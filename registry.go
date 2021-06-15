@@ -7,10 +7,10 @@ func NewRegistry() *Registry {
 	return &Registry{}
 }
 
-func (registry *Registry) Register(definition *Definition) {
+func (registry *Registry) Register(name string, level TargetLevel) {
 
 }
 
-func (registry *Registry) Define(name string, level TargetLevel) {
+func (registry *Registry) RegisterWithDefinition(definition *Definition) {
 
 }
