@@ -2,8 +2,14 @@ package marker
 
 import (
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/scanner"
 	"go/token"
+	"go/types"
 	"golang.org/x/tools/go/packages"
+	"io/ioutil"
+	"os"
 	"sync"
 )
 
@@ -17,6 +23,83 @@ func newPackage(pkg *packages.Package, loader *loader) *Package {
 		Package: pkg,
 		loader:  loader,
 	}
+}
+
+func (pkg *Package) prepare() {
+
+	if pkg.Syntax != nil {
+		return
+	}
+
+	out := make([]*ast.File, len(pkg.CompiledGoFiles))
+
+	var wg sync.WaitGroup
+	wg.Add(len(pkg.CompiledGoFiles))
+
+	for index, fileName := range pkg.CompiledGoFiles {
+
+		go func(index int, fileName string) {
+			defer wg.Done()
+
+			src, err := ioutil.ReadFile(fileName)
+
+			if err != nil {
+				pkg.addError(err)
+				return
+			}
+
+			out[index], err = pkg.loader.parseFile(fileName, src)
+
+			if err != nil {
+				pkg.addError(err)
+				return
+			}
+		}(index, fileName)
+
+	}
+
+	wg.Wait()
+
+	for _, file := range out {
+		if file == nil {
+			return
+		}
+	}
+
+	pkg.Syntax = out
+}
+
+func (pkg *Package) addError(err error) {
+
+	switch typedErr := err.(type) {
+	case *os.PathError:
+		pkg.Errors = append(pkg.Errors, packages.Error{
+			Pos:  typedErr.Path + ":1",
+			Msg:  typedErr.Err.Error(),
+			Kind: packages.ParseError,
+		})
+	case scanner.ErrorList:
+		for _, subErr := range typedErr {
+			pkg.Errors = append(pkg.Errors, packages.Error{
+				Pos:  subErr.Pos.String(),
+				Msg:  subErr.Msg,
+				Kind: packages.ParseError,
+			})
+		}
+	case types.Error:
+		pkg.Errors = append(pkg.Errors, packages.Error{
+			Pos:  typedErr.Fset.Position(typedErr.Pos).String(),
+			Msg:  typedErr.Msg,
+			Kind: packages.TypeError,
+		})
+	default:
+		pkg.Errors = append(pkg.Errors, packages.Error{
+			Pos:  pkg.ID + ":-",
+			Msg:  err.Error(),
+			Kind: packages.UnknownError,
+		})
+	}
+
 }
 
 type loader struct {
@@ -46,7 +129,10 @@ func (loader *loader) load() ([]*Package, error) {
 	for _, pkg := range pkgs {
 
 		if loader.packageMap[pkg] == nil {
-			loader.packageMap[pkg] = newPackage(pkg, loader)
+			newPkg := newPackage(pkg, loader)
+			newPkg.prepare()
+
+			loader.packageMap[pkg] = newPkg
 		}
 
 		loader.packages = append(loader.packages, loader.packageMap[pkg])
@@ -54,6 +140,16 @@ func (loader *loader) load() ([]*Package, error) {
 	}
 
 	return loader.packages, nil
+}
+
+func (loader *loader) parseFile(fileName string, src []byte) (*ast.File, error) {
+	file, err := parser.ParseFile(loader.config.Fset, fileName, src, parser.AllErrors|parser.ParseComments)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
 }
 
 func LoadPackages(patterns ...string) ([]*Package, error) {

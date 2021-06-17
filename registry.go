@@ -2,7 +2,6 @@ package marker
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 )
 
@@ -70,32 +69,17 @@ func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
 	return nil
 }
 
-func (registry *Registry) Lookup(name string) *Definition {
+func (registry *Registry) Lookup(marker string) *Definition {
 	registry.initialize()
 
 	registry.mu.RLock()
 	defer registry.mu.RUnlock()
 
-	return nil
-}
+	name, anonymousName, _ := splitMarker(marker)
 
-func splitMarker(marker string) (name string, candidateName string, options string) {
-	marker = marker[1:]
-
-	nameFieldParts := strings.SplitN(marker, "=", 2)
-
-	if len(nameFieldParts) == 1 {
-		return nameFieldParts[0], nameFieldParts[0], ""
+	if def, exists := registry.definitionMap[anonymousName]; exists {
+		return def
 	}
 
-	candidateName = nameFieldParts[0]
-	name = candidateName
-
-	nameParts := strings.Split(name, ":")
-
-	if len(nameParts) > 1 {
-		name = strings.Join(nameParts[:len(nameParts)-1], ":")
-	}
-
-	return name, candidateName, nameFieldParts[1]
+	return registry.definitionMap[name]
 }
