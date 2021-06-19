@@ -2,6 +2,7 @@ package marker
 
 import (
 	"errors"
+	"go/ast"
 	"strings"
 )
 
@@ -9,12 +10,25 @@ type TargetLevel int
 
 const (
 	TypeLevel TargetLevel = 1 << iota
-	ImportLevel
 	FieldLevel
 	FunctionLevel
 	MethodLevel
 	PackageLevel
 )
+
+type markerComment struct {
+	*ast.Comment
+}
+
+func newMarkerComment(comment *ast.Comment) markerComment {
+	return markerComment{
+		comment,
+	}
+}
+
+func (comment *markerComment) String() string {
+	return strings.TrimSpace(comment.Comment.Text[2:])
+}
 
 func splitMarker(marker string) (name string, anonymousName string, options string) {
 	marker = marker[1:]
@@ -35,6 +49,20 @@ func splitMarker(marker string) (name string, anonymousName string, options stri
 	}
 
 	return name, anonymousName, nameFieldParts[1]
+}
+
+func isMarkerComment(comment string) bool {
+	if comment[0:2] != "//" {
+		return false
+	}
+
+	stripped := strings.TrimSpace(comment[2:])
+
+	if len(stripped) < 1 || stripped[0] != '+' {
+		return false
+	}
+
+	return true
 }
 
 func Scan(collector *Collector, pkg *Package) error {
