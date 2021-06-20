@@ -21,56 +21,95 @@ func (collector *Collector) Collect(pkg *Package) error {
 		return errors.New("pkg(package) cannot be nil")
 	}
 
-	collector.collectPackageMarkers(pkg)
+	nodeMarkers := collector.collectPackageMarkerComments(pkg)
+	collector.parseMarkerComments(nodeMarkers)
 
 	return nil
 }
 
-func (collector *Collector) collectPackageMarkers(pkg *Package) map[ast.Node][]markerComment {
-	packageMarkers := make(map[ast.Node][]markerComment)
+func (collector *Collector) collectPackageMarkerComments(pkg *Package) map[ast.Node][]markerComment {
+	packageNodeMarkers := make(map[ast.Node][]markerComment)
 
 	for _, file := range pkg.Syntax {
-		fileMarkers := collector.collectFileMarkers(file)
+		fileNodeMarkers := collector.collectFileMarkerComments(file)
 
-		for node, markers := range fileMarkers {
-			packageMarkers[node] = append(packageMarkers[node], markers...)
+		for node, markers := range fileNodeMarkers {
+			packageNodeMarkers[node] = append(packageNodeMarkers[node], markers...)
 		}
 	}
 
-	return packageMarkers
+	return packageNodeMarkers
 }
 
-func (collector *Collector) collectFileMarkers(file *ast.File) map[ast.Node][]markerComment {
+func (collector *Collector) collectFileMarkerComments(file *ast.File) map[ast.Node][]markerComment {
 	visitor := newVisitor(file.Comments)
 	ast.Walk(visitor, file)
+	visitor.nodeMarkers[file] = visitor.packageMarkers
 
-	return nil
+	return visitor.nodeMarkers
 }
 
-func getCommentsForNode(node ast.Node) (docCommentGroup *ast.CommentGroup, lastCommentGroup *ast.CommentGroup) {
+func (collector *Collector) parseMarkerComments(nodeMarkers map[ast.Node][]markerComment) map[ast.Node]Marker {
+	markers := make(map[ast.Node]Marker)
 
-	switch typedNode := node.(type) {
-	case *ast.File:
-		docCommentGroup = typedNode.Doc
-	case *ast.ImportSpec:
-		docCommentGroup = typedNode.Doc
-		lastCommentGroup = typedNode.Comment
-	case *ast.TypeSpec:
-		docCommentGroup = typedNode.Doc
-		lastCommentGroup = typedNode.Comment
-	case *ast.GenDecl:
-		docCommentGroup = typedNode.Doc
-	case *ast.Field:
-		docCommentGroup = typedNode.Doc
-		lastCommentGroup = typedNode.Comment
-	case *ast.FuncDecl:
-		docCommentGroup = typedNode.Doc
-	case *ast.ValueSpec:
-		docCommentGroup = typedNode.Doc
-		lastCommentGroup = typedNode.Comment
-	default:
-		lastCommentGroup = nil
+	for node, markerComments := range nodeMarkers {
+
+		for _, markerComment := range markerComments {
+			markerText := markerComment.Text()
+			definition := collector.Lookup(markerText)
+
+			if definition == nil {
+				continue
+			}
+
+			switch typedNode := node.(type) {
+			case *ast.File:
+
+				if definition.Level&PackageLevel != PackageLevel {
+					continue
+				}
+
+			case *ast.TypeSpec:
+
+				if definition.Level&TypeLevel != TypeLevel {
+					continue
+				}
+
+				_, isStructType := typedNode.Type.(*ast.StructType)
+
+				if isStructType && definition.Level&StructTypeLevel != StructTypeLevel {
+					continue
+				}
+
+				_, isInterfaceType := typedNode.Type.(*ast.InterfaceType)
+
+				if isInterfaceType && definition.Level&InterfaceTypeLevel != InterfaceTypeLevel {
+					continue
+				}
+
+			case *ast.Field:
+
+				_, isFuncType := typedNode.Type.(*ast.FuncType)
+
+				if !isFuncType && definition.Level&FieldLevel != FieldLevel {
+					continue
+				} else if isFuncType && (definition.Level&MethodLevel != MethodLevel || definition.Level&InterfaceTypeLevel != InterfaceTypeLevel) {
+					continue
+				}
+
+			case *ast.FuncDecl:
+
+				if typedNode.Recv != nil && (definition.Level&MethodLevel != MethodLevel || definition.Level&StructTypeLevel != StructTypeLevel) {
+					continue
+				} else if typedNode.Recv == nil && definition.Level&FunctionLevel != FunctionLevel {
+					continue
+				}
+
+			}
+
+		}
+
 	}
 
-	return docCommentGroup, lastCommentGroup
+	return markers
 }

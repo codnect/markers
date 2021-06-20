@@ -9,12 +9,19 @@ import (
 type TargetLevel int
 
 const (
-	TypeLevel TargetLevel = 1 << iota
+	PackageLevel TargetLevel = 1 << iota
+	TypeLevel
+	StructTypeLevel
+	InterfaceTypeLevel
 	FieldLevel
 	FunctionLevel
 	MethodLevel
-	PackageLevel
+	StructMethodLevel
+	InterfaceMethodLevel
 )
+
+type Marker struct {
+}
 
 type markerComment struct {
 	*ast.Comment
@@ -26,7 +33,7 @@ func newMarkerComment(comment *ast.Comment) markerComment {
 	}
 }
 
-func (comment *markerComment) String() string {
+func (comment *markerComment) Text() string {
 	return strings.TrimSpace(comment.Comment.Text[2:])
 }
 

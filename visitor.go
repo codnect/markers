@@ -7,7 +7,6 @@ import (
 type Visitor struct {
 	allComments      []*ast.CommentGroup
 	nextCommentIndex int
-	lastCommentGroup *ast.CommentGroup
 
 	packageMarkers     []markerComment
 	declarationMarkers []markerComment
@@ -61,9 +60,7 @@ func (visitor *Visitor) Visit(node ast.Node) (w ast.Visitor) {
 		}
 
 		lastCommentIndex--
-
-		var docCommentGroup *ast.CommentGroup
-		docCommentGroup, visitor.lastCommentGroup = getCommentsForNode(node)
+		docCommentGroup := visitor.getCommentsForNode(node)
 
 		markerCommentIndex := lastCommentIndex
 
@@ -72,10 +69,10 @@ func (visitor *Visitor) Visit(node ast.Node) (w ast.Visitor) {
 		}
 
 		if markerCommentIndex >= visitor.nextCommentIndex {
-			markersFromComment = visitor.getMarkers(markerCommentIndex, markerCommentIndex+1)
-			markersFromDocument = visitor.getMarkers(markerCommentIndex+1, lastCommentIndex+1)
+			markersFromComment = visitor.getMarkerComments(markerCommentIndex, markerCommentIndex+1)
+			markersFromDocument = visitor.getMarkerComments(markerCommentIndex+1, lastCommentIndex+1)
 		} else {
-			markersFromDocument = visitor.getMarkers(markerCommentIndex+1, lastCommentIndex+1)
+			markersFromDocument = visitor.getMarkerComments(markerCommentIndex+1, lastCommentIndex+1)
 		}
 	}
 
@@ -104,7 +101,7 @@ func (visitor *Visitor) Visit(node ast.Node) (w ast.Visitor) {
 	return visitor
 }
 
-func (visitor *Visitor) getMarkers(startIndex, endIndex int) []markerComment {
+func (visitor *Visitor) getMarkerComments(startIndex, endIndex int) []markerComment {
 	if startIndex < 0 || endIndex < 0 {
 		return nil
 	}
@@ -124,4 +121,26 @@ func (visitor *Visitor) getMarkers(startIndex, endIndex int) []markerComment {
 	}
 
 	return markerComments
+}
+
+func (visitor *Visitor) getCommentsForNode(node ast.Node) (docCommentGroup *ast.CommentGroup) {
+
+	switch typedNode := node.(type) {
+	case *ast.File:
+		docCommentGroup = typedNode.Doc
+	case *ast.ImportSpec:
+		docCommentGroup = typedNode.Doc
+	case *ast.TypeSpec:
+		docCommentGroup = typedNode.Doc
+	case *ast.GenDecl:
+		docCommentGroup = typedNode.Doc
+	case *ast.Field:
+		docCommentGroup = typedNode.Doc
+	case *ast.FuncDecl:
+		docCommentGroup = typedNode.Doc
+	case *ast.ValueSpec:
+		docCommentGroup = typedNode.Doc
+	}
+
+	return docCommentGroup
 }
