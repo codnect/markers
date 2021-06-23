@@ -93,19 +93,21 @@ func (collector *Collector) parseMarkerComments(nodeMarkers map[ast.Node][]marke
 
 				if !isFuncType && definition.Level&FieldLevel != FieldLevel {
 					continue
-				} else if isFuncType && (definition.Level&MethodLevel != MethodLevel || definition.Level&InterfaceTypeLevel != InterfaceTypeLevel) {
+				} else if isFuncType && !(definition.Level&MethodLevel != MethodLevel || definition.Level&InterfaceTypeLevel != InterfaceTypeLevel) {
 					continue
 				}
 
 			case *ast.FuncDecl:
 
-				if typedNode.Recv != nil && (definition.Level&MethodLevel != MethodLevel || definition.Level&StructTypeLevel != StructTypeLevel) {
+				if typedNode.Recv != nil && !(definition.Level&MethodLevel != MethodLevel || definition.Level&StructTypeLevel != StructTypeLevel) {
 					continue
 				} else if typedNode.Recv == nil && definition.Level&FunctionLevel != FunctionLevel {
 					continue
 				}
 
 			}
+
+			definition.Parse("Min=\"-135,123123\"")
 
 		}
 

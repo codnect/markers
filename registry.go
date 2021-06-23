@@ -1,8 +1,10 @@
 package marker
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode"
@@ -15,7 +17,7 @@ const (
 	RawType
 	AnyType
 	BoolType
-	IntType
+	IntegerType
 	StringType
 	SliceType
 	MapType
@@ -45,6 +47,18 @@ type Definition struct {
 
 func (definition *Definition) extract() error {
 
+	if definition.Output.Kind() != reflect.Struct {
+		argumentInfo, err := getArgumentInfoFromAnonymous(definition.Output)
+
+		if err != nil {
+			return err
+		}
+
+		definition.Fields[""] = argumentInfo
+		definition.FieldNames[""] = ""
+		return nil
+	}
+
 	for index := 0; index < definition.Output.NumField(); index++ {
 		field := definition.Output.Field(index)
 
@@ -52,20 +66,166 @@ func (definition *Definition) extract() error {
 			continue
 		}
 
-		fieldInfo, err := getArgumentInfo(field)
+		argumentInfo, err := getArgumentInfoFromStructField(field)
 
 		if err != nil {
 			return err
 		}
 
-		definition.Fields[fieldInfo.Name] = fieldInfo
-		definition.FieldNames[fieldInfo.Name] = field.Name
+		if argumentInfo.Type == RawType {
+			return errors.New("RawArgument cannot be a field")
+		}
+
+		definition.Fields[argumentInfo.Name] = argumentInfo
+		definition.FieldNames[argumentInfo.Name] = field.Name
 	}
 
 	return nil
 }
 
-func getArgumentInfo(structField reflect.StructField) (Argument, error) {
+func (definition *Definition) Parse(marker string) (interface{}, error) {
+	output := reflect.Indirect(reflect.New(definition.Output))
+
+	splitMarker(marker)
+	parser := newParser(marker)
+
+	if parser.peek() != EOF {
+		for {
+			if !parser.expect(Identifier) {
+				break
+			}
+
+			argumentName := parser.token()
+
+			if !parser.expect('=') {
+				break
+			}
+
+			fieldName, exists := definition.FieldNames[argumentName]
+
+			if !exists {
+				break
+			}
+
+			argument, exists := definition.Fields[argumentName]
+
+			if !exists {
+				break
+			}
+
+			fieldValue := output.FieldByName(fieldName)
+
+			if !fieldValue.CanSet() {
+				break
+			}
+
+			definition.parseArgument(parser, argument)
+		}
+	}
+
+	return nil, nil
+}
+
+func (definition *Definition) parseArgument(parser *parser, argument Argument) {
+	switch argument.Type {
+	case IntegerType:
+		nextCharacter := parser.peek()
+
+		isNegative := false
+
+		if nextCharacter == '-' {
+			isNegative = true
+			parser.scan()
+		}
+
+		if !parser.expect(Integer) {
+			return
+		}
+
+		text := parser.token()
+
+		if isNegative {
+			text = "-" + text
+		}
+
+		x, _ := strconv.Atoi(text)
+
+		if x == 0 {
+
+		}
+	case StringType:
+		token := parser.scan()
+
+		if token == String {
+
+			val, err := strconv.Unquote(parser.token())
+
+			if err != nil {
+
+				return
+			}
+
+			if val == "" {
+
+			}
+			return
+		}
+
+		startPosition := parser.searchIndex
+
+		for character := scanForString(parser); character != ',' && character != ';' && character != ':' && character != '}' && character != EOF; character = scanForString(parser) {
+			parser.scan()
+		}
+
+		endPosition := parser.searchIndex
+
+		value := string(parser.markerComment[startPosition:endPosition])
+
+		if value == "" {
+
+		}
+	}
+}
+
+func scanForString(parser *parser) rune {
+	character := parser.peek()
+
+	for ; character <= ' ' && ((1<<uint64(character))&Whitespace) != 0; character = parser.peek() {
+		parser.next()
+	}
+
+	return character
+}
+
+func getArgumentInfoFromAnonymous(typ reflect.Type) (Argument, error) {
+	argumentType, err := getArgumentType(typ)
+
+	if err != nil {
+		return Argument{}, err
+	}
+
+	var argumentItemType ArgumentType
+
+	if argumentType == SliceType || argumentType == MapType {
+		itemType, err := getArgumentType(typ.Elem())
+
+		if err != nil && argumentType == SliceType {
+			return Argument{}, fmt.Errorf("bad slice item type: %w", err)
+		} else if err != nil && argumentType == MapType {
+			return Argument{}, fmt.Errorf("bad map item type: %w", err)
+		}
+
+		argumentItemType = itemType
+	}
+
+	return Argument{
+		Type:     argumentType,
+		Required: true,
+		ItemType: &argumentItemType,
+	}, nil
+}
+
+func getArgumentInfoFromStructField(structField reflect.StructField) (Argument, error) {
 	fieldName := lowerCamelCase(structField.Name)
 
 	markerTag, tagExists := structField.Tag.Lookup("marker")
@@ -143,9 +303,9 @@ func getArgumentType(rawType reflect.Type) (ArgumentType, error) {
 	case reflect.String:
 		return StringType, nil
 	case reflect.Uint8, reflect.Uint16, reflect.Uint, reflect.Uint32, reflect.Uint64:
-		return IntType, nil
+		return IntegerType, nil
 	case reflect.Int8, reflect.Int16, reflect.Int, reflect.Int32, reflect.Int64:
-		return IntType, nil
+		return IntegerType, nil
 	case reflect.Bool:
 		return BoolType, nil
 	case reflect.Slice:
@@ -187,6 +347,7 @@ func MakeDefinition(name string, level TargetLevel, output interface{}) (*Defini
 		Name:       name,
 		Level:      level,
 		Output:     outputType,
+		Fields:     make(map[string]Argument),
 		FieldNames: make(map[string]string),
 	}
 
