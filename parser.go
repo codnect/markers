@@ -1,9 +1,5 @@
 package marker
 
-import (
-	"unicode"
-)
-
 const Whitespace = 1<<'\t' | 1<<'\r' | 1<<' '
 
 const (
@@ -16,7 +12,7 @@ const (
 	RawString
 )
 
-type parser struct {
+type Parser struct {
 	markerComment      []byte
 	tokenStartPosition int
 	tokenEndPosition   int
@@ -24,8 +20,8 @@ type parser struct {
 	character          rune
 }
 
-func newParser(markerComment string) *parser {
-	return &parser{
+func NewParser(markerComment string) *Parser {
+	return &Parser{
 		markerComment:      []byte(markerComment),
 		character:          Identifier,
 		tokenStartPosition: -1,
@@ -34,16 +30,16 @@ func newParser(markerComment string) *parser {
 	}
 }
 
-func (parser *parser) peek() rune {
+func (parser *Parser) Peek() rune {
 	if parser.character == Identifier {
-		parser.character = parser.next()
+		parser.character = parser.Next()
 	}
 
 	return parser.character
 }
 
-func (parser *parser) expect(expected rune) bool {
-	token := parser.scan()
+func (parser *Parser) Expect(expected rune) bool {
+	token := parser.Scan()
 
 	if token != expected {
 		return false
@@ -52,7 +48,7 @@ func (parser *parser) expect(expected rune) bool {
 	return true
 }
 
-func (parser *parser) next() rune {
+func (parser *Parser) Next() rune {
 	parser.searchIndex++
 
 	if parser.searchIndex >= len(parser.markerComment) {
@@ -62,31 +58,37 @@ func (parser *parser) next() rune {
 	return rune(parser.markerComment[parser.searchIndex])
 }
 
-func (parser *parser) scan() rune {
-	character := parser.peek()
+func (parser *Parser) SkipWhitespaces() rune {
+	character := parser.Peek()
 
 	for Whitespace&(1<<uint(character)) != 0 {
-		character = parser.next()
+		character = parser.Next()
 	}
+
+	return character
+}
+
+func (parser *Parser) Scan() rune {
+	character := parser.SkipWhitespaces()
 
 	token := character
 
 	parser.tokenStartPosition = parser.searchIndex
 
-	if parser.isIdentifier(character, 0) {
+	if IsIdentifier(character, 0) {
 		token = Identifier
-		character = parser.scanIdentifier()
-	} else if parser.isDecimal(character) {
+		character = parser.ScanIdentifier()
+	} else if IsDecimal(character) {
 		token = Integer
-		character = parser.scanNumber()
+		character = parser.ScanNumber()
 	} else if character == EOF {
 		return EOF
 	} else if character == '"' {
 		token = String
-		parser.scanString('"')
-		character = parser.next()
+		parser.ScanString('"')
+		character = parser.Next()
 	} else {
-		character = parser.next()
+		character = parser.Next()
 	}
 
 	parser.tokenEndPosition = parser.searchIndex
@@ -94,63 +96,42 @@ func (parser *parser) scan() rune {
 	return token
 }
 
-func (parser *parser) isIdentifier(character rune, index int) bool {
-	return character == '_' || unicode.IsLetter(character) || unicode.IsDigit(character) && index > 0
-}
+func (parser *Parser) ScanNumber() rune {
+	character := parser.Next()
 
-func (parser *parser) isDecimal(character rune) bool {
-	return '0' <= character && character <= '9'
-}
-
-func (parser *parser) lower(character rune) rune {
-	return ('a' - 'A') | character
-}
-
-func (parser *parser) isHex(ch rune) bool {
-	return '0' <= ch && ch <= '9' || 'a' <= parser.lower(ch) && parser.lower(ch) <= 'f'
-}
-
-func (parser *parser) scanNumber() rune {
-	character := parser.next()
-
-	for parser.isDecimal(character) {
-		character = parser.next()
+	for IsDecimal(character) {
+		character = parser.Next()
 	}
 
 	return character
 }
 
-func (parser *parser) scanIdentifier() rune {
-	character := parser.next()
+func (parser *Parser) ScanIdentifier() rune {
+	character := parser.Next()
 
-	for index := 1; parser.isIdentifier(character, index); index++ {
-		character = parser.next()
+	for index := 1; IsIdentifier(character, index); index++ {
+		character = parser.Next()
 	}
 
 	return character
 }
 
-func (parser *parser) scanString(quote rune) (n int) {
-	character := parser.next()
+func (parser *Parser) ScanString(quote rune) (len int) {
+	character := parser.Next()
 
 	for character != quote {
 		if character == '\n' || character < 0 {
 			return
 		}
 
-		if character == '\\' {
-			character = parser.next()
-		} else {
-			character = parser.next()
-		}
-
-		n++
+		character = parser.Next()
+		len++
 	}
 
 	return
 }
 
-func (parser *parser) token() string {
+func (parser *Parser) Token() string {
 	if parser.tokenStartPosition < 0 {
 		return ""
 	}
