@@ -187,7 +187,7 @@ func (typeInfo TypeInfo) parseString(scanner *Scanner, out reflect.Value) error 
 		return nil
 	}
 
-	for character := scanner.PeekWithoutSpace(); character != ',' && character != ';' && character != ':' && character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+	for character := scanner.SkipWhitespaces(); character != ',' && character != ';' && character != ':' && character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
 		scanner.Scan()
 	}
 
@@ -207,11 +207,11 @@ func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
 	sliceType := reflect.Zero(out.Type())
 	sliceItemType := reflect.Indirect(reflect.New(out.Type().Elem()))
 
-	if scanner.PeekWithoutSpace() == '{' {
+	if scanner.SkipWhitespaces() == '{' {
 
 		scanner.Scan()
 
-		for character := scanner.PeekWithoutSpace(); character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+		for character := scanner.SkipWhitespaces(); character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
 			err := typeInfo.ItemType.Parse(scanner, sliceItemType)
 
 			if err != nil {
@@ -220,7 +220,7 @@ func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
 
 			sliceType = reflect.Append(sliceType, sliceItemType)
 
-			token := scanner.PeekWithoutSpace()
+			token := scanner.SkipWhitespaces()
 
 			if token == '}' {
 				break
@@ -238,7 +238,7 @@ func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
 		return nil
 	}
 
-	for character := scanner.PeekWithoutSpace(); character != ',' && character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+	for character := scanner.SkipWhitespaces(); character != ',' && character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
 		err := typeInfo.ItemType.Parse(scanner, sliceItemType)
 
 		if err != nil {
@@ -247,7 +247,7 @@ func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
 
 		sliceType = reflect.Append(sliceType, sliceItemType)
 
-		token := scanner.PeekWithoutSpace()
+		token := scanner.SkipWhitespaces()
 
 		if token == ',' || token == '}' || token == EOF {
 			break
@@ -277,7 +277,7 @@ func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 		return nil
 	}
 
-	for character := scanner.PeekWithoutSpace(); character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+	for character := scanner.SkipWhitespaces(); character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
 		err := typeInfo.parseString(scanner, key)
 
 		if err != nil {
@@ -296,7 +296,7 @@ func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 
 		mapType.SetMapIndex(key, value)
 
-		if scanner.PeekWithoutSpace() == '}' {
+		if scanner.SkipWhitespaces() == '}' {
 			break
 		}
 
