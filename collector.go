@@ -107,7 +107,7 @@ func (collector *Collector) parseMarkerComments(nodeMarkers map[ast.Node][]marke
 
 			}
 
-			definition.Parse("Min=Test;Test1")
+			definition.Parse("Min={value:0,message:hello}")
 
 		}
 

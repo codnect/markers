@@ -85,16 +85,18 @@ func GetTypeInfo(typ reflect.Type) (TypeInfo, error) {
 	return *typeInfo, nil
 }
 
-func (typeInfo TypeInfo) Parse(parser *Parser, out reflect.Value) error {
+func (typeInfo TypeInfo) Parse(scanner *Scanner, out reflect.Value) error {
 	switch typeInfo.ActualType {
 	case BoolType:
-		return typeInfo.parseBoolean(parser, out)
+		return typeInfo.parseBoolean(scanner, out)
 	case IntegerType:
-		return typeInfo.parseInteger(parser, out)
+		return typeInfo.parseInteger(scanner, out)
 	case StringType:
-		return typeInfo.parseString(parser, out)
+		return typeInfo.parseString(scanner, out)
 	case SliceType:
-		return typeInfo.parseSlice(parser, out)
+		return typeInfo.parseSlice(scanner, out)
+	case MapType:
+		return typeInfo.parseMap(scanner, out)
 	}
 
 	return nil
@@ -110,44 +112,44 @@ func (typeInfo TypeInfo) setValue(out, value reflect.Value) {
 	out.Set(value)
 }
 
-func (typeInfo TypeInfo) parseBoolean(parser *Parser, out reflect.Value) error {
-	if parser == nil {
-		return errors.New("parser cannot be nil")
+func (typeInfo TypeInfo) parseBoolean(scanner *Scanner, out reflect.Value) error {
+	if scanner == nil {
+		return errors.New("scanner cannot be nil")
 	}
 
-	if !parser.Expect(Identifier) {
+	if !scanner.Expect(Identifier) {
 		return nil
 	}
 
-	switch parser.Token() {
+	switch scanner.Token() {
 	case "false":
 		typeInfo.setValue(out, reflect.ValueOf(false))
 	case "true":
 		typeInfo.setValue(out, reflect.ValueOf(true))
 	}
 
-	return fmt.Errorf("expected true or false, got %q", parser.Token())
+	return fmt.Errorf("expected true or false, got %q", scanner.Token())
 }
 
-func (typeInfo TypeInfo) parseInteger(parser *Parser, out reflect.Value) error {
-	if parser == nil {
-		return errors.New("parser cannot be nil")
+func (typeInfo TypeInfo) parseInteger(scanner *Scanner, out reflect.Value) error {
+	if scanner == nil {
+		return errors.New("scanner cannot be nil")
 	}
 
-	nextCharacter := parser.Peek()
+	nextCharacter := scanner.Peek()
 
 	isNegative := false
 
 	if nextCharacter == '-' {
 		isNegative = true
-		parser.Scan()
+		scanner.Scan()
 	}
 
-	if !parser.Expect(Integer) {
+	if !scanner.Expect(Integer) {
 		return nil
 	}
 
-	text := parser.Token()
+	text := scanner.Token()
 
 	if isNegative {
 		text = "-" + text
@@ -164,18 +166,18 @@ func (typeInfo TypeInfo) parseInteger(parser *Parser, out reflect.Value) error {
 	return nil
 }
 
-func (typeInfo TypeInfo) parseString(parser *Parser, out reflect.Value) error {
-	if parser == nil {
-		return errors.New("parser cannot be nil")
+func (typeInfo TypeInfo) parseString(scanner *Scanner, out reflect.Value) error {
+	if scanner == nil {
+		return errors.New("scanner cannot be nil")
 	}
 
-	startPosition := parser.searchIndex
+	startPosition := scanner.searchIndex
 
-	token := parser.Scan()
+	token := scanner.Scan()
 
 	if token == String {
 
-		value, err := strconv.Unquote(parser.Token())
+		value, err := strconv.Unquote(scanner.Token())
 
 		if err != nil {
 			return nil
@@ -185,31 +187,32 @@ func (typeInfo TypeInfo) parseString(parser *Parser, out reflect.Value) error {
 		return nil
 	}
 
-	for character := parser.PeekWithoutSpace(); character != ',' && character != ';' && character != ':' && character != '}' && character != EOF; character = parser.PeekWithoutSpace() {
-		parser.Scan()
+	for character := scanner.PeekWithoutSpace(); character != ',' && character != ';' && character != ':' && character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+		scanner.Scan()
 	}
 
-	endPosition := parser.searchIndex
+	endPosition := scanner.searchIndex
 
-	value := string(parser.markerComment[startPosition:endPosition])
+	value := string(scanner.markerComment[startPosition:endPosition])
 	typeInfo.setValue(out, reflect.ValueOf(value))
 
 	return nil
 }
 
-func (typeInfo TypeInfo) parseSlice(parser *Parser, out reflect.Value) error {
-	if parser == nil {
-		return errors.New("parser cannot be nil")
+func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
+	if scanner == nil {
+		return errors.New("scanner cannot be nil")
 	}
 
 	sliceType := reflect.Zero(out.Type())
 	sliceItemType := reflect.Indirect(reflect.New(out.Type().Elem()))
 
-	if parser.PeekWithoutSpace() == '{' {
+	if scanner.PeekWithoutSpace() == '{' {
 
-		parser.Scan()
-		for character := parser.PeekWithoutSpace(); character != '}' && character != EOF; character = parser.PeekWithoutSpace() {
-			err := typeInfo.ItemType.Parse(parser, sliceItemType)
+		scanner.Scan()
+
+		for character := scanner.PeekWithoutSpace(); character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+			err := typeInfo.ItemType.Parse(scanner, sliceItemType)
 
 			if err != nil {
 				return err
@@ -217,26 +220,26 @@ func (typeInfo TypeInfo) parseSlice(parser *Parser, out reflect.Value) error {
 
 			sliceType = reflect.Append(sliceType, sliceItemType)
 
-			token := parser.PeekWithoutSpace()
+			token := scanner.PeekWithoutSpace()
 
 			if token == '}' {
 				break
 			}
 
-			if !parser.Expect(',') {
+			if !scanner.Expect(',') {
 				return nil
 			}
 		}
 
-		if !parser.Expect('}') {
+		if !scanner.Expect('}') {
 			return nil
 		}
 
 		return nil
 	}
 
-	for character := parser.PeekWithoutSpace(); character != ',' && character != '}' && character != EOF; character = parser.PeekWithoutSpace() {
-		err := typeInfo.ItemType.Parse(parser, sliceItemType)
+	for character := scanner.PeekWithoutSpace(); character != ',' && character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+		err := typeInfo.ItemType.Parse(scanner, sliceItemType)
 
 		if err != nil {
 			return err
@@ -244,13 +247,13 @@ func (typeInfo TypeInfo) parseSlice(parser *Parser, out reflect.Value) error {
 
 		sliceType = reflect.Append(sliceType, sliceItemType)
 
-		token := parser.PeekWithoutSpace()
+		token := scanner.PeekWithoutSpace()
 
 		if token == ',' || token == '}' || token == EOF {
 			break
 		}
 
-		parser.Scan()
+		scanner.Scan()
 
 		if token != ';' {
 			return nil
@@ -258,5 +261,55 @@ func (typeInfo TypeInfo) parseSlice(parser *Parser, out reflect.Value) error {
 	}
 
 	typeInfo.setValue(out, sliceType)
+	return nil
+}
+
+func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
+	if scanner == nil {
+		return errors.New("scanner cannot be nil")
+	}
+
+	mapType := reflect.MakeMap(out.Type())
+	key := reflect.Indirect(reflect.New(out.Type().Key()))
+	value := reflect.Indirect(reflect.New(out.Type().Elem()))
+
+	if !scanner.Expect('{') {
+		return nil
+	}
+
+	for character := scanner.PeekWithoutSpace(); character != '}' && character != EOF; character = scanner.PeekWithoutSpace() {
+		err := typeInfo.parseString(scanner, key)
+
+		if err != nil {
+			return err
+		}
+
+		if !scanner.Expect(':') {
+			return nil
+		}
+
+		err = typeInfo.ItemType.Parse(scanner, value)
+
+		if err != nil {
+			return err
+		}
+
+		mapType.SetMapIndex(key, value)
+
+		if scanner.PeekWithoutSpace() == '}' {
+			break
+		}
+
+		if !scanner.Expect(',') {
+			return nil
+		}
+	}
+
+	if !scanner.Expect('}') {
+		return nil
+	}
+
+	typeInfo.setValue(out, mapType)
+
 	return nil
 }
