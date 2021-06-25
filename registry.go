@@ -2,11 +2,7 @@ package marker
 
 import (
 	"fmt"
-	"reflect"
-	"strconv"
-	"strings"
 	"sync"
-	"unicode"
 )
 
 type Registry struct {

@@ -2,15 +2,13 @@ package marker
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
 type Output struct {
 	Type              reflect.Type
 	IsAnonymous       bool
-	AnonymousType     Type
-	AnonymousItemType *Type
+	AnonymousTypeInfo TypeInfo
 	Fields            map[string]Argument
 	FieldNames        map[string]string
 }
@@ -32,11 +30,10 @@ func MakeDefinition(name string, level TargetLevel, output interface{}) (*Defini
 		Name:  name,
 		Level: level,
 		Output: Output{
-			Type:          nil,
-			IsAnonymous:   false,
-			AnonymousType: InvalidType,
-			Fields:        nil,
-			FieldNames:    nil,
+			Type:        outputType,
+			IsAnonymous: false,
+			Fields:      make(map[string]Argument),
+			FieldNames:  make(map[string]string),
 		},
 	}
 
@@ -52,27 +49,14 @@ func MakeDefinition(name string, level TargetLevel, output interface{}) (*Defini
 func (definition *Definition) extract() error {
 
 	if definition.Output.Type.Kind() != reflect.Struct {
-		argumentType, err := GetType(definition.Output.Type)
+		argumentTypeInfo, err := GetTypeInfo(definition.Output.Type)
 
 		if err != nil {
 			return err
 		}
 
 		definition.Output.IsAnonymous = true
-		definition.Output.AnonymousType = argumentType
-
-		if argumentType == SliceType || argumentType == MapType {
-			itemType, err := GetType(definition.Output.Type.Elem())
-
-			if err != nil && argumentType == SliceType {
-				return fmt.Errorf("bad slice item type: %w", err)
-			} else if err != nil && argumentType == MapType {
-				return fmt.Errorf("bad map item type: %w", err)
-			}
-
-			definition.Output.AnonymousItemType = &itemType
-		}
-
+		definition.Output.AnonymousTypeInfo = argumentTypeInfo
 		return nil
 	}
 
@@ -89,7 +73,7 @@ func (definition *Definition) extract() error {
 			return err
 		}
 
-		if argumentInfo.Type == RawType {
+		if argumentInfo.TypeInfo.ActualType == RawType {
 			return errors.New("RawArgument cannot be a field")
 		}
 
@@ -137,7 +121,11 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 				break
 			}
 
-			//argument.parseArgument(parser, fieldValue, false)
+			err := argument.TypeInfo.Parse(parser, fieldValue)
+
+			if err != nil {
+				break
+			}
 		}
 	}
 

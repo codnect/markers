@@ -131,6 +131,16 @@ func (parser *Parser) ScanString(quote rune) (len int) {
 	return
 }
 
+func (parser *Parser) PeekWithoutSpace() rune {
+	character := parser.Peek()
+
+	for ; character <= ' ' && ((1<<uint64(character))&Whitespace) != 0; character = parser.Peek() {
+		parser.Next()
+	}
+
+	return character
+}
+
 func (parser *Parser) Token() string {
 	if parser.tokenStartPosition < 0 {
 		return ""
