@@ -89,17 +89,17 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 
 	splitMarker(marker)
 
-	parser := NewParser(marker)
+	scanner := NewScanner(marker)
 
-	if parser.Peek() != EOF {
+	if scanner.Peek() != EOF {
 		for {
-			if !parser.Expect(Identifier) {
+			if !scanner.Expect(Identifier) {
 				break
 			}
 
-			argumentName := parser.Token()
+			argumentName := scanner.Token()
 
-			if !parser.Expect('=') {
+			if !scanner.Expect('=') {
 				break
 			}
 
@@ -121,7 +121,7 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 				break
 			}
 
-			err := argument.TypeInfo.Parse(parser, fieldValue)
+			err := argument.TypeInfo.Parse(scanner, fieldValue)
 
 			if err != nil {
 				break

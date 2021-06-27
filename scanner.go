@@ -6,10 +6,7 @@ const (
 	EOF = -(iota + 1)
 	Identifier
 	Integer
-	Float
-	Character
 	String
-	RawString
 )
 
 type Scanner struct {
@@ -20,7 +17,7 @@ type Scanner struct {
 	character          rune
 }
 
-func NewParser(markerComment string) *Scanner {
+func NewScanner(markerComment string) *Scanner {
 	return &Scanner{
 		markerComment:      []byte(markerComment),
 		character:          Identifier,
@@ -46,6 +43,16 @@ func (scanner *Scanner) Expect(expected rune) bool {
 	}
 
 	return true
+}
+
+func (scanner *Scanner) SetSearchIndex(searchIndex int) {
+	if searchIndex >= len(scanner.markerComment) {
+		searchIndex = len(scanner.markerComment)
+		return
+	}
+
+	scanner.searchIndex = searchIndex
+	scanner.character = rune(scanner.markerComment[searchIndex])
 }
 
 func (scanner *Scanner) Next() rune {
@@ -86,6 +93,10 @@ func (scanner *Scanner) Scan() rune {
 	} else if character == '"' {
 		token = String
 		scanner.ScanString('"')
+		character = scanner.Next()
+	} else if character == '`' {
+		token = String
+		scanner.ScanString('`')
 		character = scanner.Next()
 	} else {
 		character = scanner.Next()

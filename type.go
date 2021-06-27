@@ -97,6 +97,40 @@ func (typeInfo TypeInfo) Parse(scanner *Scanner, out reflect.Value) error {
 		return typeInfo.parseSlice(scanner, out)
 	case MapType:
 		return typeInfo.parseMap(scanner, out)
+	case AnyType:
+		interferedType, _ := typeInfo.interfereType(scanner, out, false)
+		newOut := out
+
+		switch interferedType.ActualType {
+		case SliceType:
+			newType, err := interferedType.makeSliceType()
+
+			if err != nil {
+				return err
+			}
+
+			newOut = reflect.Indirect(reflect.New(newType))
+		case MapType:
+			newType, err := interferedType.makeMapType()
+
+			if err != nil {
+				return err
+			}
+
+			newOut = reflect.Indirect(reflect.New(newType))
+		}
+
+		if !newOut.CanSet() {
+			return nil
+		}
+
+		err := interferedType.Parse(scanner, newOut)
+
+		if err != nil {
+			return err
+		}
+
+		interferedType.setValue(out, newOut)
 	}
 
 	return nil
@@ -312,4 +346,193 @@ func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 	typeInfo.setValue(out, mapType)
 
 	return nil
+}
+
+func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, ignoreLegacySlice bool) (TypeInfo, error) {
+
+	// we don't wanna create another scanner not to lose search index while interfering type
+	// instead we we will store the search index to assign it after interfering type
+	character := scanner.SkipWhitespaces()
+	searchIndex := scanner.searchIndex
+
+	if !ignoreLegacySlice {
+		itemType, _ := typeInfo.interfereType(scanner, out, true)
+
+		var token rune
+		for token = scanner.Scan(); token != ',' && token != EOF && token != ';'; token = scanner.Scan() {
+		}
+
+		scanner.SetSearchIndex(searchIndex)
+
+		if token == ';' {
+			return TypeInfo{
+				ActualType: SliceType,
+				ItemType:   &itemType,
+			}, nil
+		}
+
+		return itemType, nil
+	}
+
+	switch character {
+	case '"', '\'', '`':
+		return TypeInfo{
+			ActualType: StringType,
+		}, nil
+	}
+
+	if character == '{' {
+		scanner.Scan()
+
+		elementType, _ := typeInfo.interfereType(scanner, out, true)
+
+		// skip left curly bracket character
+		scanner.SetSearchIndex(searchIndex + 1)
+
+		if elementType.ActualType == StringType {
+
+			var keyString string
+			(TypeInfo{ActualType: StringType}).parseString(scanner, reflect.Indirect(reflect.ValueOf(&keyString)))
+
+			if scanner.Scan() == ':' {
+				scanner.SetSearchIndex(searchIndex)
+
+				return TypeInfo{
+					ActualType: MapType,
+					ItemType: &TypeInfo{
+						ActualType: AnyType,
+					},
+				}, nil
+			}
+		}
+
+		scanner.SetSearchIndex(searchIndex)
+
+		return TypeInfo{
+			ActualType: SliceType,
+			ItemType:   &elementType,
+		}, nil
+	}
+
+	canBeString := false
+
+	if character == 't' || character == 'f' {
+
+		if token := scanner.Scan(); token == Identifier {
+
+			switch scanner.Token() {
+			case "true", "false":
+				scanner.SetSearchIndex(searchIndex)
+				return TypeInfo{
+					ActualType: BoolType,
+				}, nil
+			}
+
+			canBeString = true
+		} else {
+			return TypeInfo{
+				ActualType: InvalidType,
+			}, nil
+		}
+	}
+
+	if !canBeString {
+
+		token := scanner.Scan()
+
+		if token == '-' {
+			token = scanner.Scan()
+		}
+
+		if token == Integer {
+			return TypeInfo{
+				ActualType: IntegerType,
+			}, nil
+		}
+
+	}
+
+	return TypeInfo{
+		ActualType: StringType,
+	}, nil
+}
+
+func (typeInfo TypeInfo) makeSliceType() (reflect.Type, error) {
+	if typeInfo.ActualType != SliceType {
+		return nil, errors.New("this is not slice type")
+	}
+
+	if typeInfo.ItemType == nil {
+		return nil, errors.New("item type cannot be nil for slice type")
+	}
+
+	var itemType reflect.Type
+	switch typeInfo.ItemType.ActualType {
+	case IntegerType:
+		itemType = reflect.TypeOf(int(0))
+	case BoolType:
+		itemType = reflect.TypeOf(false)
+	case StringType:
+		itemType = reflect.TypeOf("")
+	case SliceType:
+		subItemType, err := typeInfo.ItemType.makeSliceType()
+
+		if err != nil {
+			return nil, err
+		}
+
+		itemType = subItemType
+	case MapType:
+		subItemType, err := typeInfo.ItemType.makeMapType()
+
+		if err != nil {
+			return nil, err
+		}
+
+		itemType = subItemType
+	default:
+		return nil, fmt.Errorf("invalid type: %v", typeInfo.ItemType.ActualType)
+	}
+
+	return reflect.SliceOf(itemType), nil
+}
+
+func (typeInfo TypeInfo) makeMapType() (reflect.Type, error) {
+	if typeInfo.ActualType != MapType {
+		return nil, errors.New("this is not map type")
+	}
+
+	if typeInfo.ItemType == nil {
+		return nil, errors.New("item type cannot be nil for map type")
+	}
+
+	var itemType reflect.Type
+	switch typeInfo.ItemType.ActualType {
+	case IntegerType:
+		itemType = reflect.TypeOf(int(0))
+	case BoolType:
+		itemType = reflect.TypeOf(false)
+	case StringType:
+		itemType = reflect.TypeOf("")
+	case SliceType:
+		subItemType, err := typeInfo.ItemType.makeSliceType()
+
+		if err != nil {
+			return nil, err
+		}
+
+		itemType = subItemType
+	case MapType:
+		subItemType, err := typeInfo.ItemType.makeMapType()
+		if err != nil {
+			return nil, err
+		}
+		itemType = subItemType
+	case AnyType:
+		itemType = interfaceType
+	default:
+		return nil, fmt.Errorf("invalid type: %v", typeInfo.ItemType.ActualType)
+	}
+
+	return reflect.MapOf(reflect.TypeOf(""), itemType), nil
 }
