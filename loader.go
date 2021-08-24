@@ -47,6 +47,7 @@ func (loader *loader) load() ([]*Package, error) {
 
 		if loader.packageMap[pkg] == nil {
 			loader.packageMap[pkg] = newPackage(pkg, loader)
+			pkg.Fset = loader.config.Fset
 		}
 
 		loader.packages = append(loader.packages, loader.packageMap[pkg])

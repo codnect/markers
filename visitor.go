@@ -144,3 +144,245 @@ func (visitor *Visitor) getCommentsForNode(node ast.Node) (docCommentGroup *ast.
 
 	return docCommentGroup
 }
+
+type typeElementCallback func(file *ast.File, decl *ast.GenDecl, node *ast.TypeSpec)
+
+type typeElementVisitor struct {
+	pkg      *Package
+	callback typeElementCallback
+	decl     *ast.GenDecl
+	file     *ast.File
+}
+
+func (visitor *typeElementVisitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		visitor.decl = nil
+		return visitor
+	}
+
+	switch typedNode := node.(type) {
+	case *ast.File:
+		visitor.file = typedNode
+		return visitor
+	case *ast.GenDecl:
+		visitor.decl = typedNode
+		return visitor
+	case *ast.TypeSpec:
+		visitor.callback(visitor.file, visitor.decl, typedNode)
+		return nil
+	default:
+		return nil
+	}
+}
+
+func visitTypeElements(pkg *Package, callback typeElementCallback) {
+	visitor := &typeElementVisitor{
+		pkg:      pkg,
+		callback: callback,
+	}
+
+	for _, file := range pkg.Syntax {
+		visitor.file = file
+		ast.Walk(visitor, file)
+	}
+}
+
+type methodVisitorCallback func(methods []*Method)
+
+type methodVisitor struct {
+	spec          *ast.TypeSpec
+	interfaceType *ast.InterfaceType
+	structType    *ast.StructType
+	fieldList     *ast.FieldList
+	methods       []*Method
+	method        *Method
+}
+
+func (visitor *methodVisitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		visitor.spec = nil
+		return visitor
+	}
+
+	switch typedNode := node.(type) {
+	case *ast.TypeSpec:
+		visitor.spec = typedNode
+		return visitor
+	case *ast.InterfaceType:
+		visitor.interfaceType = typedNode
+		return visitor
+	case *ast.StructType:
+		visitor.structType = typedNode
+		return visitor
+	case *ast.FieldList:
+		visitor.fieldList = typedNode
+		return visitor
+	case *ast.Field:
+		if visitor.method == nil {
+			visitor.method = &Method{
+				Name:         typedNode.Names[0].Name,
+				Parameters:   make([]TypeInfo, 0),
+				ReturnValues: make([]TypeInfo, 0),
+			}
+		}
+
+		return visitor
+	case *ast.FuncType:
+		if visitor.method != nil {
+
+			if typedNode.Params != nil {
+				visitor.method.Parameters = getTypes(typedNode.Params.List)
+			}
+
+			if typedNode.Results != nil {
+				visitor.method.ReturnValues = getTypes(typedNode.Results.List)
+			}
+			visitor.methods = append(visitor.methods, visitor.method)
+			visitor.method = nil
+		}
+		return visitor
+	default:
+		return nil
+	}
+}
+
+func getTypes(fieldList []*ast.Field) []TypeInfo {
+	types := make([]TypeInfo, 0)
+
+	for _, field := range fieldList {
+		typeInfo := &TypeInfo{
+			Names: make([]string, 0),
+		}
+
+		for _, name := range field.Names {
+			typeInfo.Names = append(typeInfo.Names, name.Name)
+		}
+
+		typeInfo.Type = getType(field)
+
+		types = append(types, *typeInfo)
+	}
+
+	return types
+}
+
+func getType(field *ast.Field) Type {
+
+	switch parameterIdent := field.Type.(type) {
+	case *ast.Ident:
+		return Type{
+			Name:      parameterIdent.Name,
+			RawObject: parameterIdent.Obj,
+		}
+	case *ast.SelectorExpr:
+		return Type{
+			ImportAlias: parameterIdent.X.(*ast.Ident).Name,
+			Name:        parameterIdent.Sel.Name,
+			IsPointer:   false,
+			RawObject:   parameterIdent.X.(*ast.Ident).Obj,
+		}
+	case *ast.StarExpr:
+
+		switch typeExpression := parameterIdent.X.(type) {
+		case *ast.SelectorExpr:
+			return Type{
+				ImportAlias: typeExpression.X.(*ast.Ident).Name,
+				Name:        typeExpression.Sel.Name,
+				IsPointer:   true,
+				RawObject:   typeExpression.X.(*ast.Ident).Obj,
+			}
+		case *ast.Ident:
+			return Type{
+				Name:      typeExpression.Name,
+				IsPointer: true,
+				RawObject: typeExpression.Obj,
+			}
+		}
+	}
+
+	panic("Unreachable code!")
+}
+
+func visitMethods(node *ast.TypeSpec, methodVisitorCallback methodVisitorCallback) {
+	visitor := &methodVisitor{
+		methods: make([]*Method, 0),
+	}
+
+	ast.Walk(visitor, node)
+	methodVisitorCallback(visitor.methods)
+}
+
+type functionCallback func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType)
+
+type functionVisitor struct {
+	pkg      *Package
+	callback functionCallback
+	decl     *ast.FuncDecl
+	file     *ast.File
+}
+
+func (visitor *functionVisitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		visitor.decl = nil
+		return visitor
+	}
+
+	switch typedNode := node.(type) {
+	case *ast.File:
+		visitor.file = typedNode
+		return visitor
+	case *ast.FuncDecl:
+		visitor.decl = typedNode
+		return visitor
+	case *ast.FuncType:
+		visitor.callback(visitor.file, visitor.decl, typedNode)
+		return nil
+	default:
+		return nil
+	}
+}
+
+func visitFunctions(pkg *Package, callback functionCallback) {
+	visitor := &functionVisitor{
+		pkg:      pkg,
+		callback: callback,
+	}
+
+	for _, file := range pkg.Syntax {
+		visitor.file = file
+		ast.Walk(visitor, file)
+	}
+}
+
+type fileCallback func(file *ast.File)
+
+type fileVisitor struct {
+	pkg      *Package
+	callback fileCallback
+	file     *ast.File
+}
+
+func (visitor *fileVisitor) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		return visitor
+	}
+
+	switch typedNode := node.(type) {
+	case *ast.File:
+		visitor.callback(typedNode)
+		return nil
+	default:
+		return nil
+	}
+}
+
+func visitFiles(pkg *Package, callback fileCallback) {
+	visitor := &fileVisitor{
+		pkg:      pkg,
+		callback: callback,
+	}
+
+	for _, file := range pkg.Syntax {
+		ast.Walk(visitor, file)
+	}
+}

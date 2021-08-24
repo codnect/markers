@@ -1,5 +1,7 @@
 package marker
 
+import "fmt"
+
 const Whitespace = 1<<'\t' | 1<<'\r' | 1<<' '
 
 const (
@@ -10,20 +12,44 @@ const (
 )
 
 type Scanner struct {
-	markerComment      []byte
+	source             []byte
 	tokenStartPosition int
 	tokenEndPosition   int
 	searchIndex        int
 	character          rune
+
+	errorCount    int
+	ErrorCallback func(scanner *Scanner, message string)
 }
 
-func NewScanner(markerComment string) *Scanner {
+func NewScanner(source string) *Scanner {
 	return &Scanner{
-		markerComment:      []byte(markerComment),
+		source:             []byte(source),
 		character:          Identifier,
 		tokenStartPosition: -1,
 		tokenEndPosition:   0,
 		searchIndex:        -1,
+		errorCount:         0,
+	}
+}
+
+func (scanner *Scanner) SearchIndex() int {
+	return scanner.searchIndex
+}
+
+func (scanner *Scanner) SourceLength() int {
+	return len(scanner.source)
+}
+
+func (scanner *Scanner) ErrorCount() int {
+	return scanner.errorCount
+}
+
+func (scanner *Scanner) AddError(message string) {
+	scanner.errorCount++
+
+	if scanner.ErrorCallback == nil {
+		scanner.ErrorCallback(scanner, message)
 	}
 }
 
@@ -35,10 +61,11 @@ func (scanner *Scanner) Peek() rune {
 	return scanner.character
 }
 
-func (scanner *Scanner) Expect(expected rune) bool {
+func (scanner *Scanner) Expect(expected rune, description string) bool {
 	token := scanner.Scan()
 
 	if token != expected {
+		scanner.AddError(fmt.Sprintf("expected %s, got %q", description, scanner.Token()))
 		return false
 	}
 
@@ -46,23 +73,23 @@ func (scanner *Scanner) Expect(expected rune) bool {
 }
 
 func (scanner *Scanner) SetSearchIndex(searchIndex int) {
-	if searchIndex >= len(scanner.markerComment) {
-		searchIndex = len(scanner.markerComment)
+	if searchIndex >= scanner.SourceLength() {
+		searchIndex = scanner.SourceLength()
 		return
 	}
 
 	scanner.searchIndex = searchIndex
-	scanner.character = rune(scanner.markerComment[searchIndex])
+	scanner.character = rune(scanner.source[searchIndex])
 }
 
 func (scanner *Scanner) Next() rune {
 	scanner.searchIndex++
 
-	if scanner.searchIndex >= len(scanner.markerComment) {
+	if scanner.searchIndex >= scanner.SourceLength() {
 		return EOF
 	}
 
-	return rune(scanner.markerComment[scanner.searchIndex])
+	return rune(scanner.source[scanner.searchIndex])
 }
 
 func (scanner *Scanner) SkipWhitespaces() rune {
@@ -147,5 +174,5 @@ func (scanner *Scanner) Token() string {
 		return ""
 	}
 
-	return string(scanner.markerComment[scanner.tokenStartPosition:scanner.tokenEndPosition])
+	return string(scanner.source[scanner.tokenStartPosition:scanner.tokenEndPosition])
 }

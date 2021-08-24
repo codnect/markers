@@ -8,7 +8,7 @@ import (
 type Output struct {
 	Type              reflect.Type
 	IsAnonymous       bool
-	AnonymousTypeInfo TypeInfo
+	AnonymousTypeInfo ArgumentTypeInfo
 	Fields            map[string]Argument
 	FieldNames        map[string]string
 }
@@ -49,7 +49,7 @@ func MakeDefinition(name string, level TargetLevel, output interface{}) (*Defini
 func (definition *Definition) extract() error {
 
 	if definition.Output.Type.Kind() != reflect.Struct {
-		argumentTypeInfo, err := GetTypeInfo(definition.Output.Type)
+		argumentTypeInfo, err := GetArgumentTypeInfo(definition.Output.Type)
 
 		if err != nil {
 			return err
@@ -89,17 +89,24 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 
 	splitMarker(marker)
 
+	//errorList := NewErrorList(nil)
+
 	scanner := NewScanner(marker)
+	scanner.ErrorCallback = func(scanner *Scanner, message string) {
+		//parserError := &ParserError {
+		//	Message: message,
+		//}
+	}
 
 	if scanner.Peek() != EOF {
 		for {
-			if !scanner.Expect(Identifier) {
+			if !scanner.Expect(Identifier, "Argument Name") {
 				break
 			}
 
 			argumentName := scanner.Token()
 
-			if !scanner.Expect('=') {
+			if !scanner.Expect('=', "Equals Sign '='") {
 				break
 			}
 
@@ -124,6 +131,13 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 			err := argument.TypeInfo.Parse(scanner, fieldValue)
 
 			if err != nil {
+				break
+			}
+
+			if scanner.Peek() == EOF {
+				break
+			}
+			if !scanner.Expect(',', "Comma ','") {
 				break
 			}
 		}

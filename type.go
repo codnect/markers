@@ -7,10 +7,10 @@ import (
 	"strconv"
 )
 
-type Type int
+type ArgumentType int
 
 const (
-	InvalidType Type = iota
+	InvalidType ArgumentType = iota
 	RawType
 	AnyType
 	BoolType
@@ -25,13 +25,13 @@ var (
 	rawType       = reflect.TypeOf((*[]byte)(nil)).Elem()
 )
 
-type TypeInfo struct {
-	ActualType Type
-	ItemType   *TypeInfo
+type ArgumentTypeInfo struct {
+	ActualType ArgumentType
+	ItemType   *ArgumentTypeInfo
 }
 
-func GetTypeInfo(typ reflect.Type) (TypeInfo, error) {
-	typeInfo := &TypeInfo{}
+func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
+	typeInfo := &ArgumentTypeInfo{}
 
 	if typ == rawType {
 		typeInfo.ActualType = RawType
@@ -58,34 +58,34 @@ func GetTypeInfo(typ reflect.Type) (TypeInfo, error) {
 		typeInfo.ActualType = BoolType
 	case reflect.Slice:
 		typeInfo.ActualType = SliceType
-		itemType, err := GetTypeInfo(typ.Elem())
+		itemType, err := GetArgumentTypeInfo(typ.Elem())
 
 		if err != nil {
-			return TypeInfo{}, fmt.Errorf("bad slice item type: %w", err)
+			return ArgumentTypeInfo{}, fmt.Errorf("bad slice item type: %w", err)
 		}
 
 		typeInfo.ItemType = &itemType
 	case reflect.Map:
 		if typ.Key().Kind() != reflect.String {
-			return TypeInfo{}, fmt.Errorf("map key must be string")
+			return ArgumentTypeInfo{}, fmt.Errorf("map key must be string")
 		}
 
 		typeInfo.ActualType = MapType
-		itemType, err := GetTypeInfo(typ.Elem())
+		itemType, err := GetArgumentTypeInfo(typ.Elem())
 
 		if err != nil {
-			return TypeInfo{}, fmt.Errorf("bad map item type: %w", err)
+			return ArgumentTypeInfo{}, fmt.Errorf("bad map item type: %w", err)
 		}
 
 		typeInfo.ItemType = &itemType
 	default:
-		return TypeInfo{}, fmt.Errorf("type has unsupported kind %s", typ.Kind())
+		return ArgumentTypeInfo{}, fmt.Errorf("type has unsupported kind %s", typ.Kind())
 	}
 
 	return *typeInfo, nil
 }
 
-func (typeInfo TypeInfo) Parse(scanner *Scanner, out reflect.Value) error {
+func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) error {
 	switch typeInfo.ActualType {
 	case BoolType:
 		return typeInfo.parseBoolean(scanner, out)
@@ -136,7 +136,7 @@ func (typeInfo TypeInfo) Parse(scanner *Scanner, out reflect.Value) error {
 	return nil
 }
 
-func (typeInfo TypeInfo) setValue(out, value reflect.Value) {
+func (typeInfo ArgumentTypeInfo) setValue(out, value reflect.Value) {
 	outType := out.Type()
 
 	if outType != value.Type() {
@@ -146,12 +146,12 @@ func (typeInfo TypeInfo) setValue(out, value reflect.Value) {
 	out.Set(value)
 }
 
-func (typeInfo TypeInfo) parseBoolean(scanner *Scanner, out reflect.Value) error {
+func (typeInfo ArgumentTypeInfo) parseBoolean(scanner *Scanner, out reflect.Value) error {
 	if scanner == nil {
 		return errors.New("scanner cannot be nil")
 	}
 
-	if !scanner.Expect(Identifier) {
+	if !scanner.Expect(Identifier, "Boolean (true or false)") {
 		return nil
 	}
 
@@ -165,7 +165,7 @@ func (typeInfo TypeInfo) parseBoolean(scanner *Scanner, out reflect.Value) error
 	return fmt.Errorf("expected true or false, got %q", scanner.Token())
 }
 
-func (typeInfo TypeInfo) parseInteger(scanner *Scanner, out reflect.Value) error {
+func (typeInfo ArgumentTypeInfo) parseInteger(scanner *Scanner, out reflect.Value) error {
 	if scanner == nil {
 		return errors.New("scanner cannot be nil")
 	}
@@ -179,7 +179,7 @@ func (typeInfo TypeInfo) parseInteger(scanner *Scanner, out reflect.Value) error
 		scanner.Scan()
 	}
 
-	if !scanner.Expect(Integer) {
+	if !scanner.Expect(Integer, "Integer") {
 		return nil
 	}
 
@@ -200,7 +200,7 @@ func (typeInfo TypeInfo) parseInteger(scanner *Scanner, out reflect.Value) error
 	return nil
 }
 
-func (typeInfo TypeInfo) parseString(scanner *Scanner, out reflect.Value) error {
+func (typeInfo ArgumentTypeInfo) parseString(scanner *Scanner, out reflect.Value) error {
 	if scanner == nil {
 		return errors.New("scanner cannot be nil")
 	}
@@ -227,13 +227,13 @@ func (typeInfo TypeInfo) parseString(scanner *Scanner, out reflect.Value) error 
 
 	endPosition := scanner.searchIndex
 
-	value := string(scanner.markerComment[startPosition:endPosition])
+	value := string(scanner.source[startPosition:endPosition])
 	typeInfo.setValue(out, reflect.ValueOf(value))
 
 	return nil
 }
 
-func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
+func (typeInfo ArgumentTypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
 	if scanner == nil {
 		return errors.New("scanner cannot be nil")
 	}
@@ -260,12 +260,12 @@ func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
 				break
 			}
 
-			if !scanner.Expect(',') {
+			if !scanner.Expect(',', "Comma ','") {
 				return nil
 			}
 		}
 
-		if !scanner.Expect('}') {
+		if !scanner.Expect('}', "Right Curly Bracket '}'") {
 			return nil
 		}
 
@@ -298,7 +298,7 @@ func (typeInfo TypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
 	return nil
 }
 
-func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
+func (typeInfo ArgumentTypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 	if scanner == nil {
 		return errors.New("scanner cannot be nil")
 	}
@@ -307,7 +307,7 @@ func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 	key := reflect.Indirect(reflect.New(out.Type().Key()))
 	value := reflect.Indirect(reflect.New(out.Type().Elem()))
 
-	if !scanner.Expect('{') {
+	if !scanner.Expect('{', "Left Curly Bracket") {
 		return nil
 	}
 
@@ -318,7 +318,7 @@ func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 			return err
 		}
 
-		if !scanner.Expect(':') {
+		if !scanner.Expect(':', "Colon ':'") {
 			return nil
 		}
 
@@ -334,12 +334,12 @@ func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 			break
 		}
 
-		if !scanner.Expect(',') {
+		if !scanner.Expect(',', "Comma ','") {
 			return nil
 		}
 	}
 
-	if !scanner.Expect('}') {
+	if !scanner.Expect('}', "Right Curly Bracket '}'") {
 		return nil
 	}
 
@@ -348,10 +348,8 @@ func (typeInfo TypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
 	return nil
 }
 
-func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, ignoreLegacySlice bool) (TypeInfo, error) {
+func (typeInfo ArgumentTypeInfo) interfereType(scanner *Scanner, out reflect.Value, ignoreLegacySlice bool) (ArgumentTypeInfo, error) {
 
-	// we don't wanna create another scanner not to lose search index while interfering type
-	// instead we we will store the search index to assign it after interfering type
 	character := scanner.SkipWhitespaces()
 	searchIndex := scanner.searchIndex
 
@@ -365,7 +363,7 @@ func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, igno
 		scanner.SetSearchIndex(searchIndex)
 
 		if token == ';' {
-			return TypeInfo{
+			return ArgumentTypeInfo{
 				ActualType: SliceType,
 				ItemType:   &itemType,
 			}, nil
@@ -376,7 +374,7 @@ func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, igno
 
 	switch character {
 	case '"', '\'', '`':
-		return TypeInfo{
+		return ArgumentTypeInfo{
 			ActualType: StringType,
 		}, nil
 	}
@@ -392,14 +390,14 @@ func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, igno
 		if elementType.ActualType == StringType {
 
 			var keyString string
-			(TypeInfo{ActualType: StringType}).parseString(scanner, reflect.Indirect(reflect.ValueOf(&keyString)))
+			(ArgumentTypeInfo{ActualType: StringType}).parseString(scanner, reflect.Indirect(reflect.ValueOf(&keyString)))
 
 			if scanner.Scan() == ':' {
 				scanner.SetSearchIndex(searchIndex)
 
-				return TypeInfo{
+				return ArgumentTypeInfo{
 					ActualType: MapType,
-					ItemType: &TypeInfo{
+					ItemType: &ArgumentTypeInfo{
 						ActualType: AnyType,
 					},
 				}, nil
@@ -408,7 +406,7 @@ func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, igno
 
 		scanner.SetSearchIndex(searchIndex)
 
-		return TypeInfo{
+		return ArgumentTypeInfo{
 			ActualType: SliceType,
 			ItemType:   &elementType,
 		}, nil
@@ -423,14 +421,14 @@ func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, igno
 			switch scanner.Token() {
 			case "true", "false":
 				scanner.SetSearchIndex(searchIndex)
-				return TypeInfo{
+				return ArgumentTypeInfo{
 					ActualType: BoolType,
 				}, nil
 			}
 
 			canBeString = true
 		} else {
-			return TypeInfo{
+			return ArgumentTypeInfo{
 				ActualType: InvalidType,
 			}, nil
 		}
@@ -445,19 +443,19 @@ func (typeInfo TypeInfo) interfereType(scanner *Scanner, out reflect.Value, igno
 		}
 
 		if token == Integer {
-			return TypeInfo{
+			return ArgumentTypeInfo{
 				ActualType: IntegerType,
 			}, nil
 		}
 
 	}
 
-	return TypeInfo{
+	return ArgumentTypeInfo{
 		ActualType: StringType,
 	}, nil
 }
 
-func (typeInfo TypeInfo) makeSliceType() (reflect.Type, error) {
+func (typeInfo ArgumentTypeInfo) makeSliceType() (reflect.Type, error) {
 	if typeInfo.ActualType != SliceType {
 		return nil, errors.New("this is not slice type")
 	}
@@ -497,7 +495,7 @@ func (typeInfo TypeInfo) makeSliceType() (reflect.Type, error) {
 	return reflect.SliceOf(itemType), nil
 }
 
-func (typeInfo TypeInfo) makeMapType() (reflect.Type, error) {
+func (typeInfo ArgumentTypeInfo) makeMapType() (reflect.Type, error) {
 	if typeInfo.ActualType != MapType {
 		return nil, errors.New("this is not map type")
 	}

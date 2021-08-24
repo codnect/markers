@@ -7,7 +7,7 @@ import (
 
 type Argument struct {
 	Name     string
-	TypeInfo TypeInfo
+	TypeInfo ArgumentTypeInfo
 	Pointer  bool
 	Required bool
 }
@@ -33,7 +33,7 @@ func ExtractArgument(structField reflect.StructField) (Argument, error) {
 	}
 
 	fieldType := structField.Type
-	argumentTypeInfo, err := GetTypeInfo(fieldType)
+	argumentTypeInfo, err := GetArgumentTypeInfo(fieldType)
 
 	if err != nil {
 		return Argument{}, err
