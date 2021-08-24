@@ -84,19 +84,6 @@ func isMarkerComment(comment string) bool {
 
 type Callback func(element *File)
 
-/*type TypeElement struct {
-	Name string
-	Doc string
-
-	Markers MarkerValues
-
-	//Fields []FieldInfo
-
-	RawDecl *ast.GenDecl
-	RawSpec *ast.TypeSpec
-	RawFile *ast.File
-}*/
-
 type File struct {
 	Name        string
 	FullPath    string
@@ -106,9 +93,15 @@ type File struct {
 	Functions      []Function
 	StructTypes    []StructType
 	InterfaceTypes []InterfaceType
+	RawFile        *ast.File
 }
 
 type Field struct {
+	Name     string
+	Markers  MarkerValues
+	Type     Type
+	RawFile  *ast.File
+	RawField *ast.Field
 }
 
 type Type struct {
@@ -119,16 +112,22 @@ type Type struct {
 }
 
 type TypeInfo struct {
-	Names []string
-	Type  Type
+	Names    []string
+	Type     Type
+	RawField *ast.Field
 }
 
 type Method struct {
 	Name         string
 	Markers      MarkerValues
-	Receiver     TypeInfo
+	Receiver     *TypeInfo
 	Parameters   []TypeInfo
 	ReturnValues []TypeInfo
+	File         *File
+	RawFile      *ast.File
+	RawField     *ast.Field
+	RawFuncDecl  *ast.FuncDecl
+	RawFuncType  *ast.FuncType
 }
 
 type StructType struct {
@@ -136,6 +135,9 @@ type StructType struct {
 	Markers     MarkerValues
 	Fields      []Field
 	Methods     []Method
+	File        *File
+	RawFile     *ast.File
+	RawGenDecl  *ast.GenDecl
 	RawTypeSpec *ast.TypeSpec
 }
 
@@ -144,12 +146,20 @@ type Function struct {
 	Markers      MarkerValues
 	Parameters   []TypeInfo
 	ReturnValues []TypeInfo
+	File         *File
+	RawFile      *ast.File
+	RawFuncDecl  *ast.FuncDecl
+	RawFuncType  *ast.FuncType
 }
 
 type InterfaceType struct {
-	Name    string
-	Markers MarkerValues
-	Methods []Method
+	Name        string
+	Markers     MarkerValues
+	Methods     []Method
+	File        *File
+	RawFile     *ast.File
+	RawGenDecl  *ast.GenDecl
+	RawTypeSpec *ast.TypeSpec
 }
 
 func EachFile(collector *Collector, pkg *Package, callback Callback) error {
@@ -188,6 +198,7 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			Functions:      make([]Function, 0),
 			StructTypes:    make([]StructType, 0),
 			InterfaceTypes: make([]InterfaceType, 0),
+			RawFile:        file,
 		}
 
 		fileInfoMap[file] = fileInfo
@@ -201,32 +212,66 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			return
 		}
 
-		switch spec.Type.(type) {
+		switch specType := spec.Type.(type) {
 		case *ast.InterfaceType:
 			interfaceType := InterfaceType{
-				Name:    spec.Name.Name,
-				Markers: markers[spec],
+				Name:        spec.Name.Name,
+				Markers:     markers[spec],
+				File:        fileInfo,
+				RawFile:     file,
+				RawGenDecl:  decl,
+				RawTypeSpec: spec,
 			}
 
-			visitMethods(spec, func(methods []*Method) {
-				if methods != nil {
-
+			for _, methodInfo := range specType.Methods.List {
+				method := &Method{
+					Name:        methodInfo.Names[0].Name,
+					Markers:     markers[methodInfo],
+					File:        fileInfo,
+					RawFile:     file,
+					RawFuncType: methodInfo.Type.(*ast.FuncType),
+					RawField:    methodInfo,
 				}
-			})
+
+				if methodInfo.Type.(*ast.FuncType).Params != nil {
+					method.Parameters = getTypesInfo(methodInfo.Type.(*ast.FuncType).Params.List)
+				}
+
+				if methodInfo.Type.(*ast.FuncType).Results != nil {
+					method.ReturnValues = getTypesInfo(methodInfo.Type.(*ast.FuncType).Results.List)
+				}
+
+				interfaceType.Methods = append(interfaceType.Methods, *method)
+			}
 
 			fileInfo.InterfaceTypes = append(fileInfo.InterfaceTypes, interfaceType)
 		case *ast.StructType:
 			structType := StructType{
 				Name:        spec.Name.Name,
 				Markers:     markers[spec],
+				File:        fileInfo,
+				RawFile:     file,
+				RawGenDecl:  decl,
 				RawTypeSpec: spec,
 			}
 
-			visitMethods(spec, func(methods []*Method) {
-				if methods != nil {
+			fieldTypeInfoList := getTypesInfo(specType.Fields.List)
 
+			for _, fieldTypeInfo := range fieldTypeInfoList {
+
+				for _, fieldName := range fieldTypeInfo.Names {
+					field := &Field{
+						Name:     fieldName,
+						Markers:  markers[fieldTypeInfo.RawField],
+						Type:     fieldTypeInfo.Type,
+						RawFile:  file,
+						RawField: fieldTypeInfo.RawField,
+					}
+
+					structType.Fields = append(structType.Fields, *field)
 				}
-			})
+
+			}
 
 			fileInfo.StructTypes = append(fileInfo.StructTypes, structType)
 		}
@@ -245,16 +290,20 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 		if decl.Recv == nil {
 
 			function := &Function{
-				Name:    decl.Name.Name,
-				Markers: markers[decl],
+				Name:        decl.Name.Name,
+				Markers:     markers[decl],
+				File:        fileInfo,
+				RawFile:     file,
+				RawFuncDecl: decl,
+				RawFuncType: funcType,
 			}
 
 			if funcType.Params != nil {
-				function.Parameters = getTypes(funcType.Params.List)
+				function.Parameters = getTypesInfo(funcType.Params.List)
 			}
 
 			if funcType.Results != nil {
-				function.ReturnValues = getTypes(funcType.Results.List)
+				function.ReturnValues = getTypesInfo(funcType.Results.List)
 			}
 
 			fileInfo.Functions = append(fileInfo.Functions, *function)
@@ -262,18 +311,22 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			method := &Method{
 				Name:    decl.Name.Name,
 				Markers: markers[decl],
-				Receiver: TypeInfo{
+				Receiver: &TypeInfo{
 					Names: make([]string, 0),
 					Type:  Type{},
 				},
+				File:        fileInfo,
+				RawFile:     file,
+				RawFuncDecl: decl,
+				RawFuncType: funcType,
 			}
 
 			if funcType.Params != nil {
-				method.Parameters = getTypes(funcType.Params.List)
+				method.Parameters = getTypesInfo(funcType.Params.List)
 			}
 
 			if funcType.Results != nil {
-				method.ReturnValues = getTypes(funcType.Results.List)
+				method.ReturnValues = getTypesInfo(funcType.Results.List)
 			}
 
 			receiver := decl.Recv.List[0]
@@ -282,10 +335,12 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			method.Receiver.Type = receiverType
 			method.Receiver.Names = append(method.Receiver.Names, receiver.Names[0].Name)
 
+			//  Find the struct type to add the method into its list.
 			for _, fileInfo := range fileInfoMap {
 
 				for typeIndex, structType := range fileInfo.StructTypes {
 
+					// if RawObject is nil, try to resolve the struct type by receiver type name
 					if receiverType.RawObject == nil {
 						if file.Name.Name != fileInfo.PackageName && structType.Name != receiverType.Name {
 							continue
@@ -302,6 +357,10 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 		}
 
 	})
+
+	for _, fileInfo := range fileInfoMap {
+		callback(fileInfo)
+	}
 
 	return nil
 }

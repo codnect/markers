@@ -187,71 +187,13 @@ func visitTypeElements(pkg *Package, callback typeElementCallback) {
 	}
 }
 
-type methodVisitorCallback func(methods []*Method)
-
-type methodVisitor struct {
-	spec          *ast.TypeSpec
-	interfaceType *ast.InterfaceType
-	structType    *ast.StructType
-	fieldList     *ast.FieldList
-	methods       []*Method
-	method        *Method
-}
-
-func (visitor *methodVisitor) Visit(node ast.Node) ast.Visitor {
-	if node == nil {
-		visitor.spec = nil
-		return visitor
-	}
-
-	switch typedNode := node.(type) {
-	case *ast.TypeSpec:
-		visitor.spec = typedNode
-		return visitor
-	case *ast.InterfaceType:
-		visitor.interfaceType = typedNode
-		return visitor
-	case *ast.StructType:
-		visitor.structType = typedNode
-		return visitor
-	case *ast.FieldList:
-		visitor.fieldList = typedNode
-		return visitor
-	case *ast.Field:
-		if visitor.method == nil {
-			visitor.method = &Method{
-				Name:         typedNode.Names[0].Name,
-				Parameters:   make([]TypeInfo, 0),
-				ReturnValues: make([]TypeInfo, 0),
-			}
-		}
-
-		return visitor
-	case *ast.FuncType:
-		if visitor.method != nil {
-
-			if typedNode.Params != nil {
-				visitor.method.Parameters = getTypes(typedNode.Params.List)
-			}
-
-			if typedNode.Results != nil {
-				visitor.method.ReturnValues = getTypes(typedNode.Results.List)
-			}
-			visitor.methods = append(visitor.methods, visitor.method)
-			visitor.method = nil
-		}
-		return visitor
-	default:
-		return nil
-	}
-}
-
-func getTypes(fieldList []*ast.Field) []TypeInfo {
+func getTypesInfo(fieldList []*ast.Field) []TypeInfo {
 	types := make([]TypeInfo, 0)
 
 	for _, field := range fieldList {
 		typeInfo := &TypeInfo{
-			Names: make([]string, 0),
+			Names:    make([]string, 0),
+			RawField: field,
 		}
 
 		for _, name := range field.Names {
@@ -301,15 +243,6 @@ func getType(field *ast.Field) Type {
 	}
 
 	panic("Unreachable code!")
-}
-
-func visitMethods(node *ast.TypeSpec, methodVisitorCallback methodVisitorCallback) {
-	visitor := &methodVisitor{
-		methods: make([]*Method, 0),
-	}
-
-	ast.Walk(visitor, node)
-	methodVisitorCallback(visitor.methods)
 }
 
 type functionCallback func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType)
