@@ -82,12 +82,25 @@ func isMarkerComment(comment string) bool {
 	return true
 }
 
-type Callback func(element *File)
+type Callback func(element *File, error error)
+
+type Position struct {
+	Line   int
+	Column int
+}
+
+type Import struct {
+	Name          string
+	Path          string
+	Position      Position
+	RawImportSpec *ast.ImportSpec
+}
 
 type File struct {
 	Name        string
 	FullPath    string
 	PackageName string
+	Imports     []Import
 	Markers     MarkerValues
 
 	Functions      []Function
@@ -98,6 +111,7 @@ type File struct {
 
 type Field struct {
 	Name     string
+	Position Position
 	Markers  MarkerValues
 	Type     Type
 	RawFile  *ast.File
@@ -105,7 +119,7 @@ type Field struct {
 }
 
 type Type struct {
-	ImportAlias string
+	PackageName string
 	Name        string
 	IsPointer   bool
 	RawObject   *ast.Object
@@ -119,6 +133,7 @@ type TypeInfo struct {
 
 type Method struct {
 	Name         string
+	Position     Position
 	Markers      MarkerValues
 	Receiver     *TypeInfo
 	Parameters   []TypeInfo
@@ -132,6 +147,7 @@ type Method struct {
 
 type StructType struct {
 	Name        string
+	Position    Position
 	Markers     MarkerValues
 	Fields      []Field
 	Methods     []Method
@@ -143,6 +159,7 @@ type StructType struct {
 
 type Function struct {
 	Name         string
+	Position     Position
 	Markers      MarkerValues
 	Parameters   []TypeInfo
 	ReturnValues []TypeInfo
@@ -154,6 +171,7 @@ type Function struct {
 
 type InterfaceType struct {
 	Name        string
+	Position    Position
 	Markers     MarkerValues
 	Methods     []Method
 	File        *File
@@ -162,20 +180,23 @@ type InterfaceType struct {
 	RawTypeSpec *ast.TypeSpec
 }
 
-func EachFile(collector *Collector, pkg *Package, callback Callback) error {
+func EachFile(collector *Collector, pkg *Package, callback Callback) {
 
 	if collector == nil {
-		return errors.New("collector cannot be nil")
+		callback(nil, errors.New("collector cannot be nil"))
+		return
 	}
 
 	if pkg == nil {
-		return errors.New("pkg(package) cannot be nil")
+		callback(nil, errors.New("pkg(package) cannot be nil"))
+		return
 	}
 
 	markers, err := collector.Collect(pkg)
 
 	if err != nil {
-		return err
+		callback(nil, err)
+		return
 	}
 
 	var fileInfoMap = make(map[*ast.File]*File)
@@ -188,12 +209,35 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 		}
 
 		position := pkg.Fset.Position(file.Pos())
+
 		fileFullPath := position.Filename
+
+		imports := make([]Import, 0)
+
+		for _, importInfo := range file.Imports {
+			importPosition := pkg.Fset.Position(importInfo.Pos())
+			importName := ""
+
+			if importInfo.Name != nil {
+				importName = importInfo.Name.Name
+			}
+
+			imports = append(imports, Import{
+				Name: importName,
+				Path: importInfo.Path.Value,
+				Position: Position{
+					importPosition.Line,
+					importPosition.Column,
+				},
+				RawImportSpec: importInfo,
+			})
+		}
 
 		fileInfo = &File{
 			Name:           filepath.Base(fileFullPath),
 			FullPath:       fileFullPath,
 			PackageName:    file.Name.Name,
+			Imports:        imports,
 			Markers:        markers[file],
 			Functions:      make([]Function, 0),
 			StructTypes:    make([]StructType, 0),
@@ -212,10 +256,17 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			return
 		}
 
+		position := pkg.Fset.Position(spec.Pos())
+		typePosition := Position{
+			Line:   position.Line,
+			Column: position.Column,
+		}
+
 		switch specType := spec.Type.(type) {
 		case *ast.InterfaceType:
 			interfaceType := InterfaceType{
 				Name:        spec.Name.Name,
+				Position:    typePosition,
 				Markers:     markers[spec],
 				File:        fileInfo,
 				RawFile:     file,
@@ -224,8 +275,16 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			}
 
 			for _, methodInfo := range specType.Methods.List {
+
+				position := pkg.Fset.Position(methodInfo.Pos())
+				methodPosition := Position{
+					Line:   position.Line,
+					Column: position.Column,
+				}
+
 				method := &Method{
 					Name:        methodInfo.Names[0].Name,
+					Position:    methodPosition,
 					Markers:     markers[methodInfo],
 					File:        fileInfo,
 					RawFile:     file,
@@ -248,6 +307,7 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 		case *ast.StructType:
 			structType := StructType{
 				Name:        spec.Name.Name,
+				Position:    typePosition,
 				Markers:     markers[spec],
 				File:        fileInfo,
 				RawFile:     file,
@@ -259,9 +319,16 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 
 			for _, fieldTypeInfo := range fieldTypeInfoList {
 
+				position := pkg.Fset.Position(fieldTypeInfo.RawField.Pos())
+				fieldPosition := Position{
+					Line:   position.Line,
+					Column: position.Column,
+				}
+
 				for _, fieldName := range fieldTypeInfo.Names {
 					field := &Field{
 						Name:     fieldName,
+						Position: fieldPosition,
 						Markers:  markers[fieldTypeInfo.RawField],
 						Type:     fieldTypeInfo.Type,
 						RawFile:  file,
@@ -286,11 +353,18 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			return
 		}
 
+		position := pkg.Fset.Position(funcType.Pos())
+		functionPosition := Position{
+			Line:   position.Line,
+			Column: position.Column,
+		}
+
 		// If Recv is nil, it is a function, not a method
 		if decl.Recv == nil {
 
 			function := &Function{
 				Name:        decl.Name.Name,
+				Position:    functionPosition,
 				Markers:     markers[decl],
 				File:        fileInfo,
 				RawFile:     file,
@@ -309,8 +383,9 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 			fileInfo.Functions = append(fileInfo.Functions, *function)
 		} else {
 			method := &Method{
-				Name:    decl.Name.Name,
-				Markers: markers[decl],
+				Name:     decl.Name.Name,
+				Position: functionPosition,
+				Markers:  markers[decl],
 				Receiver: &TypeInfo{
 					Names: make([]string, 0),
 					Type:  Type{},
@@ -359,8 +434,6 @@ func EachFile(collector *Collector, pkg *Package, callback Callback) error {
 	})
 
 	for _, fileInfo := range fileInfoMap {
-		callback(fileInfo)
+		callback(fileInfo, nil)
 	}
-
-	return nil
 }

@@ -89,13 +89,14 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 
 	splitMarker(marker)
 
-	//errorList := NewErrorList(nil)
+	var errs []error
 
 	scanner := NewScanner(marker)
 	scanner.ErrorCallback = func(scanner *Scanner, message string) {
-		//parserError := &ParserError {
-		//	Message: message,
-		//}
+		errs = append(errs, ScannerError{
+			Position: scanner.SearchIndex(),
+			Message:  message,
+		})
 	}
 
 	if scanner.Peek() != EOF {
@@ -143,5 +144,5 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 		}
 	}
 
-	return nil, nil
+	return output.Interface(), NewErrorList(errs)
 }

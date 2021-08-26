@@ -1,15 +1,24 @@
 package marker
 
-import "fmt"
+import (
+	"fmt"
+	"go/ast"
+	"go/token"
+)
 
-type ParserError struct {
-	FileName string
-	Line     int
+type ScannerError struct {
+	Position int
 	Message  string
 }
 
-func (parserError *ParserError) Error() string {
-	return ""
+func (err ScannerError) Error() string {
+	return fmt.Sprintf("%s (at %d)", err.Message, err.Position)
+}
+
+type ParserError struct {
+	FileName string
+	Position Position
+	error
 }
 
 type ErrorList []error
@@ -24,4 +33,31 @@ func NewErrorList(errors []error) error {
 
 func (errorList ErrorList) Error() string {
 	return fmt.Sprintf("%v", []error(errorList))
+}
+
+func toParseError(err error, node ast.Node, position token.Position) error {
+
+	errorList, ok := err.(ErrorList)
+
+	if !ok {
+
+		errorPosition := Position{
+			Line:   position.Line,
+			Column: position.Column,
+		}
+
+		return ParserError{
+			FileName: position.Filename,
+			Position: errorPosition,
+			error:    err,
+		}
+	}
+
+	errors := make(ErrorList, len(errorList))
+
+	for index, errorElement := range errorList {
+		errors[index] = toParseError(errorElement, node, position)
+	}
+
+	return errors
 }

@@ -22,7 +22,11 @@ func (collector *Collector) Collect(pkg *Package) (map[ast.Node]MarkerValues, er
 	}
 
 	nodeMarkers := collector.collectPackageMarkerComments(pkg)
-	markers := collector.parseMarkerComments(pkg, nodeMarkers)
+	markers, err := collector.parseMarkerComments(pkg, nodeMarkers)
+
+	if err != nil {
+		return nil, err
+	}
 
 	return markers, nil
 }
@@ -49,7 +53,8 @@ func (collector *Collector) collectFileMarkerComments(file *ast.File) map[ast.No
 	return visitor.nodeMarkers
 }
 
-func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments map[ast.Node][]markerComment) map[ast.Node]MarkerValues {
+func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
+	var errs []error
 	nodeMarkerValues := make(map[ast.Node]MarkerValues)
 
 	for node, markerComments := range nodeMarkerComments {
@@ -91,13 +96,13 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 
 				if !isFuncType && definition.Level&FieldLevel != FieldLevel {
 					continue
-				} else if isFuncType && !(definition.Level&MethodLevel != MethodLevel || definition.Level&InterfaceTypeLevel != InterfaceTypeLevel) {
+				} else if isFuncType && !(definition.Level&MethodLevel != MethodLevel || definition.Level&InterfaceMethodLevel != InterfaceMethodLevel) {
 					continue
 				}
 
 			case *ast.FuncDecl:
 
-				if typedNode.Recv != nil && !(definition.Level&MethodLevel != MethodLevel || definition.Level&StructTypeLevel != StructTypeLevel) {
+				if typedNode.Recv != nil && !(definition.Level&MethodLevel != MethodLevel || definition.Level&StructMethodLevel != StructMethodLevel) {
 					continue
 				} else if typedNode.Recv == nil && definition.Level&FunctionLevel != FunctionLevel {
 					continue
@@ -105,15 +110,13 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 
 			}
 
-			position := pkg.Fset.Position(markerComment.Pos())
-			line := position.Line
-			fileName := position.Filename
+			value, err := definition.Parse(markerText)
 
-			if line == 0 || fileName == "" {
-
+			if err != nil {
+				position := pkg.Fset.Position(node.Pos())
+				errs = append(errs, toParseError(err, markerComment, position))
+				continue
 			}
-
-			value, _ := definition.Parse(markerText)
 
 			markerValues[definition.Name] = append(markerValues[definition.Name], value)
 		}
@@ -121,5 +124,5 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 		nodeMarkerValues[node] = markerValues
 	}
 
-	return nodeMarkerValues
+	return nodeMarkerValues, NewErrorList(errs)
 }

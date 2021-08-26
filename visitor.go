@@ -218,7 +218,7 @@ func getType(field *ast.Field) Type {
 		}
 	case *ast.SelectorExpr:
 		return Type{
-			ImportAlias: parameterIdent.X.(*ast.Ident).Name,
+			PackageName: parameterIdent.X.(*ast.Ident).Name,
 			Name:        parameterIdent.Sel.Name,
 			IsPointer:   false,
 			RawObject:   parameterIdent.X.(*ast.Ident).Obj,
@@ -228,7 +228,7 @@ func getType(field *ast.Field) Type {
 		switch typeExpression := parameterIdent.X.(type) {
 		case *ast.SelectorExpr:
 			return Type{
-				ImportAlias: typeExpression.X.(*ast.Ident).Name,
+				PackageName: typeExpression.X.(*ast.Ident).Name,
 				Name:        typeExpression.Sel.Name,
 				IsPointer:   true,
 				RawObject:   typeExpression.X.(*ast.Ident).Obj,

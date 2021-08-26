@@ -13,9 +13,10 @@ func TestCollector_Collect(t *testing.T) {
 	registry.Register("test-marker:package-level", PackageLevel, TestOutput{})
 	registry.Register("test-marker:type-level", TypeLevel, TestOutput{})
 	registry.Register("test-marker:function-level", FunctionLevel, TestOutput{})
+	registry.Register("test-marker:field-level", FieldLevel, TestOutput{})
 	collector := NewCollector(registry)
 
-	EachFile(collector, pkgs[0], func(file *File) {
+	EachFile(collector, pkgs[0], func(file *File, err error) {
 		if file == nil {
 
 		}
