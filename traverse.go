@@ -10,7 +10,7 @@ import (
 type Kind int
 
 const (
-	AnyObject Kind = iota
+	AnyKind Kind = iota
 	Object
 	Array
 	Chan
@@ -64,11 +64,11 @@ type File struct {
 	RawFile        *ast.File
 }
 
-type AnyObjectType struct {
+type AnyKindType struct {
 }
 
-func (typ AnyObjectType) Kind() Kind {
-	return AnyObject
+func (typ AnyKindType) Kind() Kind {
+	return AnyKind
 }
 
 type ObjectType struct {
@@ -646,7 +646,7 @@ func getTypeFromExpression(tokenFileSet *token.FileSet, expression ast.Expr, mar
 
 		return anonymousStructType
 	case *ast.InterfaceType:
-		return &AnyObjectType{}
+		return &AnyKindType{}
 	}
 
 	panic("Unreachable code!")
