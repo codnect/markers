@@ -48,7 +48,7 @@ func (scanner *Scanner) ErrorCount() int {
 func (scanner *Scanner) AddError(message string) {
 	scanner.errorCount++
 
-	if scanner.ErrorCallback == nil {
+	if scanner.ErrorCallback != nil {
 		scanner.ErrorCallback(scanner, message)
 	}
 }

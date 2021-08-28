@@ -87,11 +87,15 @@ func (definition *Definition) extract() error {
 func (definition *Definition) Parse(marker string) (interface{}, error) {
 	output := reflect.Indirect(reflect.New(definition.Output.Type))
 
-	splitMarker(marker)
+	name, anonymousName, fields := splitMarker(marker)
+
+	if len(anonymousName) >= len(name)+1 {
+		fields = anonymousName[len(name)+1:] + "=" + fields
+	}
 
 	var errs []error
 
-	scanner := NewScanner(marker)
+	scanner := NewScanner(fields)
 	scanner.ErrorCallback = func(scanner *Scanner, message string) {
 		errs = append(errs, ScannerError{
 			Position: scanner.SearchIndex(),

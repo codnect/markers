@@ -187,64 +187,6 @@ func visitTypeElements(pkg *Package, callback typeElementCallback) {
 	}
 }
 
-func getTypesInfo(fieldList []*ast.Field) []TypeInfo {
-	types := make([]TypeInfo, 0)
-
-	for _, field := range fieldList {
-		typeInfo := &TypeInfo{
-			Names:    make([]string, 0),
-			RawField: field,
-		}
-
-		for _, name := range field.Names {
-			typeInfo.Names = append(typeInfo.Names, name.Name)
-		}
-
-		typeInfo.Type = getType(field)
-
-		types = append(types, *typeInfo)
-	}
-
-	return types
-}
-
-func getType(field *ast.Field) Type {
-
-	switch parameterIdent := field.Type.(type) {
-	case *ast.Ident:
-		return Type{
-			Name:      parameterIdent.Name,
-			RawObject: parameterIdent.Obj,
-		}
-	case *ast.SelectorExpr:
-		return Type{
-			PackageName: parameterIdent.X.(*ast.Ident).Name,
-			Name:        parameterIdent.Sel.Name,
-			IsPointer:   false,
-			RawObject:   parameterIdent.X.(*ast.Ident).Obj,
-		}
-	case *ast.StarExpr:
-
-		switch typeExpression := parameterIdent.X.(type) {
-		case *ast.SelectorExpr:
-			return Type{
-				PackageName: typeExpression.X.(*ast.Ident).Name,
-				Name:        typeExpression.Sel.Name,
-				IsPointer:   true,
-				RawObject:   typeExpression.X.(*ast.Ident).Obj,
-			}
-		case *ast.Ident:
-			return Type{
-				Name:      typeExpression.Name,
-				IsPointer: true,
-				RawObject: typeExpression.Obj,
-			}
-		}
-	}
-
-	panic("Unreachable code!")
-}
-
 type functionCallback func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType)
 
 type functionVisitor struct {
