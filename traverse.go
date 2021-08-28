@@ -18,6 +18,7 @@ const (
 	Ptr
 	Interface
 	Struct
+	UserDefined
 )
 
 type Type interface {
@@ -58,10 +59,11 @@ type File struct {
 	Imports  []Import
 	Markers  MarkerValues
 
-	Functions      []Function
-	StructTypes    []StructType
-	InterfaceTypes []InterfaceType
-	RawFile        *ast.File
+	Functions        []Function
+	StructTypes      []StructType
+	InterfaceTypes   []InterfaceType
+	UserDefinedTypes []UserDefinedType
+	RawFile          *ast.File
 }
 
 type AnyKindType struct {
@@ -172,6 +174,22 @@ func (typ StructType) Kind() Kind {
 	return Struct
 }
 
+type UserDefinedType struct {
+	Name        string
+	ActualType  Type
+	Position    Position
+	Markers     MarkerValues
+	Methods     []Method
+	File        *File
+	RawFile     *ast.File
+	RawGenDecl  *ast.GenDecl
+	RawTypeSpec *ast.TypeSpec
+}
+
+func (typ UserDefinedType) Kind() Kind {
+	return UserDefined
+}
+
 type InterfaceType struct {
 	Name        string
 	Position    Position
@@ -238,7 +256,7 @@ func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
 
 func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]*File {
 	var fileInfoMap = make(map[*ast.File]*File)
-	var structMethods = make([]Method, 0)
+	var methods = make([]Method, 0)
 
 	visitFiles(pkg, func(file *ast.File) {
 		fileInfo, ok := fileInfoMap[file]
@@ -284,6 +302,8 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 			fileInfo.InterfaceTypes = append(fileInfo.InterfaceTypes, typ.(InterfaceType))
 		case *ast.StructType:
 			fileInfo.StructTypes = append(fileInfo.StructTypes, typ.(StructType))
+		default:
+			fileInfo.UserDefinedTypes = append(fileInfo.UserDefinedTypes, typ.(UserDefinedType))
 		}
 
 	})
@@ -301,53 +321,63 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 			function := getFunction(pkg.Fset, fileInfo, file, decl, funcType, markers)
 			fileInfo.Functions = append(fileInfo.Functions, function)
 		} else {
-			method := getStructMethod(pkg.Fset, fileInfo, file, decl, funcType, markers)
-			structMethods = append(structMethods, method)
+			method := getMethod(pkg.Fset, fileInfo, file, decl, funcType, markers)
+			methods = append(methods, method)
 		}
 
 	})
 
-	resolveStructMethods(fileInfoMap, structMethods)
+	resolveMethods(fileInfoMap, methods)
 
 	return fileInfoMap
 }
 
-func resolveStructMethods(fileInfoMap map[*ast.File]*File, structMethods []Method) {
+func resolveMethods(fileInfoMap map[*ast.File]*File, methods []Method) {
 
-	for _, structMethod := range structMethods {
-		resolveStructMethod(fileInfoMap, structMethod)
+	for _, method := range methods {
+		resolveMethod(fileInfoMap, method)
 	}
 
 }
 
-func resolveStructMethod(fileInfoMap map[*ast.File]*File, structMethod Method) {
+func resolveMethod(fileInfoMap map[*ast.File]*File, method Method) {
+
+	receiverType := method.Receiver.Type
+	var receiverTypeName string
+
+	switch typed := receiverType.(type) {
+	case *PointerType:
+		objectType := typed.Typ.(*ObjectType)
+
+		if objectType.ImportName != "" {
+			return
+		}
+
+		receiverTypeName = objectType.Name
+
+	case *ObjectType:
+		if typed.ImportName != "" {
+			return
+		}
+
+		receiverTypeName = typed.Name
+	}
+
 	for file, fileInfo := range fileInfoMap {
 
-		for structIndex, structType := range fileInfo.StructTypes {
-
-			receiverType := structMethod.Receiver.Type
-			var receiverTypeName string
-
-			switch typed := receiverType.(type) {
-			case *PointerType:
-				objectType := typed.Typ.(*ObjectType)
-
-				if objectType.ImportName != "" {
-					return
-				}
-
-				receiverTypeName = objectType.Name
-
-			case *ObjectType:
-				if typed.ImportName != "" {
-					return
-				}
-
-				receiverTypeName = typed.Name
-			}
+		for index, structType := range fileInfo.StructTypes {
 
 			if file.Name.Name == fileInfo.Package.Name && structType.Name == receiverTypeName {
-				fileInfo.StructTypes[structIndex].Methods = append(fileInfo.StructTypes[structIndex].Methods, structMethod)
+				fileInfo.StructTypes[index].Methods = append(fileInfo.StructTypes[index].Methods, method)
+				return
+			}
+
+		}
+
+		for index, userDefinedType := range fileInfo.UserDefinedTypes {
+
+			if file.Name.Name == fileInfo.Package.Name && userDefinedType.Name == receiverTypeName {
+				fileInfo.UserDefinedTypes[index].Methods = append(fileInfo.UserDefinedTypes[index].Methods, method)
 				return
 			}
 
@@ -444,6 +474,30 @@ func getType(fileSet *token.FileSet,
 
 		structType.Fields = getStructFields(fileSet, file, specType, markers)
 		typ = structType
+	case *ast.Ident:
+		typ = UserDefinedType{
+			Name:        spec.Name.Name,
+			Position:    getPosition(fileSet, spec.Pos()),
+			ActualType:  getTypeFromExpression(fileSet, spec.Type, markers),
+			Markers:     markers[spec],
+			File:        fileInfo,
+			RawFile:     file,
+			RawGenDecl:  decl,
+			RawTypeSpec: spec,
+		}
+
+	case *ast.SelectorExpr:
+		typ = UserDefinedType{
+			Name:        spec.Name.Name,
+			Position:    getPosition(fileSet, spec.Pos()),
+			ActualType:  getTypeFromExpression(fileSet, spec.Type, markers),
+			Markers:     markers[spec],
+			File:        fileInfo,
+			RawFile:     file,
+			RawGenDecl:  decl,
+			RawTypeSpec: spec,
+		}
+
 	}
 
 	return typ
@@ -511,7 +565,7 @@ func getStructFields(fileSet *token.FileSet,
 	return fields
 }
 
-func getStructMethod(fileSet *token.FileSet,
+func getMethod(fileSet *token.FileSet,
 	fileInfo *File,
 	file *ast.File,
 	decl *ast.FuncDecl,
