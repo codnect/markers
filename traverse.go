@@ -16,6 +16,8 @@ const (
 	Chan
 	Map
 	Ptr
+	Variadic
+	Function
 	Interface
 	Struct
 	UserDefined
@@ -59,7 +61,7 @@ type File struct {
 	Imports  []Import
 	Markers  MarkerValues
 
-	Functions        []Function
+	FunctionTypes    []FunctionType
 	StructTypes      []StructType
 	InterfaceTypes   []InterfaceType
 	UserDefinedTypes []UserDefinedType
@@ -123,7 +125,7 @@ func (typ ChanType) Kind() Kind {
 	return Chan
 }
 
-type Function struct {
+type FunctionType struct {
 	Name         string
 	Position     Position
 	Markers      MarkerValues
@@ -133,6 +135,10 @@ type Function struct {
 	RawFile      *ast.File
 	RawFuncDecl  *ast.FuncDecl
 	RawFuncType  *ast.FuncType
+}
+
+func (function FunctionType) Kind() Kind {
+	return Function
 }
 
 type Field struct {
@@ -214,6 +220,14 @@ func (typ AnonymousStructType) Kind() Kind {
 	return Struct
 }
 
+type VariadicType struct {
+	ItemType Type
+}
+
+func (typ VariadicType) Kind() Kind {
+	return Variadic
+}
+
 func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
 
 	if collector == nil {
@@ -278,7 +292,7 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 			},
 			Imports:        getFileImports(pkg.Fset, file),
 			Markers:        markers[file],
-			Functions:      make([]Function, 0),
+			FunctionTypes:  make([]FunctionType, 0),
 			StructTypes:    make([]StructType, 0),
 			InterfaceTypes: make([]InterfaceType, 0),
 			RawFile:        file,
@@ -318,8 +332,8 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 
 		// If Recv is nil, it is a function, not a method
 		if decl.Recv == nil {
-			function := getFunction(pkg.Fset, fileInfo, file, decl, funcType, markers)
-			fileInfo.Functions = append(fileInfo.Functions, function)
+			functionType := getFunctionType(pkg.Fset, fileInfo, file, decl, funcType, markers)
+			fileInfo.FunctionTypes = append(fileInfo.FunctionTypes, functionType)
 		} else {
 			method := getMethod(pkg.Fset, fileInfo, file, decl, funcType, markers)
 			methods = append(methods, method)
@@ -410,29 +424,32 @@ func getFileImports(fileSet *token.FileSet, file *ast.File) []Import {
 	return imports
 }
 
-func getFunction(fileSet *token.FileSet,
+func getFunctionType(fileSet *token.FileSet,
 	fileInfo *File,
 	file *ast.File,
 	decl *ast.FuncDecl,
 	funcType *ast.FuncType,
-	markers map[ast.Node]MarkerValues) Function {
+	markers map[ast.Node]MarkerValues) FunctionType {
 
-	function := &Function{
-		Name:        decl.Name.Name,
+	function := &FunctionType{
 		Position:    getPosition(fileSet, funcType.Pos()),
-		Markers:     markers[decl],
 		File:        fileInfo,
 		RawFile:     file,
 		RawFuncDecl: decl,
 		RawFuncType: funcType,
 	}
 
+	if decl != nil {
+		function.Name = decl.Name.Name
+		function.Markers = markers[decl]
+	}
+
 	if funcType.Params != nil {
-		function.Parameters = getFieldTypesInfo(fileSet, funcType.Params.List, markers)
+		function.Parameters = getFieldTypesInfo(fileSet, fileInfo, file, funcType.Params.List, markers)
 	}
 
 	if funcType.Results != nil {
-		function.ReturnValues = getFieldTypesInfo(fileSet, funcType.Results.List, markers)
+		function.ReturnValues = getFieldTypesInfo(fileSet, fileInfo, file, funcType.Results.List, markers)
 	}
 
 	return *function
@@ -472,13 +489,13 @@ func getType(fileSet *token.FileSet,
 			RawTypeSpec: spec,
 		}
 
-		structType.Fields = getStructFields(fileSet, file, specType, markers)
+		structType.Fields = getStructFields(fileSet, fileInfo, file, specType, markers)
 		typ = structType
 	case *ast.Ident:
 		typ = UserDefinedType{
 			Name:        spec.Name.Name,
 			Position:    getPosition(fileSet, spec.Pos()),
-			ActualType:  getTypeFromExpression(fileSet, spec.Type, markers),
+			ActualType:  getTypeFromExpression(fileSet, fileInfo, file, spec.Type, markers),
 			Markers:     markers[spec],
 			File:        fileInfo,
 			RawFile:     file,
@@ -490,7 +507,7 @@ func getType(fileSet *token.FileSet,
 		typ = UserDefinedType{
 			Name:        spec.Name.Name,
 			Position:    getPosition(fileSet, spec.Pos()),
-			ActualType:  getTypeFromExpression(fileSet, spec.Type, markers),
+			ActualType:  getTypeFromExpression(fileSet, fileInfo, file, spec.Type, markers),
 			Markers:     markers[spec],
 			File:        fileInfo,
 			RawFile:     file,
@@ -524,11 +541,11 @@ func getInterfaceMethods(fileSet *token.FileSet,
 		}
 
 		if methodInfo.Type.(*ast.FuncType).Params != nil {
-			method.Parameters = getFieldTypesInfo(fileSet, methodInfo.Type.(*ast.FuncType).Params.List, markers)
+			method.Parameters = getFieldTypesInfo(fileSet, fileInfo, file, methodInfo.Type.(*ast.FuncType).Params.List, markers)
 		}
 
 		if methodInfo.Type.(*ast.FuncType).Results != nil {
-			method.ReturnValues = getFieldTypesInfo(fileSet, methodInfo.Type.(*ast.FuncType).Results.List, markers)
+			method.ReturnValues = getFieldTypesInfo(fileSet, fileInfo, file, methodInfo.Type.(*ast.FuncType).Results.List, markers)
 		}
 
 		methods = append(methods, *method)
@@ -539,6 +556,7 @@ func getInterfaceMethods(fileSet *token.FileSet,
 }
 
 func getStructFields(fileSet *token.FileSet,
+	fileInfo *File,
 	file *ast.File,
 	specType *ast.StructType,
 	markers map[ast.Node]MarkerValues) []Field {
@@ -552,7 +570,7 @@ func getStructFields(fileSet *token.FileSet,
 				Name:     fieldName.Name,
 				Position: getPosition(fileSet, fieldName.Pos()),
 				Markers:  markers[fieldTypeInfo],
-				Type:     getTypeFromExpression(fileSet, fieldTypeInfo.Type, markers),
+				Type:     getTypeFromExpression(fileSet, fileInfo, file, fieldTypeInfo.Type, markers),
 				RawFile:  file,
 				RawField: fieldTypeInfo,
 			}
@@ -584,16 +602,16 @@ func getMethod(fileSet *token.FileSet,
 	}
 
 	if funcType.Params != nil {
-		method.Parameters = getFieldTypesInfo(fileSet, funcType.Params.List, markers)
+		method.Parameters = getFieldTypesInfo(fileSet, fileInfo, file, funcType.Params.List, markers)
 	}
 
 	if funcType.Results != nil {
-		method.ReturnValues = getFieldTypesInfo(fileSet, funcType.Results.List, markers)
+		method.ReturnValues = getFieldTypesInfo(fileSet, fileInfo, file, funcType.Results.List, markers)
 	}
 
 	// Receiver
 	receiver := decl.Recv.List[0]
-	receiverType := getTypeFromExpression(fileSet, receiver.Type, markers)
+	receiverType := getTypeFromExpression(fileSet, fileInfo, file, receiver.Type, markers)
 
 	method.Receiver.Type = receiverType
 	method.Receiver.Name = receiver.Names[0].Name
@@ -609,7 +627,10 @@ func getPosition(tokenFileSet *token.FileSet, pos token.Pos) Position {
 	}
 }
 
-func getFieldTypesInfo(tokenFileSet *token.FileSet, fieldList []*ast.Field, markers map[ast.Node]MarkerValues) []TypeInfo {
+func getFieldTypesInfo(tokenFileSet *token.FileSet,
+	fileInfo *File,
+	file *ast.File,
+	fieldList []*ast.Field, markers map[ast.Node]MarkerValues) []TypeInfo {
 	types := make([]TypeInfo, 0)
 
 	for _, field := range fieldList {
@@ -617,7 +638,7 @@ func getFieldTypesInfo(tokenFileSet *token.FileSet, fieldList []*ast.Field, mark
 		if field.Names == nil {
 			typeInfo := &TypeInfo{
 				RawField: field,
-				Type:     getTypeFromExpression(tokenFileSet, field.Type, markers),
+				Type:     getTypeFromExpression(tokenFileSet, fileInfo, file, field.Type, markers),
 				Markers:  markers[field],
 			}
 
@@ -629,7 +650,7 @@ func getFieldTypesInfo(tokenFileSet *token.FileSet, fieldList []*ast.Field, mark
 			typeInfo := &TypeInfo{
 				Name:     name.Name,
 				RawField: field,
-				Type:     getTypeFromExpression(tokenFileSet, field.Type, markers),
+				Type:     getTypeFromExpression(tokenFileSet, fileInfo, file, field.Type, markers),
 				Markers:  markers[field],
 			}
 
@@ -640,7 +661,11 @@ func getFieldTypesInfo(tokenFileSet *token.FileSet, fieldList []*ast.Field, mark
 	return types
 }
 
-func getTypeFromExpression(tokenFileSet *token.FileSet, expression ast.Expr, markers map[ast.Node]MarkerValues) Type {
+func getTypeFromExpression(tokenFileSet *token.FileSet,
+	fileInfo *File,
+	file *ast.File,
+	expression ast.Expr,
+	markers map[ast.Node]MarkerValues) Type {
 
 	switch result := expression.(type) {
 	case *ast.Ident:
@@ -654,20 +679,20 @@ func getTypeFromExpression(tokenFileSet *token.FileSet, expression ast.Expr, mar
 		}
 	case *ast.StarExpr:
 		return &PointerType{
-			Typ: getTypeFromExpression(tokenFileSet, result.X, markers),
+			Typ: getTypeFromExpression(tokenFileSet, fileInfo, file, result.X, markers),
 		}
 	case *ast.ArrayType:
 		return &ArrayType{
-			ItemType: getTypeFromExpression(tokenFileSet, result.Elt, markers),
+			ItemType: getTypeFromExpression(tokenFileSet, fileInfo, file, result.Elt, markers),
 		}
 	case *ast.MapType:
 		return &DictionaryType{
-			KeyType:   getTypeFromExpression(tokenFileSet, result.Key, markers),
-			ValueType: getTypeFromExpression(tokenFileSet, result.Value, markers),
+			KeyType:   getTypeFromExpression(tokenFileSet, fileInfo, file, result.Key, markers),
+			ValueType: getTypeFromExpression(tokenFileSet, fileInfo, file, result.Value, markers),
 		}
 	case *ast.ChanType:
 		chanTyp := &ChanType{
-			Typ: getTypeFromExpression(tokenFileSet, result.Value, markers),
+			Typ: getTypeFromExpression(tokenFileSet, fileInfo, file, result.Value, markers),
 		}
 
 		if result.Dir&ast.SEND == ast.SEND {
@@ -682,7 +707,7 @@ func getTypeFromExpression(tokenFileSet *token.FileSet, expression ast.Expr, mar
 	case *ast.StructType:
 		anonymousStructType := &AnonymousStructType{}
 
-		fieldTypeInfoList := getFieldTypesInfo(tokenFileSet, result.Fields.List, markers)
+		fieldTypeInfoList := getFieldTypesInfo(tokenFileSet, fileInfo, file, result.Fields.List, markers)
 
 		for _, fieldTypeInfo := range fieldTypeInfoList {
 
@@ -701,6 +726,12 @@ func getTypeFromExpression(tokenFileSet *token.FileSet, expression ast.Expr, mar
 		return anonymousStructType
 	case *ast.InterfaceType:
 		return &AnyKindType{}
+	case *ast.FuncType:
+		return getFunctionType(tokenFileSet, fileInfo, file, nil, result, markers)
+	case *ast.Ellipsis:
+		return &VariadicType{
+			ItemType: getTypeFromExpression(tokenFileSet, fileInfo, file, result.Elt, markers),
+		}
 	}
 
 	panic("Unreachable code!")
