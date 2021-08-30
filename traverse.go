@@ -42,9 +42,20 @@ type Position struct {
 }
 
 type PackageInfo struct {
-	Id   string
-	Name string
-	Path string
+	Id         string
+	Name       string
+	Path       string
+	ModuleInfo *ModuleInfo
+}
+
+type ModuleInfo struct {
+	Path      string
+	Version   string
+	Main      bool
+	Indirect  bool
+	Dir       string
+	GoMod     string
+	GoVersion string
 }
 
 type Import struct {
@@ -282,14 +293,28 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 		position := pkg.Fset.Position(file.Pos())
 		fileFullPath := position.Filename
 
+		packageInfo := PackageInfo{
+			Id:   pkg.ID,
+			Name: file.Name.Name,
+			Path: pkg.PkgPath,
+		}
+
+		if pkg.Module != nil {
+			packageInfo.ModuleInfo = &ModuleInfo{
+				Path:      pkg.Module.Path,
+				Version:   pkg.Module.Version,
+				Main:      pkg.Module.Main,
+				Indirect:  pkg.Module.Indirect,
+				Dir:       pkg.Module.Dir,
+				GoMod:     pkg.Module.GoMod,
+				GoVersion: pkg.Module.GoVersion,
+			}
+		}
+
 		fileInfo = &File{
-			Name:     filepath.Base(fileFullPath),
-			FullPath: fileFullPath,
-			Package: PackageInfo{
-				Id:   pkg.ID,
-				Name: file.Name.Name,
-				Path: pkg.PkgPath,
-			},
+			Name:           filepath.Base(fileFullPath),
+			FullPath:       fileFullPath,
+			Package:        packageInfo,
 			Imports:        getFileImports(pkg.Fset, file),
 			Markers:        markers[file],
 			FunctionTypes:  make([]FunctionType, 0),
