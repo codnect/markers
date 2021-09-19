@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go/ast"
 	"go/token"
+	"golang.org/x/tools/go/packages"
 	"path/filepath"
 )
 
@@ -46,6 +47,7 @@ type PackageInfo struct {
 	Name       string
 	Path       string
 	ModuleInfo *ModuleInfo
+	RawPackage *packages.Package
 }
 
 type ModuleInfo struct {
@@ -56,6 +58,7 @@ type ModuleInfo struct {
 	Dir       string
 	GoMod     string
 	GoVersion string
+	RawModule *packages.Module
 }
 
 type Import struct {
@@ -294,9 +297,10 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 		fileFullPath := position.Filename
 
 		packageInfo := PackageInfo{
-			Id:   pkg.ID,
-			Name: file.Name.Name,
-			Path: pkg.PkgPath,
+			Id:         pkg.ID,
+			Name:       file.Name.Name,
+			Path:       pkg.PkgPath,
+			RawPackage: pkg.Package,
 		}
 
 		if pkg.Module != nil {
@@ -308,6 +312,7 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 				Dir:       pkg.Module.Dir,
 				GoMod:     pkg.Module.GoMod,
 				GoVersion: pkg.Module.GoVersion,
+				RawModule: pkg.Module,
 			}
 		}
 
