@@ -21,67 +21,74 @@ type testStructInterfaceTypeLevelMarker struct {
 }
 
 func TestRegistry_Register(t *testing.T) {
+	testCases := []struct {
+		MarkerName  string
+		TargetLevel TargetLevel
+		Output      interface{}
+	}{
+		{"marker:type-level", TypeLevel, &testTypeLevelMarker{}},
+		{"marker:function-level", FunctionLevel, &testFunctionLevelMarker{}},
+		{"marker:method-function-level", MethodLevel | FunctionLevel, &testMethodFunctionLevelMarker{}},
+		{"marker:struct-interface-level", StructTypeLevel | InterfaceTypeLevel, &testStructInterfaceTypeLevelMarker{}},
+	}
+
 	registry := NewRegistry()
-	registry.Register("marker:type-level", TypeLevel, &testTypeLevelMarker{})
-	registry.Register("marker:function-level", FunctionLevel, &testFunctionLevelMarker{})
-	registry.Register("marker:method-function-level", MethodLevel|FunctionLevel, &testMethodFunctionLevelMarker{})
-	registry.Register("marker:struct-interface-level", StructTypeLevel|InterfaceTypeLevel, &testStructInterfaceTypeLevelMarker{})
 
-	assert.Len(t, registry.definitionMap, 4)
+	for _, testCase := range testCases {
+		err := registry.Register(testCase.MarkerName, testCase.TargetLevel, testCase.Output)
+		assert.Nil(t, err)
 
-	definition := registry.definitionMap["marker:type-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:type-level")
-	assert.Equal(t, definition.Level, TypeLevel)
+		definition, ok := registry.definitionMap[testCase.MarkerName]
+		if !ok {
+			t.Error("marker has not been registered successfully")
+		}
 
-	definition = registry.definitionMap["marker:function-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:function-level")
-	assert.Equal(t, definition.Level, FunctionLevel)
+		if definition.Name != testCase.MarkerName {
+			t.Errorf("marker name is not equal to expected, got %q; want %q", definition.Name, testCase.MarkerName)
+		}
 
-	definition = registry.definitionMap["marker:method-function-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:method-function-level")
-	assert.Equal(t, definition.Level, MethodLevel|FunctionLevel)
+		if definition.Level != testCase.TargetLevel {
+			t.Errorf("target level is not equal to expected, got %q; want %q", definition.Level, testCase.TargetLevel)
+		}
+	}
 
-	definition = registry.definitionMap["marker:struct-interface-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:struct-interface-level")
-	assert.Equal(t, definition.Level, StructTypeLevel|InterfaceTypeLevel)
+	assert.Len(t, registry.definitionMap, len(testCases))
 }
 
 func TestRegistry_RegisterWithDefinition(t *testing.T) {
+	testCases := []struct {
+		MarkerName  string
+		TargetLevel TargetLevel
+		Output      interface{}
+	}{
+		{"marker:type-level", TypeLevel, &testTypeLevelMarker{}},
+		{"marker:function-level", FunctionLevel, &testFunctionLevelMarker{}},
+		{"marker:method-function-level", MethodLevel | FunctionLevel, &testMethodFunctionLevelMarker{}},
+		{"marker:struct-interface-level", StructTypeLevel | InterfaceTypeLevel, &testStructInterfaceTypeLevelMarker{}},
+	}
+
 	registry := NewRegistry()
-	definition, _ := MakeDefinition("marker:type-level", TypeLevel, &testTypeLevelMarker{})
-	registry.RegisterWithDefinition(definition)
-	definition, _ = MakeDefinition("marker:function-level", FunctionLevel, &testFunctionLevelMarker{})
-	registry.RegisterWithDefinition(definition)
-	definition, _ = MakeDefinition("marker:method-function-level", MethodLevel|FunctionLevel, &testMethodFunctionLevelMarker{})
-	registry.RegisterWithDefinition(definition)
-	definition, _ = MakeDefinition("marker:struct-interface-level", StructTypeLevel|InterfaceTypeLevel, &testStructInterfaceTypeLevelMarker{})
-	registry.RegisterWithDefinition(definition)
 
-	assert.Len(t, registry.definitionMap, 4)
+	for _, testCase := range testCases {
+		newDefinition, _ := MakeDefinition(testCase.MarkerName, testCase.TargetLevel, testCase.Output)
+		err := registry.RegisterWithDefinition(newDefinition)
+		assert.Nil(t, err)
 
-	definition = registry.definitionMap["marker:type-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:type-level")
-	assert.Equal(t, definition.Level, TypeLevel)
+		definition, ok := registry.definitionMap[testCase.MarkerName]
+		if !ok {
+			t.Error("marker has not been registered successfully")
+		}
 
-	definition = registry.definitionMap["marker:function-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:function-level")
-	assert.Equal(t, definition.Level, FunctionLevel)
+		if definition.Name != testCase.MarkerName {
+			t.Errorf("marker name is not equal to expected, got %q; want %q", definition.Name, testCase.MarkerName)
+		}
 
-	definition = registry.definitionMap["marker:method-function-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:method-function-level")
-	assert.Equal(t, definition.Level, MethodLevel|FunctionLevel)
+		if definition.Level != testCase.TargetLevel {
+			t.Errorf("target level is not equal to expected, got %q; want %q", definition.Level, testCase.TargetLevel)
+		}
+	}
 
-	definition = registry.definitionMap["marker:struct-interface-level"]
-	assert.NotNil(t, definition)
-	assert.Equal(t, definition.Name, "marker:struct-interface-level")
-	assert.Equal(t, definition.Level, StructTypeLevel|InterfaceTypeLevel)
+	assert.Len(t, registry.definitionMap, len(testCases))
 }
 
 func TestRegistry_RegisterMarkerAlreadyRegistered(t *testing.T) {
