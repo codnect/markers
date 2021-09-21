@@ -5,17 +5,27 @@ import (
 	"strings"
 )
 
+// TargetLevel describes which kind of node a given marker is associated with.
 type TargetLevel int
 
 const (
+	// PackageLevel indicates that a marker is associated with a package.
 	PackageLevel TargetLevel = 1 << iota
+	// TypeLevel indicates that a marker is associated with any type.
 	TypeLevel
+	// StructTypeLevel indicates that a marker is associated with a struct type.
 	StructTypeLevel
+	// InterfaceTypeLevel indicates that a marker is associated with an interface type.
 	InterfaceTypeLevel
+	// FieldLevel indicates that a marker is associated with a struct field.
 	FieldLevel
+	// FunctionLevel indicates that a marker is associated with a function.
 	FunctionLevel
+	// MethodLevel indicates that a marker is associated with a struct method or an interface method.
 	MethodLevel
+	// StructMethodLevel indicates that a marker is associated with a struct method.
 	StructMethodLevel
+	// InterfaceMethodLevel indicates that a marker is associated with an interface method.
 	InterfaceMethodLevel
 )
 

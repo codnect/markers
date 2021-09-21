@@ -98,12 +98,12 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 	case MapType:
 		return typeInfo.parseMap(scanner, out)
 	case AnyType:
-		interferedType, _ := typeInfo.interfereType(scanner, out, false)
+		inferredType, _ := typeInfo.inferType(scanner, out, false)
 		newOut := out
 
-		switch interferedType.ActualType {
+		switch inferredType.ActualType {
 		case SliceType:
-			newType, err := interferedType.makeSliceType()
+			newType, err := inferredType.makeSliceType()
 
 			if err != nil {
 				return err
@@ -111,7 +111,7 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 
 			newOut = reflect.Indirect(reflect.New(newType))
 		case MapType:
-			newType, err := interferedType.makeMapType()
+			newType, err := inferredType.makeMapType()
 
 			if err != nil {
 				return err
@@ -124,13 +124,13 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 			return nil
 		}
 
-		err := interferedType.Parse(scanner, newOut)
+		err := inferredType.Parse(scanner, newOut)
 
 		if err != nil {
 			return err
 		}
 
-		interferedType.setValue(out, newOut)
+		inferredType.setValue(out, newOut)
 	}
 
 	return nil
@@ -348,13 +348,13 @@ func (typeInfo ArgumentTypeInfo) parseMap(scanner *Scanner, out reflect.Value) e
 	return nil
 }
 
-func (typeInfo ArgumentTypeInfo) interfereType(scanner *Scanner, out reflect.Value, ignoreLegacySlice bool) (ArgumentTypeInfo, error) {
+func (typeInfo ArgumentTypeInfo) inferType(scanner *Scanner, out reflect.Value, ignoreLegacySlice bool) (ArgumentTypeInfo, error) {
 
 	character := scanner.SkipWhitespaces()
 	searchIndex := scanner.searchIndex
 
 	if !ignoreLegacySlice {
-		itemType, _ := typeInfo.interfereType(scanner, out, true)
+		itemType, _ := typeInfo.inferType(scanner, out, true)
 
 		var token rune
 		for token = scanner.Scan(); token != ',' && token != EOF && token != ';'; token = scanner.Scan() {
@@ -382,7 +382,7 @@ func (typeInfo ArgumentTypeInfo) interfereType(scanner *Scanner, out reflect.Val
 	if character == '{' {
 		scanner.Scan()
 
-		elementType, _ := typeInfo.interfereType(scanner, out, true)
+		elementType, _ := typeInfo.inferType(scanner, out, true)
 
 		// skip left curly bracket character
 		scanner.SetSearchIndex(searchIndex + 1)

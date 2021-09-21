@@ -5,6 +5,7 @@ import (
 	"sync"
 )
 
+// Registry keeps the registered marker definitions.
 type Registry struct {
 	definitionMap map[string]*Definition
 
@@ -12,10 +13,12 @@ type Registry struct {
 	mu       sync.RWMutex
 }
 
+// NewRegistry returns a new registry to register the markers.
 func NewRegistry() *Registry {
 	return &Registry{}
 }
 
+// initialize initializes the registry when needed.
 func (registry *Registry) initialize() {
 	registry.initOnce.Do(func() {
 
@@ -26,6 +29,7 @@ func (registry *Registry) initialize() {
 	})
 }
 
+// Register registers a new marker with the given name, target level, and output type.
 func (registry *Registry) Register(name string, level TargetLevel, output interface{}) error {
 	registry.initialize()
 
@@ -38,6 +42,7 @@ func (registry *Registry) Register(name string, level TargetLevel, output interf
 	return registry.RegisterWithDefinition(def)
 }
 
+// RegisterWithDefinition registers a new marker with the given definition.
 func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
 	registry.initialize()
 
@@ -57,13 +62,14 @@ func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
 	return nil
 }
 
-func (registry *Registry) Lookup(marker string) *Definition {
+// Lookup fetches the definition corresponding to the given name.
+func (registry *Registry) Lookup(name string) *Definition {
 	registry.initialize()
 
 	registry.mu.RLock()
 	defer registry.mu.RUnlock()
 
-	name, anonymousName, _ := splitMarker(marker)
+	name, anonymousName, _ := splitMarker(name)
 
 	if def, exists := registry.definitionMap[anonymousName]; exists {
 		return def

@@ -3,6 +3,7 @@ package marker
 import (
 	"errors"
 	"reflect"
+	"strings"
 )
 
 type Output struct {
@@ -20,6 +21,9 @@ type Definition struct {
 }
 
 func MakeDefinition(name string, level TargetLevel, output interface{}) (*Definition, error) {
+	if len(strings.TrimSpace(name)) == 0 {
+		return nil, errors.New("marker name cannot be empty")
+	}
 	outputType := reflect.TypeOf(output)
 
 	if outputType.Kind() == reflect.Ptr {
@@ -27,7 +31,7 @@ func MakeDefinition(name string, level TargetLevel, output interface{}) (*Defini
 	}
 
 	definition := &Definition{
-		Name:  name,
+		Name:  strings.TrimSpace(name),
 		Level: level,
 		Output: Output{
 			Type:        outputType,
