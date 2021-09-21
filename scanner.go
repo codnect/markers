@@ -107,8 +107,6 @@ func (scanner *Scanner) Scan() rune {
 
 	token := character
 
-	scanner.tokenStartPosition = scanner.searchIndex
-
 	if IsIdentifier(character, 0) {
 		token = Identifier
 		character = scanner.ScanIdentifier()
@@ -120,41 +118,53 @@ func (scanner *Scanner) Scan() rune {
 	} else if character == '"' {
 		token = String
 		scanner.ScanString('"')
-		character = scanner.Next()
+		character = scanner.Peek()
 	} else if character == '`' {
 		token = String
 		scanner.ScanString('`')
-		character = scanner.Next()
+		character = scanner.Peek()
 	} else {
 		character = scanner.Next()
 	}
 
-	scanner.tokenEndPosition = scanner.searchIndex
 	scanner.character = character
 	return token
 }
 
 func (scanner *Scanner) ScanNumber() rune {
-	character := scanner.Next()
+	if IsDecimal(scanner.Peek()) {
+		scanner.tokenStartPosition = scanner.searchIndex
+	}
+
+	character := scanner.Peek()
 
 	for IsDecimal(character) {
 		character = scanner.Next()
 	}
 
+	scanner.tokenEndPosition = scanner.searchIndex
+	scanner.character = character
 	return character
 }
 
 func (scanner *Scanner) ScanIdentifier() rune {
-	character := scanner.Next()
+	if IsIdentifier(scanner.Peek(), 1) {
+		scanner.tokenStartPosition = scanner.searchIndex
+	}
+
+	character := scanner.Peek()
 
 	for index := 1; IsIdentifier(character, index); index++ {
 		character = scanner.Next()
 	}
 
+	scanner.tokenEndPosition = scanner.searchIndex
+	scanner.character = character
 	return character
 }
 
 func (scanner *Scanner) ScanString(quote rune) (len int) {
+	scanner.tokenStartPosition = scanner.searchIndex
 	character := scanner.Next()
 
 	for character != quote {
@@ -166,6 +176,9 @@ func (scanner *Scanner) ScanString(quote rune) (len int) {
 		len++
 	}
 
+	character = scanner.Next()
+	scanner.tokenEndPosition = scanner.searchIndex
+	scanner.character = character
 	return
 }
 
