@@ -9,6 +9,10 @@ import (
 
 type ArgumentType int
 
+func (argumentType ArgumentType) String() string {
+	return argumentTypeText[argumentType]
+}
+
 const (
 	InvalidType ArgumentType = iota
 	RawType
@@ -19,6 +23,17 @@ const (
 	SliceType
 	MapType
 )
+
+var argumentTypeText = map[ArgumentType]string{
+	InvalidType: "InvalidType",
+	RawType:     "RawType",
+	AnyType:     "AnyType",
+	BoolType:    "BoolType",
+	IntegerType: "IntegerType",
+	StringType:  "StringType",
+	SliceType:   "SliceType",
+	MapType:     "MapType",
+}
 
 var (
 	interfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
@@ -33,6 +48,10 @@ type ArgumentTypeInfo struct {
 func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
 	typeInfo := &ArgumentTypeInfo{}
 
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
 	if typ == rawType {
 		typeInfo.ActualType = RawType
 		return *typeInfo, nil
@@ -41,10 +60,6 @@ func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
 	if typ == interfaceType {
 		typeInfo.ActualType = AnyType
 		return *typeInfo, nil
-	}
-
-	if typ.Kind() == reflect.Ptr {
-		rawType = typ.Elem()
 	}
 
 	switch typ.Kind() {
