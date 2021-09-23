@@ -102,7 +102,7 @@ func TestScanner_ScanString(t *testing.T) {
 	assert.Equal(t, EOF, int(current))
 }
 
-func TestScanner_Scans(t *testing.T) {
+func TestScanner_AllScans(t *testing.T) {
 	scanner := NewScanner("key1=`test`,key2=123,key3=\"hello\"")
 
 	current := scanner.ScanIdentifier()

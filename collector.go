@@ -75,6 +75,11 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 				if definition.Level&PackageLevel != PackageLevel {
 					continue
 				}
+			case *ast.GenDecl:
+
+				if definition.Level&ImportLevel != ImportLevel {
+					continue
+				}
 
 			case *ast.TypeSpec:
 
@@ -113,7 +118,7 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 			value, err := definition.Parse(markerText)
 
 			if err != nil {
-				position := pkg.Fset.Position(node.Pos())
+				position := pkg.Fset.Position(markerComment.Pos())
 				errs = append(errs, toParseError(err, markerComment, position))
 				continue
 			}
@@ -121,7 +126,10 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 			markerValues[definition.Name] = append(markerValues[definition.Name], value)
 		}
 
-		nodeMarkerValues[node] = markerValues
+		if len(markerValues) != 0 {
+			nodeMarkerValues[node] = markerValues
+		}
+
 	}
 
 	return nodeMarkerValues, NewErrorList(errs)

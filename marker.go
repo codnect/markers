@@ -2,15 +2,18 @@ package marker
 
 import (
 	"go/ast"
+	"go/token"
 	"strings"
 )
 
-// TargetLevel describes which kind of node a given marker is associated with.
+// TargetLevel describes which kind of nodes a given marker are associated with.
 type TargetLevel int
 
 const (
 	// PackageLevel indicates that a marker is associated with a package.
 	PackageLevel TargetLevel = 1 << iota
+	// ImportLevel indicates that a marker is associated with an import block.
+	ImportLevel
 	// TypeLevel indicates that a marker is associated with any type.
 	TypeLevel
 	// StructTypeLevel indicates that a marker is associated with a struct type.
@@ -29,6 +32,14 @@ const (
 	InterfaceMethodLevel
 )
 
+const ValueArgument = "Value"
+
+type ImportMarker struct {
+	Value string `marker:"Value"`
+	Name  string `marker:"Marker"`
+	Pkg   string `marker:"Package"`
+}
+
 type MarkerValues map[string][]interface{}
 
 func (markerValues MarkerValues) Get(name string) interface{} {
@@ -42,17 +53,57 @@ func (markerValues MarkerValues) Get(name string) interface{} {
 }
 
 type markerComment struct {
-	*ast.Comment
+	commentLines []*ast.Comment
 }
 
-func newMarkerComment(comment *ast.Comment) markerComment {
-	return markerComment{
-		comment,
+func newMarkerComment(comment *ast.Comment) *markerComment {
+	markerComment := &markerComment{
+		make([]*ast.Comment, 0),
 	}
+
+	markerComment.commentLines = append(markerComment.commentLines, comment)
+
+	return markerComment
 }
 
-func (comment *markerComment) Text() string {
-	return strings.TrimSpace(comment.Comment.Text[2:])
+func (c markerComment) Pos() token.Pos {
+	return c.commentLines[0].Pos()
+}
+
+func (c markerComment) End() token.Pos {
+	return c.commentLines[len(c.commentLines)].End()
+}
+
+func (c *markerComment) append(comment *ast.Comment) {
+	c.commentLines = append(c.commentLines, comment)
+}
+
+func (c *markerComment) Text() string {
+	if len(c.commentLines) == 1 {
+		text := strings.TrimSpace(c.commentLines[0].Text[2:])
+
+		if strings.HasSuffix(text, "\\") {
+			text = strings.TrimSpace(text[:len(text)-1])
+		}
+
+		return text
+	}
+
+	var text string
+	for _, line := range c.commentLines {
+		comment := strings.TrimSpace(line.Text[2:])
+
+		if strings.HasSuffix(comment, "\\") {
+			comment = strings.TrimSpace(comment[:len(comment)-1])
+		}
+
+		if text == "" {
+			text = comment
+		} else {
+			text = text + " " + comment
+		}
+	}
+	return text
 }
 
 func splitMarker(marker string) (name string, anonymousName string, options string) {
@@ -88,4 +139,9 @@ func isMarkerComment(comment string) bool {
 	}
 
 	return true
+}
+
+func hasContinuationCharacter(comment string) bool {
+	stripped := strings.TrimSpace(comment[2:])
+	return strings.HasSuffix(stripped, "\\")
 }

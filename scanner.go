@@ -65,11 +65,15 @@ func (scanner *Scanner) Expect(expected rune, description string) bool {
 	token := scanner.Scan()
 
 	if token != expected {
-		scanner.AddError(fmt.Sprintf("expected %s, got %q", description, scanner.Token()))
+		scanner.AddError(fmt.Sprintf("got %q; want %s", scanner.Token(), description))
 		return false
 	}
 
 	return true
+}
+
+func (scanner *Scanner) Reset() {
+	scanner.searchIndex = 0
 }
 
 func (scanner *Scanner) SetSearchIndex(searchIndex int) {
@@ -99,6 +103,7 @@ func (scanner *Scanner) SkipWhitespaces() rune {
 		character = scanner.Next()
 	}
 
+	scanner.character = character
 	return character
 }
 
@@ -106,7 +111,6 @@ func (scanner *Scanner) Scan() rune {
 	character := scanner.SkipWhitespaces()
 
 	token := character
-
 	if IsIdentifier(character, 0) {
 		token = Identifier
 		character = scanner.ScanIdentifier()
@@ -124,7 +128,9 @@ func (scanner *Scanner) Scan() rune {
 		scanner.ScanString('`')
 		character = scanner.Peek()
 	} else {
+		scanner.tokenStartPosition = scanner.searchIndex
 		character = scanner.Next()
+		scanner.tokenEndPosition = scanner.searchIndex
 	}
 
 	scanner.character = character
@@ -132,11 +138,11 @@ func (scanner *Scanner) Scan() rune {
 }
 
 func (scanner *Scanner) ScanNumber() rune {
-	if IsDecimal(scanner.Peek()) {
+	if IsDecimal(scanner.SkipWhitespaces()) {
 		scanner.tokenStartPosition = scanner.searchIndex
 	}
 
-	character := scanner.Peek()
+	character := scanner.SkipWhitespaces()
 
 	for IsDecimal(character) {
 		character = scanner.Next()
@@ -148,11 +154,11 @@ func (scanner *Scanner) ScanNumber() rune {
 }
 
 func (scanner *Scanner) ScanIdentifier() rune {
-	if IsIdentifier(scanner.Peek(), 1) {
+	if IsIdentifier(scanner.SkipWhitespaces(), 1) {
 		scanner.tokenStartPosition = scanner.searchIndex
 	}
 
-	character := scanner.Peek()
+	character := scanner.SkipWhitespaces()
 
 	for index := 1; IsIdentifier(character, index); index++ {
 		character = scanner.Next()

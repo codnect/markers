@@ -2,6 +2,7 @@ package marker
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -15,12 +16,13 @@ type Output struct {
 }
 
 type Definition struct {
-	Name   string
-	Level  TargetLevel
-	Output Output
+	Name           string
+	Level          TargetLevel
+	Output         Output
+	UseValueSyntax bool
 }
 
-func MakeDefinition(name string, level TargetLevel, output interface{}) (*Definition, error) {
+func MakeDefinition(name string, level TargetLevel, output interface{}, useValueSyntax ...bool) (*Definition, error) {
 	if len(strings.TrimSpace(name)) == 0 {
 		return nil, errors.New("marker name cannot be empty")
 	}
@@ -39,6 +41,10 @@ func MakeDefinition(name string, level TargetLevel, output interface{}) (*Defini
 			Fields:      make(map[string]Argument),
 			FieldNames:  make(map[string]string),
 		},
+	}
+
+	if useValueSyntax != nil {
+		definition.UseValueSyntax = useValueSyntax[0]
 	}
 
 	err := definition.extract()
@@ -93,11 +99,19 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 
 	name, anonymousName, fields := splitMarker(marker)
 
-	if len(anonymousName) >= len(name)+1 {
+	if !definition.UseValueSyntax && len(anonymousName) >= len(name)+1 {
 		fields = anonymousName[len(name)+1:] + "=" + fields
 	}
 
 	var errs []error
+
+	if strings.ContainsAny(anonymousName, ".,;=") {
+		errs = append(errs, ScannerError{
+			Position: 0,
+			Message:  fmt.Sprintf("Marker format is not valid : %s", marker),
+		})
+		return nil, NewErrorList(errs)
+	}
 
 	scanner := NewScanner(fields)
 	scanner.ErrorCallback = func(scanner *Scanner, message string) {
@@ -107,42 +121,70 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 		})
 	}
 
+	valueArgumentProcessed := false
+	canBeValueArgument := false
+
 	if scanner.Peek() != EOF {
 		for {
-			if !scanner.Expect(Identifier, "Argument Name") {
+			var argumentName string
+			currentCharacter := scanner.SkipWhitespaces()
+
+			if definition.UseValueSyntax && !valueArgumentProcessed && currentCharacter == '{' {
+				canBeValueArgument = true
+			} else if !scanner.Expect(Identifier, "Argument Name") {
 				break
 			}
 
-			argumentName := scanner.Token()
+			argumentName = scanner.Token()
+			currentCharacter = scanner.SkipWhitespaces()
 
-			if !scanner.Expect('=', "Equals Sign '='") {
+			if definition.UseValueSyntax && !valueArgumentProcessed && (currentCharacter == ',' || currentCharacter == ';') {
+				canBeValueArgument = true
+			} else if (valueArgumentProcessed || !canBeValueArgument) && !scanner.Expect('=', "Equals Sign '='") {
 				break
+			}
+
+			if canBeValueArgument && !valueArgumentProcessed {
+				valueArgumentProcessed = true
+				argumentName = ValueArgument
+				scanner.Reset()
 			}
 
 			fieldName, exists := definition.Output.FieldNames[argumentName]
 
+			var err error
+			var fieldValue reflect.Value
+			var argument Argument
+
+			// if the argument name does not exist in field names, parse its value to skip
 			if !exists {
-				break
+				var anyValue interface{}
+				(&ArgumentTypeInfo{ActualType: AnyType}).Parse(scanner, reflect.ValueOf(&anyValue))
+				goto nextAttribute
 			}
 
-			argument, exists := definition.Output.Fields[argumentName]
+			argument, exists = definition.Output.Fields[argumentName]
 
+			// if the argument name does not exist in fields, parse its value to skip
 			if !exists {
-				break
+				var anyValue interface{}
+				(&ArgumentTypeInfo{ActualType: AnyType}).Parse(scanner, reflect.ValueOf(&anyValue))
+				goto nextAttribute
 			}
 
-			fieldValue := output.FieldByName(fieldName)
+			fieldValue = output.FieldByName(fieldName)
 
 			if !fieldValue.CanSet() {
 				break
 			}
 
-			err := argument.TypeInfo.Parse(scanner, fieldValue)
+			err = argument.TypeInfo.Parse(scanner, fieldValue)
 
 			if err != nil {
 				break
 			}
 
+		nextAttribute:
 			if scanner.Peek() == EOF {
 				break
 			}

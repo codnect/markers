@@ -69,11 +69,12 @@ type Import struct {
 }
 
 type File struct {
-	Name     string
-	FullPath string
-	Package  PackageInfo
-	Imports  []Import
-	Markers  MarkerValues
+	Name          string
+	FullPath      string
+	Package       PackageInfo
+	Imports       []Import
+	Markers       MarkerValues
+	ImportMarkers []MarkerValues
 
 	FunctionTypes    []FunctionType
 	StructTypes      []StructType
@@ -243,7 +244,6 @@ func (typ VariadicType) Kind() Kind {
 }
 
 func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
-
 	if collector == nil {
 		callback(nil, errors.New("collector cannot be nil"))
 		return
@@ -254,7 +254,7 @@ func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
 		return
 	}
 
-	var filesInfoMap = make(map[*ast.File]*File)
+	var fileMap = make(map[*ast.File]*File)
 	var errs []error
 
 	for _, pkg := range pkgs {
@@ -265,10 +265,10 @@ func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
 			continue
 		}
 
-		infoMap := eachPackage(pkg, markers)
+		fileNodeMap := eachPackage(pkg, markers)
 
-		for file, fileInfo := range infoMap {
-			filesInfoMap[file] = fileInfo
+		for fileNode, file := range fileNodeMap {
+			fileMap[fileNode] = file
 		}
 	}
 
@@ -277,63 +277,35 @@ func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
 		return
 	}
 
-	for _, fileInfo := range filesInfoMap {
-		callback(fileInfo, nil)
+	for _, file := range fileMap {
+		callback(file, nil)
 	}
 }
 
 func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]*File {
-	var fileInfoMap = make(map[*ast.File]*File)
+	var fileNodeMap = make(map[*ast.File]*File)
 	var methods = make([]Method, 0)
 
 	visitFiles(pkg, func(file *ast.File) {
-		fileInfo, ok := fileInfoMap[file]
+		_, ok := fileNodeMap[file]
 
 		if ok {
 			return
 		}
 
-		position := pkg.Fset.Position(file.Pos())
-		fileFullPath := position.Filename
+		fileNodeMap[file] = getFile(pkg, file, markers)
+	}, func(file *ast.File, decl *ast.GenDecl) {
+		fileInfo, ok := fileNodeMap[file]
 
-		packageInfo := PackageInfo{
-			Id:         pkg.ID,
-			Name:       file.Name.Name,
-			Path:       pkg.PkgPath,
-			RawPackage: pkg.Package,
+		if !ok {
+			return
 		}
 
-		if pkg.Module != nil {
-			packageInfo.ModuleInfo = &ModuleInfo{
-				Path:      pkg.Module.Path,
-				Version:   pkg.Module.Version,
-				Main:      pkg.Module.Main,
-				Indirect:  pkg.Module.Indirect,
-				Dir:       pkg.Module.Dir,
-				GoMod:     pkg.Module.GoMod,
-				GoVersion: pkg.Module.GoVersion,
-				RawModule: pkg.Module,
-			}
+		if markerValues, ok := markers[decl]; ok {
+			fileInfo.ImportMarkers = append(fileInfo.ImportMarkers, markerValues)
 		}
-
-		fileInfo = &File{
-			Name:           filepath.Base(fileFullPath),
-			FullPath:       fileFullPath,
-			Package:        packageInfo,
-			Imports:        getFileImports(pkg.Fset, file),
-			Markers:        markers[file],
-			FunctionTypes:  make([]FunctionType, 0),
-			StructTypes:    make([]StructType, 0),
-			InterfaceTypes: make([]InterfaceType, 0),
-			RawFile:        file,
-		}
-
-		fileInfoMap[file] = fileInfo
-	})
-
-	visitTypeElements(pkg, func(file *ast.File, decl *ast.GenDecl, spec *ast.TypeSpec) {
-
-		fileInfo, ok := fileInfoMap[file]
+	}, func(file *ast.File, decl *ast.GenDecl, spec *ast.TypeSpec) {
+		fileInfo, ok := fileNodeMap[file]
 
 		if !ok {
 			return
@@ -349,12 +321,8 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 		default:
 			fileInfo.UserDefinedTypes = append(fileInfo.UserDefinedTypes, typ.(UserDefinedType))
 		}
-
-	})
-
-	visitFunctions(pkg, func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType) {
-
-		fileInfo, ok := fileInfoMap[file]
+	}, func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType) {
+		fileInfo, ok := fileNodeMap[file]
 
 		if !ok {
 			return
@@ -368,12 +336,11 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 			method := getMethod(pkg.Fset, fileInfo, file, decl, funcType, markers)
 			methods = append(methods, method)
 		}
-
 	})
 
-	resolveMethods(fileInfoMap, methods)
+	resolveMethods(fileNodeMap, methods)
 
-	return fileInfoMap
+	return fileNodeMap
 }
 
 func resolveMethods(fileInfoMap map[*ast.File]*File, methods []Method) {
@@ -426,6 +393,44 @@ func resolveMethod(fileInfoMap map[*ast.File]*File, method Method) {
 			}
 
 		}
+	}
+}
+
+func getFile(pkg *Package, file *ast.File, markers map[ast.Node]MarkerValues) *File {
+	position := pkg.Fset.Position(file.Pos())
+	fileFullPath := position.Filename
+
+	packageInfo := PackageInfo{
+		Id:         pkg.ID,
+		Name:       file.Name.Name,
+		Path:       pkg.PkgPath,
+		RawPackage: pkg.Package,
+	}
+
+	if pkg.Module != nil {
+		packageInfo.ModuleInfo = &ModuleInfo{
+			Path:      pkg.Module.Path,
+			Version:   pkg.Module.Version,
+			Main:      pkg.Module.Main,
+			Indirect:  pkg.Module.Indirect,
+			Dir:       pkg.Module.Dir,
+			GoMod:     pkg.Module.GoMod,
+			GoVersion: pkg.Module.GoVersion,
+			RawModule: pkg.Module,
+		}
+	}
+
+	return &File{
+		Name:           filepath.Base(fileFullPath),
+		FullPath:       fileFullPath,
+		Package:        packageInfo,
+		Imports:        getFileImports(pkg.Fset, file),
+		Markers:        markers[file],
+		ImportMarkers:  make([]MarkerValues, 0),
+		FunctionTypes:  make([]FunctionType, 0),
+		StructTypes:    make([]StructType, 0),
+		InterfaceTypes: make([]InterfaceType, 0),
+		RawFile:        file,
 	}
 }
 

@@ -2,6 +2,7 @@ package marker
 
 import (
 	"go/ast"
+	"go/token"
 )
 
 type Visitor struct {
@@ -9,6 +10,7 @@ type Visitor struct {
 	nextCommentIndex int
 
 	packageMarkers     []markerComment
+	importMarkers      []markerComment
 	declarationMarkers []markerComment
 	nodeMarkers        map[ast.Node][]markerComment
 }
@@ -76,7 +78,7 @@ func (visitor *Visitor) Visit(node ast.Node) (w ast.Visitor) {
 		}
 	}
 
-	switch node.(type) {
+	switch typedNode := node.(type) {
 	case *ast.File:
 		visitor.packageMarkers = append(visitor.packageMarkers, markersFromComment...)
 		visitor.packageMarkers = append(visitor.packageMarkers, markersFromDocument...)
@@ -86,12 +88,14 @@ func (visitor *Visitor) Visit(node ast.Node) (w ast.Visitor) {
 		visitor.nodeMarkers[node] = append(visitor.nodeMarkers[node], markersFromDocument...)
 		visitor.declarationMarkers = nil
 	case *ast.GenDecl:
-		visitor.declarationMarkers = append(visitor.declarationMarkers, markersFromComment...)
-		visitor.declarationMarkers = append(visitor.declarationMarkers, markersFromDocument...)
-	case *ast.Field:
-		visitor.nodeMarkers[node] = append(visitor.nodeMarkers[node], markersFromComment...)
-		visitor.nodeMarkers[node] = append(visitor.nodeMarkers[node], markersFromDocument...)
-	case *ast.FuncDecl:
+		if typedNode.Tok == token.IMPORT {
+			visitor.nodeMarkers[node] = append(visitor.nodeMarkers[node], markersFromComment...)
+			visitor.nodeMarkers[node] = append(visitor.nodeMarkers[node], markersFromDocument...)
+		} else {
+			visitor.declarationMarkers = append(visitor.declarationMarkers, markersFromComment...)
+			visitor.declarationMarkers = append(visitor.declarationMarkers, markersFromDocument...)
+		}
+	case *ast.Field, *ast.FuncDecl:
 		visitor.nodeMarkers[node] = append(visitor.nodeMarkers[node], markersFromComment...)
 		visitor.nodeMarkers[node] = append(visitor.nodeMarkers[node], markersFromDocument...)
 	}
@@ -111,12 +115,30 @@ func (visitor *Visitor) getMarkerComments(startIndex, endIndex int) []markerComm
 	for index := startIndex; index < endIndex; index++ {
 		commentGroup := visitor.allComments[index]
 
+		var markerComment *markerComment
+		var hasContinuation bool
+
 		for _, comment := range commentGroup.List {
-			if !isMarkerComment(comment.Text) {
-				continue
+			containsMarker := isMarkerComment(comment.Text)
+
+			if containsMarker {
+				if markerComment != nil {
+					markerComments = append(markerComments, *markerComment)
+				}
+
+				markerComment = newMarkerComment(comment)
+				hasContinuation = false
+			} else if hasContinuation {
+				if markerComment != nil {
+					markerComment.append(comment)
+				}
 			}
 
-			markerComments = append(markerComments, newMarkerComment(comment))
+			hasContinuation = hasContinuationCharacter(comment.Text)
+		}
+
+		if markerComment != nil {
+			markerComments = append(markerComments, *markerComment)
 		}
 	}
 
@@ -145,96 +167,20 @@ func (visitor *Visitor) getCommentsForNode(node ast.Node) (docCommentGroup *ast.
 	return docCommentGroup
 }
 
-type typeElementCallback func(file *ast.File, decl *ast.GenDecl, node *ast.TypeSpec)
-
-type typeElementVisitor struct {
-	pkg      *Package
-	callback typeElementCallback
-	decl     *ast.GenDecl
-	file     *ast.File
-}
-
-func (visitor *typeElementVisitor) Visit(node ast.Node) ast.Visitor {
-	if node == nil {
-		visitor.decl = nil
-		return visitor
-	}
-
-	switch typedNode := node.(type) {
-	case *ast.File:
-		visitor.file = typedNode
-		return visitor
-	case *ast.GenDecl:
-		visitor.decl = typedNode
-		return visitor
-	case *ast.TypeSpec:
-		visitor.callback(visitor.file, visitor.decl, typedNode)
-		return nil
-	default:
-		return nil
-	}
-}
-
-func visitTypeElements(pkg *Package, callback typeElementCallback) {
-	visitor := &typeElementVisitor{
-		pkg:      pkg,
-		callback: callback,
-	}
-
-	for _, file := range pkg.Syntax {
-		visitor.file = file
-		ast.Walk(visitor, file)
-	}
-}
-
+type importCallback func(file *ast.File, decl *ast.GenDecl)
+type typeCallback func(file *ast.File, decl *ast.GenDecl, node *ast.TypeSpec)
 type functionCallback func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType)
-
-type functionVisitor struct {
-	pkg      *Package
-	callback functionCallback
-	decl     *ast.FuncDecl
-	file     *ast.File
-}
-
-func (visitor *functionVisitor) Visit(node ast.Node) ast.Visitor {
-	if node == nil {
-		visitor.decl = nil
-		return visitor
-	}
-
-	switch typedNode := node.(type) {
-	case *ast.File:
-		visitor.file = typedNode
-		return visitor
-	case *ast.FuncDecl:
-		visitor.decl = typedNode
-		return visitor
-	case *ast.FuncType:
-		visitor.callback(visitor.file, visitor.decl, typedNode)
-		return nil
-	default:
-		return nil
-	}
-}
-
-func visitFunctions(pkg *Package, callback functionCallback) {
-	visitor := &functionVisitor{
-		pkg:      pkg,
-		callback: callback,
-	}
-
-	for _, file := range pkg.Syntax {
-		visitor.file = file
-		ast.Walk(visitor, file)
-	}
-}
-
 type fileCallback func(file *ast.File)
 
 type fileVisitor struct {
-	pkg      *Package
-	callback fileCallback
-	file     *ast.File
+	pkg              *Package
+	fileCallback     fileCallback
+	importCallback   importCallback
+	typeCallback     typeCallback
+	functionCallback functionCallback
+	genDecl          *ast.GenDecl
+	funcDecl         *ast.FuncDecl
+	file             *ast.File
 }
 
 func (visitor *fileVisitor) Visit(node ast.Node) ast.Visitor {
@@ -244,17 +190,39 @@ func (visitor *fileVisitor) Visit(node ast.Node) ast.Visitor {
 
 	switch typedNode := node.(type) {
 	case *ast.File:
-		visitor.callback(typedNode)
+		visitor.file = typedNode
+		visitor.fileCallback(typedNode)
+		return visitor
+	case *ast.GenDecl:
+		visitor.genDecl = typedNode
+		if typedNode.Tok == token.IMPORT {
+			visitor.importCallback(visitor.file, visitor.genDecl)
+		}
+		return visitor
+	case *ast.FuncDecl:
+		visitor.funcDecl = typedNode
+		return visitor
+	case *ast.FuncType:
+		visitor.functionCallback(visitor.file, visitor.funcDecl, typedNode)
+		return nil
+	case *ast.TypeSpec:
+		visitor.typeCallback(visitor.file, visitor.genDecl, typedNode)
 		return nil
 	default:
 		return nil
 	}
 }
 
-func visitFiles(pkg *Package, callback fileCallback) {
+func visitFiles(pkg *Package, fileCallback fileCallback,
+	importCallback importCallback,
+	typeCallback typeCallback,
+	functionCallback functionCallback) {
 	visitor := &fileVisitor{
-		pkg:      pkg,
-		callback: callback,
+		pkg:              pkg,
+		fileCallback:     fileCallback,
+		importCallback:   importCallback,
+		typeCallback:     typeCallback,
+		functionCallback: functionCallback,
 	}
 
 	for _, file := range pkg.Syntax {

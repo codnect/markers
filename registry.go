@@ -26,14 +26,16 @@ func (registry *Registry) initialize() {
 			registry.definitionMap = make(map[string]*Definition)
 		}
 
+		registry.definitionMap["import"], _ = MakeDefinition("import", ImportLevel, &ImportMarker{}, true)
 	})
+
 }
 
 // Register registers a new marker with the given name, target level, and output type.
-func (registry *Registry) Register(name string, level TargetLevel, output interface{}) error {
+func (registry *Registry) Register(name string, level TargetLevel, output interface{}, useValueSyntax ...bool) error {
 	registry.initialize()
 
-	def, err := MakeDefinition(name, level, output)
+	def, err := MakeDefinition(name, level, output, useValueSyntax...)
 
 	if err != nil {
 		return err

@@ -135,6 +135,10 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 			newOut = reflect.Indirect(reflect.New(newType))
 		}
 
+		if newOut.Kind() == reflect.Ptr {
+			newOut = newOut.Elem()
+		}
+
 		if !newOut.CanSet() {
 			return nil
 		}
@@ -153,6 +157,11 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 
 func (typeInfo ArgumentTypeInfo) setValue(out, value reflect.Value) {
 	outType := out.Type()
+
+	if outType.Kind() == reflect.Ptr {
+		outType = outType.Elem()
+		out = out.Elem()
+	}
 
 	if outType != value.Type() {
 		value = value.Convert(outType)
@@ -284,6 +293,7 @@ func (typeInfo ArgumentTypeInfo) parseSlice(scanner *Scanner, out reflect.Value)
 			return nil
 		}
 
+		typeInfo.setValue(out, sliceType)
 		return nil
 	}
 
