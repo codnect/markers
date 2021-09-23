@@ -15,6 +15,14 @@ func (err ScannerError) Error() string {
 	return fmt.Sprintf("%s (at %d)", err.Message, err.Position)
 }
 
+type ImportError struct {
+	Marker string
+}
+
+func (err ImportError) Error() string {
+	return fmt.Sprintf("the marker '%s' cannot be resolved", err.Marker)
+}
+
 type ParserError struct {
 	FileName string
 	Position Position

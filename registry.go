@@ -26,7 +26,7 @@ func (registry *Registry) initialize() {
 			registry.definitionMap = make(map[string]*Definition)
 		}
 
-		registry.definitionMap["import"], _ = MakeDefinition("import", ImportLevel, &ImportMarker{}, true)
+		registry.definitionMap[ImportMarkerName], _ = MakeDefinition(ImportMarkerName, ImportLevel, &ImportMarker{}, true)
 	})
 
 }
@@ -53,6 +53,10 @@ func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
 
 	if definition.Level == 0 {
 		return fmt.Errorf("specify target levels for the definition : %v", definition.Name)
+	}
+
+	if definition.Level&ImportLevel == ImportLevel {
+		return fmt.Errorf("level is not valid for %v, import level cannot be used", definition.Name)
 	}
 
 	if _, ok := registry.definitionMap[definition.Name]; ok {

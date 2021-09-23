@@ -26,6 +26,12 @@ func MakeDefinition(name string, level TargetLevel, output interface{}, useValue
 	if len(strings.TrimSpace(name)) == 0 {
 		return nil, errors.New("marker name cannot be empty")
 	}
+
+	nameParts := strings.Split(name, ":")
+	if ImportMarkerName == nameParts[0] {
+		return nil, errors.New("import is reserved for marker project, please select another marker name")
+	}
+
 	outputType := reflect.TypeOf(output)
 
 	if outputType.Kind() == reflect.Ptr {

@@ -7,16 +7,12 @@ type TestOutput struct {
 }
 
 func TestCollector_Collect(t *testing.T) {
-	pkgs, _ := LoadPackages("./test-packages/foo")
+	pkgs, _ := LoadPackages("./test/package1", "./test/package2")
 	registry := NewRegistry()
-	registry.Register("test-marker:method-level", MethodLevel, TestOutput{})
-	registry.Register("test-marker:package-level", PackageLevel, TestOutput{})
-	registry.Register("test-marker:type-level", TypeLevel, TestOutput{})
-	registry.Register("test-marker:function-level", FunctionLevel, TestOutput{})
-	registry.Register("test-marker:field-level", FieldLevel, TestOutput{})
+
 	collector := NewCollector(registry)
 
-	EachFile(collector, pkgs[0], func(file *File, err error) {
+	EachFile(collector, pkgs, func(file *File, err error) {
 		if file == nil {
 
 		}

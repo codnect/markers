@@ -7,6 +7,9 @@
 // This is a go document comment
 package package1
 
+// +import=marker, Pkg="github.com/procyon-projects/marker:command"
+import ()
+
 // This is a comment
 // +marker:type-level
 // +marker:struct-level

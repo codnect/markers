@@ -286,7 +286,7 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 	var fileNodeMap = make(map[*ast.File]*File)
 	var methods = make([]Method, 0)
 
-	visitFiles(pkg, func(file *ast.File) {
+	visitPackageFiles(pkg, func(file *ast.File) {
 		_, ok := fileNodeMap[file]
 
 		if ok {

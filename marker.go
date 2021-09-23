@@ -32,12 +32,13 @@ const (
 	InterfaceMethodLevel
 )
 
+const ImportMarkerName = "import"
 const ValueArgument = "Value"
 
 type ImportMarker struct {
 	Value string `marker:"Value"`
-	Name  string `marker:"Marker"`
-	Pkg   string `marker:"Package"`
+	Name  string `marker:"Marker,optional"`
+	Pkg   string `marker:"Pkg"`
 }
 
 type MarkerValues map[string][]interface{}

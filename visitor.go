@@ -5,7 +5,7 @@ import (
 	"go/token"
 )
 
-type Visitor struct {
+type commentVisitor struct {
 	allComments      []*ast.CommentGroup
 	nextCommentIndex int
 
@@ -15,14 +15,14 @@ type Visitor struct {
 	nodeMarkers        map[ast.Node][]markerComment
 }
 
-func newVisitor(allComments []*ast.CommentGroup) *Visitor {
-	return &Visitor{
+func newCommentVisitor(allComments []*ast.CommentGroup) *commentVisitor {
+	return &commentVisitor{
 		allComments: allComments,
 		nodeMarkers: make(map[ast.Node][]markerComment),
 	}
 }
 
-func (visitor *Visitor) Visit(node ast.Node) (w ast.Visitor) {
+func (visitor *commentVisitor) Visit(node ast.Node) (w ast.Visitor) {
 
 	if node == nil {
 		return nil
@@ -105,7 +105,7 @@ func (visitor *Visitor) Visit(node ast.Node) (w ast.Visitor) {
 	return visitor
 }
 
-func (visitor *Visitor) getMarkerComments(startIndex, endIndex int) []markerComment {
+func (visitor *commentVisitor) getMarkerComments(startIndex, endIndex int) []markerComment {
 	if startIndex < 0 || endIndex < 0 {
 		return nil
 	}
@@ -145,7 +145,7 @@ func (visitor *Visitor) getMarkerComments(startIndex, endIndex int) []markerComm
 	return markerComments
 }
 
-func (visitor *Visitor) getCommentsForNode(node ast.Node) (docCommentGroup *ast.CommentGroup) {
+func (visitor *commentVisitor) getCommentsForNode(node ast.Node) (docCommentGroup *ast.CommentGroup) {
 
 	switch typedNode := node.(type) {
 	case *ast.File:
@@ -172,7 +172,7 @@ type typeCallback func(file *ast.File, decl *ast.GenDecl, node *ast.TypeSpec)
 type functionCallback func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType)
 type fileCallback func(file *ast.File)
 
-type fileVisitor struct {
+type fileElementVisitor struct {
 	pkg              *Package
 	fileCallback     fileCallback
 	importCallback   importCallback
@@ -183,7 +183,7 @@ type fileVisitor struct {
 	file             *ast.File
 }
 
-func (visitor *fileVisitor) Visit(node ast.Node) ast.Visitor {
+func (visitor *fileElementVisitor) Visit(node ast.Node) ast.Visitor {
 	if node == nil {
 		return visitor
 	}
@@ -213,11 +213,11 @@ func (visitor *fileVisitor) Visit(node ast.Node) ast.Visitor {
 	}
 }
 
-func visitFiles(pkg *Package, fileCallback fileCallback,
+func visitPackageFiles(pkg *Package, fileCallback fileCallback,
 	importCallback importCallback,
 	typeCallback typeCallback,
 	functionCallback functionCallback) {
-	visitor := &fileVisitor{
+	visitor := &fileElementVisitor{
 		pkg:              pkg,
 		fileCallback:     fileCallback,
 		importCallback:   importCallback,
