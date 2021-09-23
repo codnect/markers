@@ -79,16 +79,6 @@ func (c *markerComment) append(comment *ast.Comment) {
 }
 
 func (c *markerComment) Text() string {
-	if len(c.commentLines) == 1 {
-		text := strings.TrimSpace(c.commentLines[0].Text[2:])
-
-		if strings.HasSuffix(text, "\\") {
-			text = strings.TrimSpace(text[:len(text)-1])
-		}
-
-		return text
-	}
-
 	var text string
 	for _, line := range c.commentLines {
 		comment := strings.TrimSpace(line.Text[2:])
