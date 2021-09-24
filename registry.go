@@ -2,6 +2,7 @@ package marker
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -26,16 +27,19 @@ func (registry *Registry) initialize() {
 			registry.definitionMap = make(map[string]*Definition)
 		}
 
-		registry.definitionMap[ImportMarkerName], _ = MakeDefinition(ImportMarkerName, ImportLevel, &ImportMarker{}, true)
+		registry.definitionMap[ImportMarkerName+"#"], _ = MakeDefinition(ImportMarkerName,
+			"",
+			ImportLevel,
+			&ImportMarker{})
 	})
 
 }
 
 // Register registers a new marker with the given name, target level, and output type.
-func (registry *Registry) Register(name string, level TargetLevel, output interface{}, useValueSyntax ...bool) error {
+func (registry *Registry) Register(name string, pkgId string, level TargetLevel, output interface{}, useValueSyntax ...bool) error {
 	registry.initialize()
 
-	def, err := MakeDefinition(name, level, output, useValueSyntax...)
+	def, err := MakeDefinition(name, pkgId, level, output)
 
 	if err != nil {
 		return err
@@ -59,27 +63,36 @@ func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
 		return fmt.Errorf("level is not valid for %v, import level cannot be used", definition.Name)
 	}
 
-	if _, ok := registry.definitionMap[definition.Name]; ok {
+	nameParts := strings.Split(definition.Name, ":")
+	name := nameParts[0]
+
+	if _, ok := registry.definitionMap[name]; ok {
+		return fmt.Errorf("reserved names such as 'import' cannot be used: %v", definition.Name)
+	}
+
+	if _, ok := registry.definitionMap[definition.Name+"#"+definition.PkgId]; ok {
 		return fmt.Errorf("there is already registered definition : %v", definition.Name)
 	}
 
-	registry.definitionMap[definition.Name] = definition
+	registry.definitionMap[definition.Name+"#"+definition.PkgId] = definition
 
 	return nil
 }
 
-// Lookup fetches the definition corresponding to the given name.
-func (registry *Registry) Lookup(name string) *Definition {
+// Lookup fetches the definition corresponding to the given name and pkgId.
+func (registry *Registry) Lookup(name string, pkgId string) *Definition {
 	registry.initialize()
 
 	registry.mu.RLock()
 	defer registry.mu.RUnlock()
 
 	name, anonymousName, _ := splitMarker(name)
+	// for syntax-free markers
+	name = strings.Split(name, " ")[0]
 
-	if def, exists := registry.definitionMap[anonymousName]; exists {
+	if def, exists := registry.definitionMap[anonymousName+"#"+pkgId]; exists {
 		return def
 	}
 
-	return registry.definitionMap[name]
+	return registry.definitionMap[name+"#"+pkgId]
 }

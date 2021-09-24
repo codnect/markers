@@ -35,7 +35,7 @@ func TestRegistry_Register(t *testing.T) {
 	registry := NewRegistry()
 
 	for _, testCase := range testCases {
-		err := registry.Register(testCase.MarkerName, testCase.TargetLevel, testCase.Output)
+		err := registry.Register(testCase.MarkerName, "", testCase.TargetLevel, testCase.Output)
 		assert.Nil(t, err)
 
 		definition, ok := registry.definitionMap[testCase.MarkerName]
@@ -70,7 +70,7 @@ func TestRegistry_RegisterWithDefinition(t *testing.T) {
 	registry := NewRegistry()
 
 	for _, testCase := range testCases {
-		newDefinition, _ := MakeDefinition(testCase.MarkerName, testCase.TargetLevel, testCase.Output)
+		newDefinition, _ := MakeDefinition(testCase.MarkerName, "", testCase.TargetLevel, testCase.Output)
 		err := registry.RegisterWithDefinition(newDefinition)
 		assert.Nil(t, err)
 
@@ -93,8 +93,8 @@ func TestRegistry_RegisterWithDefinition(t *testing.T) {
 
 func TestRegistry_RegisterMarkerAlreadyRegistered(t *testing.T) {
 	registry := NewRegistry()
-	registry.Register("marker:test", TypeLevel, &testTypeLevelMarker{})
-	err := registry.Register("marker:test", MethodLevel, &testTypeLevelMarker{})
+	registry.Register("marker:test", "", TypeLevel, &testTypeLevelMarker{})
+	err := registry.Register("marker:test", "", MethodLevel, &testTypeLevelMarker{})
 	assert.Len(t, registry.definitionMap, 1)
 	assert.NotNil(t, err)
 	assert.Equal(t, "there is already registered definition : marker:test", err.Error())
@@ -102,7 +102,7 @@ func TestRegistry_RegisterMarkerAlreadyRegistered(t *testing.T) {
 
 func TestRegistry_RegisterMarkerWithEmptyName(t *testing.T) {
 	registry := NewRegistry()
-	err := registry.Register("", MethodLevel, &testMarker{})
+	err := registry.Register("", "", MethodLevel, &testMarker{})
 	assert.Len(t, registry.definitionMap, 0)
 	assert.NotNil(t, err)
 	assert.Equal(t, "marker name cannot be empty", err.Error())
@@ -110,7 +110,7 @@ func TestRegistry_RegisterMarkerWithEmptyName(t *testing.T) {
 
 func TestRegistry_RegisterMarkerWithoutLevel(t *testing.T) {
 	registry := NewRegistry()
-	err := registry.Register("marker:test", 0, &testMarker{})
+	err := registry.Register("marker:test", "", 0, &testMarker{})
 	assert.Len(t, registry.definitionMap, 0)
 	assert.NotNil(t, err)
 	assert.Equal(t, "specify target levels for the definition : marker:test", err.Error())

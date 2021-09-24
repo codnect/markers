@@ -1,15 +1,18 @@
 package marker
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
 
 type Argument struct {
-	Name     string
-	TypeInfo ArgumentTypeInfo
-	Pointer  bool
-	Required bool
+	Name           string
+	TypeInfo       ArgumentTypeInfo
+	Pointer        bool
+	Required       bool
+	SyntaxFree     bool
+	UseValueSyntax bool
 }
 
 func ExtractArgument(structField reflect.StructField) (Argument, error) {
@@ -23,6 +26,8 @@ func ExtractArgument(structField reflect.StructField) (Argument, error) {
 	}
 
 	optionalOption := false
+	syntaxFree := false
+	useValueSyntax := false
 
 	for _, tagOption := range markerTagValues[1:] {
 
@@ -30,6 +35,25 @@ func ExtractArgument(structField reflect.StructField) (Argument, error) {
 			optionalOption = true
 		}
 
+		if tagOption == "syntaxFree" {
+			syntaxFree = true
+		}
+
+		if tagOption == "useValueSyntax" {
+			useValueSyntax = true
+		}
+	}
+
+	if ValueArgument != fieldName && syntaxFree {
+		return Argument{}, fmt.Errorf("'Value' field can only have syntaxFree option")
+	}
+
+	if ValueArgument != fieldName && useValueSyntax {
+		return Argument{}, fmt.Errorf("'Value' field can only have useValueSyntax option")
+	}
+
+	if ValueArgument == fieldName && syntaxFree && useValueSyntax {
+		return Argument{}, fmt.Errorf("'Value' cannot have both syntaxFree and useValueSyntax options at the same time")
 	}
 
 	fieldType := structField.Type
@@ -37,6 +61,10 @@ func ExtractArgument(structField reflect.StructField) (Argument, error) {
 
 	if err != nil {
 		return Argument{}, err
+	}
+
+	if syntaxFree && argumentTypeInfo.ActualType != StringType {
+		return Argument{}, fmt.Errorf("'Value' field with syntaxFree option can be only string")
 	}
 
 	isPointer := false
@@ -50,9 +78,11 @@ func ExtractArgument(structField reflect.StructField) (Argument, error) {
 	optionalOption = optionalOption || isOptional
 
 	return Argument{
-		Name:     fieldName,
-		TypeInfo: argumentTypeInfo,
-		Pointer:  isPointer,
-		Required: !optionalOption,
+		Name:           fieldName,
+		TypeInfo:       argumentTypeInfo,
+		Pointer:        isPointer,
+		Required:       !optionalOption,
+		SyntaxFree:     syntaxFree,
+		UseValueSyntax: useValueSyntax,
 	}, nil
 }

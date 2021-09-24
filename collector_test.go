@@ -1,6 +1,8 @@
 package marker
 
-import "testing"
+import (
+	"testing"
+)
 
 type TestOutput struct {
 	MinValue interface{} `marker:"Min"`

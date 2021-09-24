@@ -72,35 +72,31 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 		}
 	}
 
-	fileImportAliases := collector.extractFileImportAliases(pkg, importNodeMarkers)
+	fileImportAliases, importMarkers := collector.extractFileImportAliases(pkg, importNodeMarkers)
 
 	for node, markerComments := range nodeMarkerComments {
 
 		markerValues := make(MarkerValues)
 		file := pkg.Fset.File(node.Pos())
-		importMarkers := fileImportAliases[file]
+		importAliases := fileImportAliases[file]
 
 		for _, markerComment := range markerComments {
 			markerText := markerComment.Text()
 
+			// first we need to check if there is any import
 			aliasName, _, _ := splitMarker(markerText)
-			nameParts := strings.Split(aliasName, ":")
-			aliasName = nameParts[0]
+			aliasName = strings.Split(aliasName, ":")[0]
+			// markers can be syntax free such as +build
+			aliasName = strings.Split(aliasName, " ")[0]
 
-			if ImportMarkerName == aliasName {
-				continue
-			}
-
-			if markerName, ok := importMarkers[aliasName]; ok {
-				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", markerName), 1)
+			var definition *Definition
+			if name, ok := importAliases[aliasName]; ok {
+				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", name), 1)
+				importMarker := importMarkers[aliasName]
+				definition = collector.Lookup(markerText, importMarker.GetPkgId())
 			} else {
-				err = ImportError{Marker: aliasName}
-				position := pkg.Fset.Position(markerComment.Pos())
-				errs = append(errs, toParseError(err, markerComment, position))
-				continue
+				definition = collector.Lookup(markerText, "")
 			}
-
-			definition := collector.Lookup(markerText)
 
 			if definition == nil {
 				continue
@@ -115,10 +111,6 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 			case *ast.GenDecl:
 
 				if definition.Level&ImportLevel != ImportLevel {
-					continue
-				}
-
-				if ImportMarkerName == definition.Name {
 					continue
 				}
 			case *ast.TypeSpec:
@@ -185,7 +177,7 @@ func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerCo
 
 		for _, markerComment := range markerComments {
 			markerText := markerComment.Text()
-			definition := collector.Lookup(markerText)
+			definition := collector.Lookup(markerText, "")
 
 			if definition == nil {
 				continue
@@ -217,11 +209,12 @@ func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerCo
 
 type AliasMap map[string]string
 
-func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) map[*token.File]AliasMap {
+func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, map[string]ImportMarker) {
 	var fileImportAliases = make(map[*token.File]AliasMap, 0)
+	var importMarkers = make(map[string]ImportMarker, 0)
 
 	if importNodeMarkers == nil {
-		return fileImportAliases
+		return fileImportAliases, importMarkers
 	}
 
 	for node, markerValues := range importNodeMarkers {
@@ -241,16 +234,20 @@ func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMar
 		for _, marker := range markers {
 			importMarker := marker.(ImportMarker)
 
-			if importMarker.Name == "" {
-				aliasMap[importMarker.Value] = importMarker.Value
-			} else {
-				aliasMap[importMarker.Value] = importMarker.Name
+			if importMarker.GetPkgId() == "" || importMarker.GetCommand() == "" {
+				// error
 			}
 
+			if importMarker.Alias == "" {
+				aliasMap[importMarker.Value] = importMarker.Value
+			} else {
+				aliasMap[importMarker.Alias] = importMarker.Value
+			}
+			importMarkers[importMarker.Value] = importMarker
 		}
 
 		fileImportAliases[file] = aliasMap
 	}
 
-	return fileImportAliases
+	return fileImportAliases, importMarkers
 }

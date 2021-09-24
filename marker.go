@@ -14,8 +14,6 @@ const (
 	PackageLevel TargetLevel = 1 << iota
 	// ImportLevel indicates that a marker is associated with an import block.
 	ImportLevel
-	// TypeLevel indicates that a marker is associated with any type.
-	TypeLevel
 	// StructTypeLevel indicates that a marker is associated with a struct type.
 	StructTypeLevel
 	// InterfaceTypeLevel indicates that a marker is associated with an interface type.
@@ -24,21 +22,57 @@ const (
 	FieldLevel
 	// FunctionLevel indicates that a marker is associated with a function.
 	FunctionLevel
-	// MethodLevel indicates that a marker is associated with a struct method or an interface method.
-	MethodLevel
 	// StructMethodLevel indicates that a marker is associated with a struct method.
 	StructMethodLevel
 	// InterfaceMethodLevel indicates that a marker is associated with an interface method.
 	InterfaceMethodLevel
 )
 
-const ImportMarkerName = "import"
-const ValueArgument = "Value"
+// Combined levels
+const (
+	// TypeLevel indicates that a marker is associated with any type.
+	TypeLevel = StructTypeLevel | InterfaceTypeLevel
+	// MethodLevel indicates that a marker is associated with a struct method or an interface method.
+	MethodLevel = StructMethodLevel | InterfaceMethodLevel
+)
+
+// Reserved markers
+const (
+	ImportMarkerName = "import"
+)
 
 type ImportMarker struct {
-	Value string `marker:"Value"`
-	Name  string `marker:"Marker,optional"`
+	Value string `marker:"Value,useValueSyntax"`
+	Alias string `marker:"Alias"`
 	Pkg   string `marker:"Pkg"`
+}
+
+func (m ImportMarker) GetPkgId() string {
+	pkgParts := strings.Split(m.Pkg, ":")
+	pkgParts = strings.Split(pkgParts[0], "@")
+	return pkgParts[0]
+}
+
+func (m ImportMarker) GetPkgVersion() string {
+	pkgParts := strings.Split(m.Pkg, ":")
+	pkgParts = strings.Split(pkgParts[0], "@")
+
+	if len(pkgParts) > 1 {
+		return pkgParts[1]
+
+	}
+
+	return ""
+}
+
+func (m ImportMarker) GetCommand() string {
+	pkgParts := strings.Split(m.Pkg, ":")
+
+	if len(pkgParts) > 1 {
+		return pkgParts[1]
+	}
+
+	return ""
 }
 
 type MarkerValues map[string][]interface{}

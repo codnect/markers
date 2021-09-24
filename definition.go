@@ -7,29 +7,31 @@ import (
 	"strings"
 )
 
+// Argument names
+const (
+	ValueArgument = "Value"
+)
+
 type Output struct {
 	Type              reflect.Type
 	IsAnonymous       bool
+	SyntaxFree        bool
+	UseValueSyntax    bool
 	AnonymousTypeInfo ArgumentTypeInfo
 	Fields            map[string]Argument
 	FieldNames        map[string]string
 }
 
 type Definition struct {
-	Name           string
-	Level          TargetLevel
-	Output         Output
-	UseValueSyntax bool
+	Name   string
+	Level  TargetLevel
+	Output Output
+	PkgId  string
 }
 
-func MakeDefinition(name string, level TargetLevel, output interface{}, useValueSyntax ...bool) (*Definition, error) {
+func MakeDefinition(name string, pkgId string, level TargetLevel, output interface{}) (*Definition, error) {
 	if len(strings.TrimSpace(name)) == 0 {
 		return nil, errors.New("marker name cannot be empty")
-	}
-
-	nameParts := strings.Split(name, ":")
-	if ImportMarkerName == nameParts[0] {
-		return nil, errors.New("import is reserved for marker project, please select another marker name")
 	}
 
 	outputType := reflect.TypeOf(output)
@@ -47,10 +49,7 @@ func MakeDefinition(name string, level TargetLevel, output interface{}, useValue
 			Fields:      make(map[string]Argument),
 			FieldNames:  make(map[string]string),
 		},
-	}
-
-	if useValueSyntax != nil {
-		definition.UseValueSyntax = useValueSyntax[0]
+		PkgId: strings.TrimSpace(pkgId),
 	}
 
 	err := definition.extract()
@@ -93,19 +92,35 @@ func (definition *Definition) extract() error {
 			return errors.New("RawArgument cannot be a field")
 		}
 
+		if argumentInfo.SyntaxFree {
+			definition.Output.SyntaxFree = argumentInfo.SyntaxFree
+		}
+
+		if argumentInfo.UseValueSyntax {
+			definition.Output.UseValueSyntax = argumentInfo.UseValueSyntax
+		}
+
 		definition.Output.Fields[argumentInfo.Name] = argumentInfo
 		definition.Output.FieldNames[argumentInfo.Name] = field.Name
+	}
+
+	if len(definition.Output.Fields) > 1 && definition.Output.SyntaxFree {
+		return fmt.Errorf("output can only have 'Value' field since syntaxFree option is used")
 	}
 
 	return nil
 }
 
 func (definition *Definition) Parse(marker string) (interface{}, error) {
+	if definition.Output.SyntaxFree {
+		return definition.parseSyntaxFree(marker), nil
+	}
+
 	output := reflect.Indirect(reflect.New(definition.Output.Type))
 
 	name, anonymousName, fields := splitMarker(marker)
 
-	if !definition.UseValueSyntax && len(anonymousName) >= len(name)+1 {
+	if !definition.Output.UseValueSyntax && len(anonymousName) >= len(name)+1 {
 		fields = anonymousName[len(name)+1:] + "=" + fields
 	}
 
@@ -135,7 +150,7 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 			var argumentName string
 			currentCharacter := scanner.SkipWhitespaces()
 
-			if definition.UseValueSyntax && !valueArgumentProcessed && currentCharacter == '{' {
+			if definition.Output.UseValueSyntax && !valueArgumentProcessed && currentCharacter == '{' {
 				canBeValueArgument = true
 			} else if !scanner.Expect(Identifier, "Argument Name") {
 				break
@@ -144,7 +159,7 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 			argumentName = scanner.Token()
 			currentCharacter = scanner.SkipWhitespaces()
 
-			if definition.UseValueSyntax && !valueArgumentProcessed && (currentCharacter == ',' || currentCharacter == ';') {
+			if definition.Output.UseValueSyntax && !valueArgumentProcessed && (currentCharacter == ',' || currentCharacter == ';') {
 				canBeValueArgument = true
 			} else if (valueArgumentProcessed || !canBeValueArgument) && !scanner.Expect('=', "Equals Sign '='") {
 				break
@@ -201,4 +216,48 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 	}
 
 	return output.Interface(), NewErrorList(errs)
+}
+
+func (definition *Definition) parseSyntaxFree(marker string) interface{} {
+	output := reflect.Indirect(reflect.New(definition.Output.Type))
+
+	fieldName, exists := definition.Output.FieldNames[ValueArgument]
+
+	if !exists {
+		return output.Interface()
+	}
+
+	var argument Argument
+	argument, exists = definition.Output.Fields[ValueArgument]
+
+	if !exists {
+		return output.Interface()
+	}
+
+	fieldValue := output.FieldByName(fieldName)
+
+	if !fieldValue.CanSet() {
+		return output.Interface()
+	}
+
+	fieldOutType := fieldValue.Type()
+
+	if argument.Pointer {
+		fieldOutType = fieldOutType.Elem()
+		fieldValue = fieldValue.Elem()
+	}
+
+	name, _, _ := splitMarker(marker)
+	// markers can be syntax free such as +build
+	name = strings.Split(name, " ")[0]
+
+	value := reflect.ValueOf(strings.Replace(marker, fmt.Sprintf("+%s", name), "", 1))
+
+	if fieldOutType != value.Type() {
+		value = value.Convert(fieldOutType)
+	}
+
+	fieldValue.Set(value)
+
+	return output.Interface()
 }
