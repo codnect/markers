@@ -55,11 +55,19 @@ const (
 `
 )
 
+var module string
+
 var initCmd = &cobra.Command{
-	Use:   "init [name] [version]",
+	Use:   "init [name]",
 	Short: "Initialize a marker processor",
 	Long:  `The init command lets you create a new marker processor.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return errors.New("marker name is required")
+		}
+
+		name := args[0]
+
 		wd, err := os.Getwd()
 
 		if err != nil {
@@ -79,29 +87,17 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
-		writeConstantFile(wd, "my-processor")
-		err = renameTemplateFiles(wd, "my-processor")
+		writeConstantFile(wd, name)
+		err = renameTemplateFiles(wd, name)
 
 		if err != nil {
 			return err
 		}
 
-		err = overwriteGoModFile(wd, "my-processor", "test")
+		err = overwriteGoModFile(wd, name, module)
 
 		if err != nil {
 			return err
-		}
-
-		if len(args) == 0 {
-			return errors.New("processor name and version are required")
-		}
-
-		if len(args) == 1 {
-			return errors.New("processor version is missing")
-		}
-
-		if len(args) > 2 {
-			return errors.New("too many arguments")
 		}
 
 		return nil
@@ -110,6 +106,14 @@ var initCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initCmd)
+
+	initCmd.Flags().StringVarP(&module, "module", "m", "", "Module Name (required)")
+
+	err := initCmd.MarkFlagRequired("module")
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 func downloadTemplateZip(wd string) error {
