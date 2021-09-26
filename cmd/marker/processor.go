@@ -45,6 +45,11 @@ func ValidateMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs [
 	collectMarkerProcessors(collector, pkgs, dirs)
 
 	if err != nil {
+		switch typedErr := err.(type) {
+		case marker.ErrorList:
+			printErrors(typedErr)
+			return nil
+		}
 		return err
 	}
 
@@ -65,6 +70,11 @@ func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []
 	collectMarkerProcessors(collector, pkgs, dirs)
 
 	if err != nil {
+		switch typedErr := err.(type) {
+		case marker.ErrorList:
+			printErrors(typedErr)
+			return nil
+		}
 		return err
 	}
 

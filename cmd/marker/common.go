@@ -17,6 +17,7 @@ package main
 
 import (
 	"github.com/procyon-projects/marker"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -82,4 +83,21 @@ func findDirectoriesWithGoFiles(root string) ([]string, error) {
 	}
 
 	return dirs, nil
+}
+
+// printErrors prints error(s) if any error exists after processing markers.
+func printErrors(errorList marker.ErrorList) {
+	if errorList == nil || len(errorList) == 0 {
+		return
+	}
+
+	for _, err := range errorList {
+		switch typedErr := err.(type) {
+		case marker.ParserError:
+			pos := typedErr.Position
+			log.Errorf("%s (%d:%d) : %s\n", typedErr.FileName, pos.Line, pos.Column, typedErr.Error())
+		case marker.ErrorList:
+			printErrors(typedErr)
+		}
+	}
 }
