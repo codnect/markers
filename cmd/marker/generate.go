@@ -18,6 +18,7 @@ package main
 import (
 	"github.com/procyon-projects/marker"
 	"github.com/spf13/cobra"
+	"log"
 )
 
 var outputPath string
@@ -27,33 +28,40 @@ var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate Go files by processing markers",
 	Long:  `The generate command helps your code generation process by running marker processors`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		dirs, err := getPackageDirectories()
 
 		if err != nil {
-			return err
+			log.Println(err)
+			return
 		}
 
 		if dirs == nil || len(dirs) == 0 {
-			return nil
+			return
 		}
 
 		var packages []*marker.Package
 		packages, err = marker.LoadPackages(dirs...)
 
 		if err != nil {
-			return err
+			log.Println(err)
 		}
 
 		registry := marker.NewRegistry()
 		err = RegisterDefinitions(registry)
 
 		if err != nil {
-			return err
+			log.Println(err)
+			return
 		}
 
 		collector := marker.NewCollector(registry)
-		return ProcessMarkers(collector, packages, dirs)
+		err = ProcessMarkers(collector, packages, dirs)
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	},
 }
 

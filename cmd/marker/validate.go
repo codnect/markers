@@ -18,6 +18,7 @@ package main
 import (
 	"github.com/procyon-projects/marker"
 	"github.com/spf13/cobra"
+	"log"
 )
 
 var validateArgs []string
@@ -26,36 +27,43 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate markers' syntax and arguments",
 	Long:  `The validate command helps you validate markers' syntax and arguments'`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 		var dirs []string
 
 		dirs, err = getPackageDirectories()
 
 		if err != nil {
-			return err
+			log.Println(err)
 		}
 
 		if dirs == nil || len(dirs) == 0 {
-			return nil
+			return
 		}
 
 		var packages []*marker.Package
 		packages, err = marker.LoadPackages(dirs...)
 
 		if err != nil {
-			return err
+			log.Println(err)
+			return
 		}
 
 		registry := marker.NewRegistry()
 		err = RegisterDefinitions(registry)
 
 		if err != nil {
-			return err
+			log.Println(err)
+			return
 		}
 
 		collector := marker.NewCollector(registry)
-		return ValidateMarkers(collector, packages, dirs)
+		err = validateMarkers(collector, packages, dirs)
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	},
 }
 

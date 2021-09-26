@@ -35,41 +35,16 @@ func RegisterDefinitions(registry *marker.Registry) error {
 }
 
 var (
-	err        error
-	processors = make(map[string]MarkerProcessor, 0)
+	processors       = make(map[string]MarkerProcessor, 0)
+	validationErrors []error
 )
-
-// ProcessMarkers gets the import markers in the given directories.
-// Then, it fetches marker processors and run them for validation.
-func ValidateMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []string) error {
-	collectMarkerProcessors(collector, pkgs, dirs)
-
-	if err != nil {
-		switch typedErr := err.(type) {
-		case marker.ErrorList:
-			printErrors(typedErr)
-			return nil
-		}
-		return err
-	}
-
-	fetchPackages()
-
-	if err != nil {
-		return err
-	}
-
-	validate(dirs)
-
-	return err
-}
 
 // ProcessMarkers gets the import markers in the given directories.
 // Then, it fetches marker processors and run them for code generation.
 func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []string) error {
-	collectMarkerProcessors(collector, pkgs, dirs)
+	err := collectMarkers(collector, pkgs)
 
-	if err != nil {
+	if validationErrors != nil {
 		switch typedErr := err.(type) {
 		case marker.ErrorList:
 			printErrors(typedErr)
@@ -78,7 +53,7 @@ func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []
 		return err
 	}
 
-	fetchPackages()
+	err = fetchPackages()
 
 	if err != nil {
 		return err
@@ -89,15 +64,11 @@ func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []
 	return err
 }
 
-// collectImportMarkers collects marker processor metadata by parsing '+import' marker
-func collectMarkerProcessors(collector *marker.Collector, pkgs []*marker.Package, dirs []string) {
+// CollectMarkers collects markers by scanning metadata
+func collectMarkers(collector *marker.Collector, pkgs []*marker.Package) error {
 	marker.EachFile(collector, pkgs, func(file *marker.File, fileErr error) {
-		if err != nil {
-			return
-		}
-
 		if fileErr != nil {
-			err = fileErr
+			validationErrors = append(validationErrors, fileErr)
 			return
 		}
 
@@ -116,7 +87,7 @@ func collectMarkerProcessors(collector *marker.Collector, pkgs []*marker.Package
 				importMarker := value.(marker.ImportMarker)
 				pkgId := importMarker.GetPkgId()
 
-				processor, ok := processors[pkgId]
+				_, ok := processors[pkgId]
 
 				if !ok {
 					command := importMarker.GetCommand()
@@ -130,36 +101,42 @@ func collectMarkerProcessors(collector *marker.Collector, pkgs []*marker.Package
 						Version: importMarker.GetPkgVersion(),
 						Command: command,
 					}
-				} else {
-					version := importMarker.GetPkgVersion()
-
-					if processor.Version != version {
-						fileErr = fmt.Errorf("conflict: PkgId with '%s' has got more than one version, versions: '%s' and '%s'",
-							pkgId, processor.Version, version)
-						break
-					}
-
-					command := importMarker.GetCommand()
-
-					if command == "" {
-						command = importMarker.Value
-					}
-
-					if processor.Command != command {
-						fileErr = fmt.Errorf("conflict: PkgId with '%s' has got more than one command, commands: '%s' and '%s'",
-							pkgId, processor.Command, command)
-						break
-					}
-
 				}
 			}
 
 		}
 	})
+
+	return marker.NewErrorList(validationErrors)
+}
+
+// ProcessMarkers gets the import markers in the given directories.
+// Then, it fetches marker processors and run them for validation.
+func validateMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []string) error {
+	err := collectMarkers(collector, pkgs)
+
+	if err != nil {
+		switch typedErr := err.(type) {
+		case marker.ErrorList:
+			printErrors(typedErr)
+			return nil
+		}
+		return err
+	}
+
+	err = fetchPackages()
+
+	if err != nil {
+		return err
+	}
+
+	validate(dirs)
+
+	return err
 }
 
 // runProcessors fetches the marker processors by making use of '+import' marker metadata.
-func fetchPackages() {
+func fetchPackages() error {
 	for _, processor := range processors {
 		name := fmt.Sprintf("%s/...", processor.Module)
 
@@ -170,13 +147,14 @@ func fetchPackages() {
 			fmt.Printf("Fetching %s...\n", processor.Module)
 		}
 
-		err = exec.Command("go", "get", "-u", name).Run()
+		err := exec.Command("go", "get", "-u", name).Run()
 
 		if err != nil {
-			log.Errorf("an error occurred while fetching '%s'", name)
-			break
+			return fmt.Errorf("an error occurred while fetching '%s'", name)
 		}
 	}
+
+	return nil
 }
 
 // generateCode runs the marker processors to generate code
