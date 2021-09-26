@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -229,19 +228,15 @@ func writeConstantFile(wd, processorName string) {
 }
 
 func overwriteGoModFile(wd, processorName, module string) error {
-	err := os.Remove(filepath.Join(wd, processorName, goModFileName))
-
+	path := filepath.Join(wd, processorName, goModFileName)
+	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	err = exec.Command("go", "mod", "init", module).Run()
+	newContent := strings.Replace(string(content), "$MODULE_NAME", module, -1)
 
-	if err != nil {
-		return err
-	}
-
-	err = exec.Command("go", "get", "-t", "-v", "./...").Run()
+	err = ioutil.WriteFile(path, []byte(newContent), 0)
 
 	return err
 }
