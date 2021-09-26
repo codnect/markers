@@ -175,6 +175,7 @@ func (scanner *Scanner) ScanString(quote rune) (len int) {
 
 	for character != quote {
 		if character == '\n' || character < 0 {
+			scanner.AddError(fmt.Sprintf("'%c' is missing", quote))
 			return
 		}
 

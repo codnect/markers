@@ -7,12 +7,11 @@ import (
 )
 
 type ScannerError struct {
-	Position int
-	Message  string
+	Message string
 }
 
 func (err ScannerError) Error() string {
-	return fmt.Sprintf("%s (at %d)", err.Message, err.Position)
+	return err.Message
 }
 
 type ImportError struct {
@@ -48,16 +47,13 @@ func toParseError(err error, node ast.Node, position token.Position) error {
 	errorList, ok := err.(ErrorList)
 
 	if !ok {
-
-		errorPosition := Position{
-			Line:   position.Line,
-			Column: position.Column,
-		}
-
 		return ParserError{
 			FileName: position.Filename,
-			Position: errorPosition,
-			error:    err,
+			Position: Position{
+				Line:   position.Line,
+				Column: position.Column,
+			},
+			error: err,
 		}
 	}
 
