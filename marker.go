@@ -43,7 +43,7 @@ const (
 
 type ImportMarker struct {
 	Value string `marker:"Value,useValueSyntax"`
-	Alias string `marker:"Alias"`
+	Alias string `marker:"Alias,optional"`
 	Pkg   string `marker:"Pkg"`
 }
 

@@ -128,8 +128,7 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 
 	if strings.ContainsAny(anonymousName, ".,;=") {
 		errs = append(errs, ScannerError{
-			Position: 0,
-			Message:  fmt.Sprintf("Marker format is not valid : %s", marker),
+			Message: fmt.Sprintf("Marker format is not valid : %s", marker),
 		})
 		return nil, NewErrorList(errs)
 	}
@@ -137,13 +136,14 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 	scanner := NewScanner(fields)
 	scanner.ErrorCallback = func(scanner *Scanner, message string) {
 		errs = append(errs, ScannerError{
-			Position: scanner.SearchIndex(),
-			Message:  message,
+			Message: message,
 		})
 	}
 
 	valueArgumentProcessed := false
 	canBeValueArgument := false
+
+	seen := make(map[string]struct{}, len(definition.Output.Fields))
 
 	if scanner.Peek() != EOF {
 		for {
@@ -159,7 +159,7 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 			argumentName = scanner.Token()
 			currentCharacter = scanner.SkipWhitespaces()
 
-			if definition.Output.UseValueSyntax && !valueArgumentProcessed && (currentCharacter == ',' || currentCharacter == ';') {
+			if definition.Output.UseValueSyntax && !valueArgumentProcessed && (currentCharacter == EOF || currentCharacter == ',' || currentCharacter == ';') {
 				canBeValueArgument = true
 			} else if (valueArgumentProcessed || !canBeValueArgument) && !scanner.Expect('=', "Equals Sign '='") {
 				break
@@ -193,6 +193,8 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 				goto nextAttribute
 			}
 
+			seen[argumentName] = struct{}{}
+
 			fieldValue = output.FieldByName(fieldName)
 
 			if !fieldValue.CanSet() {
@@ -212,6 +214,12 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 			if !scanner.Expect(',', "Comma ','") {
 				break
 			}
+		}
+	}
+
+	for argumentName, argument := range definition.Output.Fields {
+		if _, wasSeen := seen[argumentName]; !wasSeen && argument.Required {
+			scanner.AddError(fmt.Sprintf("missing argument %q", argumentName))
 		}
 	}
 

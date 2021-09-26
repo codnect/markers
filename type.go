@@ -238,7 +238,7 @@ func (typeInfo ArgumentTypeInfo) parseString(scanner *Scanner, out reflect.Value
 		value, err := strconv.Unquote(scanner.Token())
 
 		if err != nil {
-			return nil
+			return err
 		}
 
 		typeInfo.setValue(out, reflect.ValueOf(value))
