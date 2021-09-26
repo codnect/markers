@@ -63,7 +63,6 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 		return nil, err
 	}
 
-	var errs []error
 	nodeMarkerValues := make(map[ast.Node]MarkerValues)
 
 	if importNodeMarkers != nil {
@@ -72,8 +71,15 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 		}
 	}
 
-	fileImportAliases, importMarkers := collector.extractFileImportAliases(pkg, importNodeMarkers)
+	var fileImportAliases map[*token.File]AliasMap
+	var importMarkers map[string]ImportMarker
+	fileImportAliases, importMarkers, err = collector.extractFileImportAliases(pkg, importNodeMarkers)
 
+	if err != nil {
+		return nil, err
+	}
+
+	var errs []error
 	for node, markerComments := range nodeMarkerComments {
 
 		markerValues := make(MarkerValues)
@@ -195,6 +201,16 @@ func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerCo
 				continue
 			}
 
+			if marker, ok := value.(Marker); ok {
+				err = marker.Validate()
+			}
+
+			if err != nil {
+				position := pkg.Fset.Position(markerComment.Pos())
+				errs = append(errs, toParseError(err, markerComment, position))
+				continue
+			}
+
 			markerValues[definition.Name] = append(markerValues[definition.Name], value)
 		}
 
@@ -209,12 +225,13 @@ func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerCo
 
 type AliasMap map[string]string
 
-func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, map[string]ImportMarker) {
+func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, map[string]ImportMarker, error) {
+	var errs []error
 	var fileImportAliases = make(map[*token.File]AliasMap, 0)
 	var importMarkers = make(map[string]ImportMarker, 0)
 
 	if importNodeMarkers == nil {
-		return fileImportAliases, importMarkers
+		return fileImportAliases, importMarkers, nil
 	}
 
 	for node, markerValues := range importNodeMarkers {
@@ -231,12 +248,19 @@ func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMar
 		}
 
 		aliasMap := make(AliasMap, 0)
+		pkgIdMap := make(map[string]bool, 0)
+
 		for _, marker := range markers {
 			importMarker := marker.(ImportMarker)
 
-			if importMarker.GetPkgId() == "" || importMarker.GetCommand() == "" {
-				// error
+			if _, ok := pkgIdMap[importMarker.GetPkgId()]; ok {
+				position := pkg.Fset.Position(node.Pos())
+				err := fmt.Errorf("processor with Pkg '%s' has alrealdy been imported", importMarker.GetPkgId())
+				errs = append(errs, toParseError(err, node, position))
+				continue
 			}
+
+			pkgIdMap[importMarker.GetPkgId()] = true
 
 			if importMarker.Alias == "" {
 				aliasMap[importMarker.Value] = importMarker.Value
@@ -249,5 +273,5 @@ func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMar
 		fileImportAliases[file] = aliasMap
 	}
 
-	return fileImportAliases, importMarkers
+	return fileImportAliases, importMarkers, NewErrorList(errs)
 }
