@@ -81,7 +81,7 @@ func init() {
 func getPackageDirectories() ([]string, error) {
 	var err error
 	var modDir string
-	modDir, err = marker.GoModDir()
+	//modDir, err = marker.GoModDir()
 
 	if err != nil {
 		return nil, err
