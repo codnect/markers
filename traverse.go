@@ -35,7 +35,7 @@ type TypeInfo struct {
 	RawField *ast.Field
 }
 
-type FileCallback func(file *File, error error)
+type FileCallback func(file *File, err error)
 
 type Position struct {
 	Line   int
@@ -246,12 +246,10 @@ func (typ VariadicType) Kind() Kind {
 func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
 	if collector == nil {
 		callback(nil, errors.New("collector cannot be nil"))
-		return
 	}
 
 	if pkgs == nil {
 		callback(nil, errors.New("pkgs(packages) cannot be nil"))
-		return
 	}
 
 	var fileMap = make(map[*ast.File]*File)
@@ -274,7 +272,6 @@ func EachFile(collector *Collector, pkgs []*Package, callback FileCallback) {
 
 	if errs != nil {
 		callback(nil, NewErrorList(errs))
-		return
 	}
 
 	for _, file := range fileMap {
@@ -526,7 +523,7 @@ func getType(fileSet *token.FileSet,
 
 		structType.Fields = getStructFields(fileSet, fileInfo, file, specType, markers)
 		typ = structType
-	case *ast.Ident:
+	case *ast.Ident, *ast.StarExpr, *ast.SelectorExpr, *ast.MapType, *ast.ArrayType, *ast.ChanType, *ast.FuncType:
 		typ = UserDefinedType{
 			Name:        spec.Name.Name,
 			Position:    getPosition(fileSet, spec.Pos()),
@@ -537,19 +534,6 @@ func getType(fileSet *token.FileSet,
 			RawGenDecl:  decl,
 			RawTypeSpec: spec,
 		}
-
-	case *ast.SelectorExpr:
-		typ = UserDefinedType{
-			Name:        spec.Name.Name,
-			Position:    getPosition(fileSet, spec.Pos()),
-			ActualType:  getTypeFromExpression(fileSet, fileInfo, file, spec.Type, markers),
-			Markers:     markers[spec],
-			File:        fileInfo,
-			RawFile:     file,
-			RawGenDecl:  decl,
-			RawTypeSpec: spec,
-		}
-
 	}
 
 	return typ
