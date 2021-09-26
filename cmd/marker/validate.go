@@ -20,15 +20,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var outputPath string
-var options []string
+var validateArgs []string
 
-var generateCmd = &cobra.Command{
-	Use:   "generate",
-	Short: "Generate Go files by processing markers",
-	Long:  `The generate command helps your code generation process by running marker processors`,
+var validateCmd = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate markers' syntax and arguments",
+	Long:  `The validate command helps you validate markers' syntax and arguments'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		dirs, err := getPackageDirectories()
+		var err error
+		var dirs []string
+
+		dirs, err = getPackageDirectories()
 
 		if err != nil {
 			return err
@@ -53,19 +55,11 @@ var generateCmd = &cobra.Command{
 		}
 
 		collector := marker.NewCollector(registry)
-		return ProcessMarkers(collector, packages, dirs)
+		return ValidateMarkers(collector, packages, dirs)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(generateCmd)
-
-	generateCmd.Flags().StringVarP(&outputPath, "output", "o", "", "output path")
-	err := generateCmd.MarkFlagRequired("output")
-
-	if err != nil {
-		panic(err)
-	}
-
-	generateCmd.Flags().StringSliceVarP(&options, "args", "a", options, "extra arguments for marker processors (key-value separated by comma)")
+	rootCmd.AddCommand(validateCmd)
+	validateCmd.Flags().StringSliceVarP(&validateArgs, "args", "a", validateArgs, "extra arguments for marker processors (key-value separated by comma)")
 }
