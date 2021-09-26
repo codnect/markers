@@ -152,8 +152,10 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 
 			if definition.Output.UseValueSyntax && !valueArgumentProcessed && currentCharacter == '{' {
 				canBeValueArgument = true
-			} else if !scanner.Expect(Identifier, "Argument Name") {
-				break
+			} else if definition.Output.UseValueSyntax && !scanner.Expect(Identifier, "Value") {
+				continue
+			} else if !definition.Output.UseValueSyntax && !scanner.Expect(Identifier, "Argument Name") {
+				continue
 			}
 
 			argumentName = scanner.Token()

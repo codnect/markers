@@ -1,6 +1,7 @@
 package marker
 
 import (
+	"errors"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -36,6 +37,10 @@ const (
 	MethodLevel = StructMethodLevel | InterfaceMethodLevel
 )
 
+type Marker interface {
+	Validate() error
+}
+
 // Reserved markers
 const (
 	ImportMarkerName = "import"
@@ -45,6 +50,18 @@ type ImportMarker struct {
 	Value string `marker:"Value,useValueSyntax"`
 	Alias string `marker:"Alias,optional"`
 	Pkg   string `marker:"Pkg"`
+}
+
+func (m ImportMarker) Validate() error {
+	if m.Value == "" {
+		return errors.New("'Value' argument cannot be nil or empty")
+	}
+
+	if m.Pkg == "" {
+		return errors.New("'Pkg' argument cannot be nil or empty")
+	}
+
+	return nil
 }
 
 func (m ImportMarker) GetPkgId() string {
