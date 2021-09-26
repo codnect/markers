@@ -27,10 +27,7 @@ func (registry *Registry) initialize() {
 			registry.definitionMap = make(map[string]*Definition)
 		}
 
-		registry.definitionMap[ImportMarkerName+"#"], _ = MakeDefinition(ImportMarkerName,
-			"",
-			ImportLevel,
-			&ImportMarker{})
+		registry.definitionMap[ImportMarkerName+"#"], _ = MakeDefinition(ImportMarkerName, "", ImportLevel, &ImportMarker{})
 	})
 
 }
