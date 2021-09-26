@@ -18,6 +18,7 @@ package main
 import (
 	"fmt"
 	"github.com/procyon-projects/marker"
+	"log"
 	"os/exec"
 	"strings"
 )
@@ -34,20 +35,59 @@ func RegisterDefinitions(registry *marker.Registry) error {
 }
 
 var (
-	processErr error
+	err        error
 	processors = make(map[string]MarkerProcessor, 0)
 )
 
 // ProcessMarkers gets the import markers in the given directories.
-// Then, it fetches marker processors and run them.
+// Then, it fetches marker processors and run them for validation.
+func ValidateMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []string) error {
+	collectMarkerProcessors(collector, pkgs, dirs)
+
+	if err != nil {
+		return err
+	}
+
+	fetchPackages()
+
+	if err != nil {
+		return err
+	}
+
+	validate(dirs)
+
+	return err
+}
+
+// ProcessMarkers gets the import markers in the given directories.
+// Then, it fetches marker processors and run them for code generation.
 func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []string) error {
-	marker.EachFile(collector, pkgs, func(file *marker.File, markerErr error) {
-		if processErr != nil {
+	collectMarkerProcessors(collector, pkgs, dirs)
+
+	if err != nil {
+		return err
+	}
+
+	fetchPackages()
+
+	if err != nil {
+		return err
+	}
+
+	generateCode(dirs)
+
+	return err
+}
+
+// collectImportMarkers collects marker processor metadata by parsing '+import' marker
+func collectMarkerProcessors(collector *marker.Collector, pkgs []*marker.Package, dirs []string) {
+	marker.EachFile(collector, pkgs, func(file *marker.File, fileErr error) {
+		if err != nil {
 			return
 		}
 
-		if markerErr != nil {
-			processErr = markerErr
+		if fileErr != nil {
+			err = fileErr
 			return
 		}
 
@@ -84,7 +124,7 @@ func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []
 					version := importMarker.GetPkgVersion()
 
 					if processor.Version != version {
-						processErr = fmt.Errorf("conflict: PkgId with '%s' has got more than one version, versions: '%s' and '%s'",
+						fileErr = fmt.Errorf("conflict: PkgId with '%s' has got more than one version, versions: '%s' and '%s'",
 							pkgId, processor.Version, version)
 						break
 					}
@@ -96,7 +136,7 @@ func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []
 					}
 
 					if processor.Command != command {
-						processErr = fmt.Errorf("conflict: PkgId with '%s' has got more than one command, commands: '%s' and '%s'",
+						fileErr = fmt.Errorf("conflict: PkgId with '%s' has got more than one command, commands: '%s' and '%s'",
 							pkgId, processor.Command, command)
 						break
 					}
@@ -106,20 +146,6 @@ func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []
 
 		}
 	})
-
-	if processErr != nil {
-		return processErr
-	}
-
-	fetchPackages()
-
-	if processErr != nil {
-		return processErr
-	}
-
-	runProcessors(dirs)
-
-	return processErr
 }
 
 // runProcessors fetches the marker processors by making use of '+import' marker metadata.
@@ -134,17 +160,17 @@ func fetchPackages() {
 			fmt.Printf("Fetching %s...\n", processor.Module)
 		}
 
-		processErr = exec.Command("go", "get", "-u", name).Run()
+		err = exec.Command("go", "get", "-u", name).Run()
 
-		if processErr != nil {
-			processErr = fmt.Errorf("an error occurred while fetching '%s'", name)
+		if err != nil {
+			log.Errorf("an error occurred while fetching '%s'", name)
 			break
 		}
 	}
 }
 
-// runProcessors runs the marker processors by making use of '+import' marker metadata.
-func runProcessors(dirs []string) {
+// generateCode runs the marker processors to generate code
+func generateCode(dirs []string) {
 	args := make([]string, 0)
 
 	args = append(args, "generate")
@@ -158,11 +184,43 @@ func runProcessors(dirs []string) {
 		args = append(args, strings.Join(options, ","))
 	}
 
-	for _, processor := range processors {
-		processErr = exec.Command(processor.Command, args...).Run()
+	runProcessors(args)
+}
 
-		if processErr != nil {
-			break
+// validate runs the marker processors to validate markers
+func validate(dirs []string) {
+	args := make([]string, 0)
+
+	args = append(args, "validate")
+	args = append(args, "--path")
+	args = append(args, strings.Join(dirs, ","))
+
+	if validateArgs != nil && len(validateArgs) != 0 {
+		args = append(args, "--args")
+		args = append(args, strings.Join(validateArgs, ","))
+	}
+
+	runProcessors(args)
+}
+
+// runProcessor runs processors by passing given args
+func runProcessors(args []string) {
+	for _, processor := range processors {
+		cmd := exec.Command(processor.Command, args...)
+		output, err := cmd.CombinedOutput()
+
+		if err != nil {
+			log.Errorf("An error occurred while running command '%s %s' : ", processor.Command, strings.Join(args, " "))
+			log.Errorf(err.Error())
 		}
+
+		if output != nil {
+			log.Errorf(string(output))
+		}
+
+		if err != nil || output != nil {
+			log.Println()
+		}
+
 	}
 }
