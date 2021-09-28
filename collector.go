@@ -161,6 +161,16 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 				continue
 			}
 
+			if marker, ok := value.(Marker); ok {
+				err = marker.Validate()
+			}
+
+			if err != nil {
+				position := pkg.Fset.Position(markerComment.Pos())
+				errs = append(errs, toParseError(err, markerComment, position))
+				continue
+			}
+
 			markerValues[definition.Name] = append(markerValues[definition.Name], value)
 		}
 

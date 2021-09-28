@@ -150,7 +150,7 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 			var argumentName string
 			currentCharacter := scanner.SkipWhitespaces()
 
-			if definition.Output.UseValueSyntax && !valueArgumentProcessed && currentCharacter == '{' {
+			if definition.Output.UseValueSyntax && !valueArgumentProcessed && currentCharacter == '{' || currentCharacter == '"' {
 				canBeValueArgument = true
 			} else if definition.Output.UseValueSyntax && !scanner.Expect(Identifier, "Value") {
 				continue
