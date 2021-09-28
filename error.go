@@ -6,6 +6,20 @@ import (
 	"go/token"
 )
 
+type Error struct {
+	FileName string
+	Position Position
+	error
+}
+
+func NewError(err error, fileName string, position Position) error {
+	return Error{
+		fileName,
+		position,
+		err,
+	}
+}
+
 type ScannerError struct {
 	Message string
 }
