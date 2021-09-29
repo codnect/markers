@@ -74,6 +74,9 @@ func (scanner *Scanner) Expect(expected rune, description string) bool {
 
 func (scanner *Scanner) Reset() {
 	scanner.searchIndex = 0
+	scanner.character = rune(scanner.source[0])
+	scanner.tokenStartPosition = 0
+	scanner.tokenEndPosition = 0
 }
 
 func (scanner *Scanner) SetSearchIndex(searchIndex int) {
