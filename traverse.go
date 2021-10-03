@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"golang.org/x/tools/go/packages"
 	"path/filepath"
+	"strings"
 )
 
 type Kind int
@@ -26,6 +27,21 @@ const (
 
 type Type interface {
 	Kind() Kind
+}
+
+type ValueType struct {
+	ImportName string
+	Name       string
+}
+
+type ConstValue struct {
+	Name         string
+	Value        string
+	IsExported   bool
+	Type         *ValueType
+	Position     Position
+	RawFile      *ast.File
+	RawValueSpec *ast.ValueSpec
 }
 
 type TypeInfo struct {
@@ -73,6 +89,7 @@ type File struct {
 	FullPath      string
 	Package       PackageInfo
 	Imports       []Import
+	Consts        []ConstValue
 	Markers       MarkerValues
 	ImportMarkers []MarkerValues
 
@@ -142,6 +159,7 @@ func (typ ChanType) Kind() Kind {
 
 type FunctionType struct {
 	Name         string
+	IsExported   bool
 	Position     Position
 	Markers      MarkerValues
 	Parameters   []TypeInfo
@@ -157,16 +175,18 @@ func (function FunctionType) Kind() Kind {
 }
 
 type Field struct {
-	Name     string
-	Position Position
-	Markers  MarkerValues
-	Type     Type
-	RawFile  *ast.File
-	RawField *ast.Field
+	Name       string
+	IsExported bool
+	Position   Position
+	Markers    MarkerValues
+	Type       Type
+	RawFile    *ast.File
+	RawField   *ast.Field
 }
 
 type Method struct {
 	Name         string
+	IsExported   bool
 	Position     Position
 	Markers      MarkerValues
 	Receiver     *TypeInfo
@@ -181,6 +201,7 @@ type Method struct {
 
 type StructType struct {
 	Name        string
+	IsExported  bool
 	Position    Position
 	Markers     MarkerValues
 	Fields      []Field
@@ -197,6 +218,7 @@ func (typ StructType) Kind() Kind {
 
 type UserDefinedType struct {
 	Name        string
+	IsExported  bool
 	ActualType  Type
 	Position    Position
 	Markers     MarkerValues
@@ -213,6 +235,7 @@ func (typ UserDefinedType) Kind() Kind {
 
 type InterfaceType struct {
 	Name        string
+	IsExported  bool
 	Position    Position
 	Markers     MarkerValues
 	Methods     []Method
@@ -300,6 +323,18 @@ func eachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]
 
 		if markerValues, ok := markers[decl]; ok {
 			fileInfo.ImportMarkers = append(fileInfo.ImportMarkers, markerValues)
+		}
+	}, func(file *ast.File, decl *ast.GenDecl) {
+		fileInfo, ok := fileNodeMap[file]
+
+		if !ok {
+			return
+		}
+
+		constValues := getConstValues(pkg.Fset, file, decl.Specs)
+
+		if constValues != nil {
+			fileInfo.Consts = append(fileInfo.Consts, constValues...)
 		}
 	}, func(file *ast.File, decl *ast.GenDecl, spec *ast.TypeSpec) {
 		fileInfo, ok := fileNodeMap[file]
@@ -422,6 +457,7 @@ func getFile(pkg *Package, file *ast.File, markers map[ast.Node]MarkerValues) *F
 		FullPath:       fileFullPath,
 		Package:        packageInfo,
 		Imports:        getFileImports(pkg.Fset, file),
+		Consts:         make([]ConstValue, 0),
 		Markers:        markers[file],
 		ImportMarkers:  make([]MarkerValues, 0),
 		FunctionTypes:  make([]FunctionType, 0),
@@ -473,6 +509,7 @@ func getFunctionType(fileSet *token.FileSet,
 
 	if decl != nil {
 		function.Name = decl.Name.Name
+		function.IsExported = ast.IsExported(decl.Name.Name)
 		function.Markers = markers[decl]
 	}
 
@@ -485,6 +522,96 @@ func getFunctionType(fileSet *token.FileSet,
 	}
 
 	return *function
+}
+
+func getConstValues(fileSet *token.FileSet,
+	file *ast.File,
+	specs []ast.Spec) []ConstValue {
+	if specs == nil {
+		return nil
+	}
+
+	constValues := make([]ConstValue, 0)
+
+	var previousValueType *ValueType
+	for _, spec := range specs {
+		valueSpec := spec.(*ast.ValueSpec)
+		constValue, inferredTypeName := getConstValue(fileSet, file, valueSpec)
+
+		if valueSpec.Type == nil && constValue.Type == nil && inferredTypeName != "" {
+			constValue.Type = &ValueType{
+				Name: inferredTypeName,
+			}
+		} else if constValue.Type != nil {
+			previousValueType = constValue.Type
+		} else {
+			constValue.Type = previousValueType
+		}
+
+		constValues = append(constValues, *constValue)
+
+	}
+
+	return constValues
+}
+
+func getConstValue(fileSet *token.FileSet, file *ast.File, spec *ast.ValueSpec) (*ConstValue, string) {
+	constValue := &ConstValue{
+		Name:         spec.Names[0].Name,
+		Type:         getConstValueType(spec.Type),
+		IsExported:   ast.IsExported(spec.Names[0].Name),
+		Position:     getPosition(fileSet, spec.Pos()),
+		RawFile:      file,
+		RawValueSpec: spec,
+	}
+
+	inferredTypeName := ""
+
+	if spec.Values != nil && len(spec.Values) > 0 {
+		switch typedValue := spec.Values[0].(type) {
+		case *ast.Ident:
+			value := typedValue.Name
+
+			if !strings.HasPrefix(value, "\"") && !strings.HasSuffix(value, "\"") {
+				if value == "true" || value == "false" {
+					inferredTypeName = "bool"
+					constValue.Value = value
+				}
+			}
+
+		case *ast.BasicLit:
+			constValue.Value = typedValue.Value
+
+			switch typedValue.Kind {
+			case token.STRING:
+				inferredTypeName = "string"
+			case token.INT:
+				inferredTypeName = "int"
+			case token.FLOAT:
+				inferredTypeName = "float"
+			case token.CHAR:
+				inferredTypeName = "char"
+			}
+		}
+	}
+
+	return constValue, inferredTypeName
+}
+
+func getConstValueType(typ ast.Expr) *ValueType {
+	switch typedExpr := typ.(type) {
+	case *ast.Ident:
+		return &ValueType{
+			Name: typedExpr.Name,
+		}
+	case *ast.SelectorExpr:
+		return &ValueType{
+			ImportName: typedExpr.X.(*ast.Ident).Name,
+			Name:       typedExpr.Sel.Name,
+		}
+	}
+
+	return nil
 }
 
 func getType(fileSet *token.FileSet,
@@ -500,6 +627,7 @@ func getType(fileSet *token.FileSet,
 	case *ast.InterfaceType:
 		interfaceType := InterfaceType{
 			Name:        spec.Name.Name,
+			IsExported:  ast.IsExported(spec.Name.Name),
 			Position:    getPosition(fileSet, spec.Pos()),
 			Markers:     markers[spec],
 			File:        fileInfo,
@@ -513,6 +641,7 @@ func getType(fileSet *token.FileSet,
 	case *ast.StructType:
 		structType := StructType{
 			Name:        spec.Name.Name,
+			IsExported:  ast.IsExported(spec.Name.Name),
 			Position:    getPosition(fileSet, spec.Pos()),
 			Markers:     markers[spec],
 			File:        fileInfo,
@@ -526,6 +655,7 @@ func getType(fileSet *token.FileSet,
 	case *ast.Ident, *ast.StarExpr, *ast.SelectorExpr, *ast.MapType, *ast.ArrayType, *ast.ChanType, *ast.FuncType:
 		typ = UserDefinedType{
 			Name:        spec.Name.Name,
+			IsExported:  ast.IsExported(spec.Name.Name),
 			Position:    getPosition(fileSet, spec.Pos()),
 			ActualType:  getTypeFromExpression(fileSet, fileInfo, file, spec.Type, markers),
 			Markers:     markers[spec],
@@ -551,6 +681,7 @@ func getInterfaceMethods(fileSet *token.FileSet,
 
 		method := &Method{
 			Name:        methodInfo.Names[0].Name,
+			IsExported:  ast.IsExported(methodInfo.Names[0].Name),
 			Position:    getPosition(fileSet, methodInfo.Pos()),
 			Markers:     markers[methodInfo],
 			File:        fileInfo,
@@ -586,12 +717,13 @@ func getStructFields(fileSet *token.FileSet,
 
 		for _, fieldName := range fieldTypeInfo.Names {
 			field := &Field{
-				Name:     fieldName.Name,
-				Position: getPosition(fileSet, fieldName.Pos()),
-				Markers:  markers[fieldTypeInfo],
-				Type:     getTypeFromExpression(fileSet, fileInfo, file, fieldTypeInfo.Type, markers),
-				RawFile:  file,
-				RawField: fieldTypeInfo,
+				Name:       fieldName.Name,
+				IsExported: ast.IsExported(fieldName.Name),
+				Position:   getPosition(fileSet, fieldName.Pos()),
+				Markers:    markers[fieldTypeInfo],
+				Type:       getTypeFromExpression(fileSet, fileInfo, file, fieldTypeInfo.Type, markers),
+				RawFile:    file,
+				RawField:   fieldTypeInfo,
 			}
 
 			fields = append(fields, *field)
@@ -611,6 +743,7 @@ func getMethod(fileSet *token.FileSet,
 
 	method := &Method{
 		Name:        decl.Name.Name,
+		IsExported:  ast.IsExported(decl.Name.Name),
 		Position:    getPosition(fileSet, funcType.Pos()),
 		Markers:     markers[decl],
 		Receiver:    &TypeInfo{},
@@ -731,11 +864,12 @@ func getTypeFromExpression(tokenFileSet *token.FileSet,
 		for _, fieldTypeInfo := range fieldTypeInfoList {
 
 			field := &Field{
-				Name:     fieldTypeInfo.Name,
-				Position: getPosition(tokenFileSet, fieldTypeInfo.RawField.Pos()),
-				Markers:  fieldTypeInfo.Markers,
-				Type:     fieldTypeInfo.Type,
-				RawField: fieldTypeInfo.RawField,
+				Name:       fieldTypeInfo.Name,
+				IsExported: ast.IsExported(fieldTypeInfo.Name),
+				Position:   getPosition(tokenFileSet, fieldTypeInfo.RawField.Pos()),
+				Markers:    fieldTypeInfo.Markers,
+				Type:       fieldTypeInfo.Type,
+				RawField:   fieldTypeInfo.RawField,
 			}
 
 			anonymousStructType.Fields = append(anonymousStructType.Fields, *field)
