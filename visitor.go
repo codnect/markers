@@ -168,6 +168,7 @@ func (visitor *commentVisitor) getCommentsForNode(node ast.Node) (docCommentGrou
 }
 
 type importCallback func(file *ast.File, decl *ast.GenDecl)
+type constCallback func(file *ast.File, decl *ast.GenDecl)
 type typeCallback func(file *ast.File, decl *ast.GenDecl, node *ast.TypeSpec)
 type functionCallback func(file *ast.File, decl *ast.FuncDecl, funcType *ast.FuncType)
 type fileCallback func(file *ast.File)
@@ -176,6 +177,7 @@ type fileElementVisitor struct {
 	pkg              *Package
 	fileCallback     fileCallback
 	importCallback   importCallback
+	constCallback    constCallback
 	typeCallback     typeCallback
 	functionCallback functionCallback
 	genDecl          *ast.GenDecl
@@ -197,6 +199,8 @@ func (visitor *fileElementVisitor) Visit(node ast.Node) ast.Visitor {
 		visitor.genDecl = typedNode
 		if typedNode.Tok == token.IMPORT {
 			visitor.importCallback(visitor.file, visitor.genDecl)
+		} else if typedNode.Tok == token.CONST {
+			visitor.constCallback(visitor.file, visitor.genDecl)
 		}
 		return visitor
 	case *ast.FuncDecl:
@@ -215,12 +219,14 @@ func (visitor *fileElementVisitor) Visit(node ast.Node) ast.Visitor {
 
 func visitPackageFiles(pkg *Package, fileCallback fileCallback,
 	importCallback importCallback,
+	constCallback constCallback,
 	typeCallback typeCallback,
 	functionCallback functionCallback) {
 	visitor := &fileElementVisitor{
 		pkg:              pkg,
 		fileCallback:     fileCallback,
 		importCallback:   importCallback,
+		constCallback:    constCallback,
 		typeCallback:     typeCallback,
 		functionCallback: functionCallback,
 	}
