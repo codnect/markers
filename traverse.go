@@ -180,6 +180,7 @@ type Field struct {
 	Position   Position
 	Markers    MarkerValues
 	Type       Type
+	File       *File
 	RawFile    *ast.File
 	RawField   *ast.Field
 }
@@ -722,6 +723,7 @@ func getStructFields(fileSet *token.FileSet,
 				Position:   getPosition(fileSet, fieldName.Pos()),
 				Markers:    markers[fieldTypeInfo],
 				Type:       getTypeFromExpression(fileSet, fileInfo, file, fieldTypeInfo.Type, markers),
+				File:       fileInfo,
 				RawFile:    file,
 				RawField:   fieldTypeInfo,
 			}
@@ -869,6 +871,8 @@ func getTypeFromExpression(tokenFileSet *token.FileSet,
 				Position:   getPosition(tokenFileSet, fieldTypeInfo.RawField.Pos()),
 				Markers:    fieldTypeInfo.Markers,
 				Type:       fieldTypeInfo.Type,
+				File:       fileInfo,
+				RawFile:    file,
 				RawField:   fieldTypeInfo.RawField,
 			}
 
