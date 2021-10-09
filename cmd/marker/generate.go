@@ -23,6 +23,7 @@ import (
 
 var outputPath string
 var options []string
+var packageName string
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
@@ -75,5 +76,6 @@ func init() {
 		panic(err)
 	}
 
+	generateCmd.Flags().StringVarP(&packageName, "package", "p", "auto_generated", "package name")
 	generateCmd.Flags().StringSliceVarP(&options, "args", "a", options, "extra arguments for marker processors (key-value separated by comma)")
 }
