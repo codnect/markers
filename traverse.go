@@ -177,6 +177,7 @@ func (function FunctionType) Kind() Kind {
 type Field struct {
 	Name       string
 	IsExported bool
+	IsEmbedded bool
 	Position   Position
 	Markers    MarkerValues
 	Type       Type
@@ -251,8 +252,7 @@ func (typ InterfaceType) Kind() Kind {
 }
 
 type AnonymousStructType struct {
-	Markers MarkerValues
-	Fields  []Field
+	Fields []Field
 }
 
 func (typ AnonymousStructType) Kind() Kind {
@@ -716,10 +716,25 @@ func getStructFields(fileSet *token.FileSet,
 
 	for _, fieldTypeInfo := range specType.Fields.List {
 
+		if fieldTypeInfo.Names == nil {
+			field := &Field{
+				IsEmbedded: true,
+				Position:   getPosition(fileSet, fieldTypeInfo.Type.Pos()),
+				Markers:    markers[fieldTypeInfo],
+				Type:       getTypeFromExpression(fileSet, fileInfo, file, fieldTypeInfo.Type, markers),
+				File:       fileInfo,
+				RawFile:    file,
+				RawField:   fieldTypeInfo,
+			}
+			fields = append(fields, *field)
+			continue
+		}
+
 		for _, fieldName := range fieldTypeInfo.Names {
 			field := &Field{
 				Name:       fieldName.Name,
 				IsExported: ast.IsExported(fieldName.Name),
+				IsEmbedded: false,
 				Position:   getPosition(fileSet, fieldName.Pos()),
 				Markers:    markers[fieldTypeInfo],
 				Type:       getTypeFromExpression(fileSet, fileInfo, file, fieldTypeInfo.Type, markers),
