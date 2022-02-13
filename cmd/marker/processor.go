@@ -198,12 +198,12 @@ func runProcessors(args []string) {
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-			log.Errorf("An error occurred while running command '%s %s' : ", processor.Command, strings.Join(args, " "))
-			log.Errorf(err.Error())
+			log.Printf("An error occurred while running command '%s %s' : ", processor.Command, strings.Join(args, " "))
+			log.Fatalf(err.Error())
 		}
 
 		if output != nil {
-			log.Errorf(string(output))
+			log.Printf(string(output))
 		}
 
 		if err != nil || output != nil {

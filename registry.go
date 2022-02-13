@@ -8,7 +8,8 @@ import (
 
 // Registry keeps the registered marker definitions.
 type Registry struct {
-	definitionMap map[string]*Definition
+	reservedDefinitionMap map[string]*Definition
+	definitionMap         map[string]*Definition
 
 	initOnce sync.Once
 	mu       sync.RWMutex
@@ -27,7 +28,11 @@ func (registry *Registry) initialize() {
 			registry.definitionMap = make(map[string]*Definition)
 		}
 
-		registry.definitionMap[ImportMarkerName+"#"], _ = MakeDefinition(ImportMarkerName, "", ImportLevel, &ImportMarker{})
+		if registry.reservedDefinitionMap == nil {
+			registry.reservedDefinitionMap = make(map[string]*Definition)
+		}
+
+		registry.reservedDefinitionMap[ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", ImportLevel, &ImportMarker{})
 	})
 
 }
@@ -63,8 +68,8 @@ func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
 	nameParts := strings.Split(definition.Name, ":")
 	name := nameParts[0]
 
-	if _, ok := registry.definitionMap[name]; ok {
-		return fmt.Errorf("reserved names such as 'import' cannot be used: %v", definition.Name)
+	if _, ok := registry.reservedDefinitionMap[name]; ok {
+		return fmt.Errorf("reserved marker names cannot be used: %v", definition.Name)
 	}
 
 	if _, ok := registry.definitionMap[definition.Name+"#"+definition.PkgId]; ok {
@@ -86,6 +91,14 @@ func (registry *Registry) Lookup(name string, pkgId string) *Definition {
 	name, anonymousName, _ := splitMarker(name)
 	// for syntax-free markers
 	name = strings.Split(name, " ")[0]
+
+	if def, exists := registry.reservedDefinitionMap[anonymousName]; exists {
+		return def
+	}
+
+	if def, exists := registry.reservedDefinitionMap[name]; exists {
+		return def
+	}
 
 	if def, exists := registry.definitionMap[anonymousName+"#"+pkgId]; exists {
 		return def
