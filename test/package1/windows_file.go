@@ -1,4 +1,6 @@
+//go:build windows
 // +build windows
+
 // This is a comment
 // +marker:package-level
 // This is a comment
@@ -10,7 +12,6 @@ package package1
 
 // +import=marker, Pkg="github.com/procyon-projects/marker@1.2.4:command"
 // +import=chrono, Pkg="github.com/procyon-projects/chrono:chrono"
-import ()
 
 // This is a comment
 // +marker:type-level

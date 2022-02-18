@@ -95,7 +95,7 @@ func printErrors(errorList marker.ErrorList) {
 		switch typedErr := err.(type) {
 		case marker.ParserError:
 			pos := typedErr.Position
-			log.Errorf("%s (%d:%d) : %s\n", typedErr.FileName, pos.Line, pos.Column, typedErr.Error())
+			log.Printf("%s (%d:%d) : %s\n", typedErr.FileName, pos.Line, pos.Column, typedErr.Error())
 		case marker.ErrorList:
 			printErrors(typedErr)
 		}

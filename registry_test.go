@@ -38,7 +38,7 @@ func TestRegistry_Register(t *testing.T) {
 		err := registry.Register(testCase.MarkerName, "", testCase.TargetLevel, testCase.Output)
 		assert.Nil(t, err)
 
-		definition, ok := registry.definitionMap[testCase.MarkerName]
+		definition, ok := registry.definitionMap[testCase.MarkerName+"#"]
 		if !ok {
 			t.Error("marker has not been registered successfully")
 		}
@@ -74,7 +74,7 @@ func TestRegistry_RegisterWithDefinition(t *testing.T) {
 		err := registry.RegisterWithDefinition(newDefinition)
 		assert.Nil(t, err)
 
-		definition, ok := registry.definitionMap[testCase.MarkerName]
+		definition, ok := registry.definitionMap[testCase.MarkerName+"#"]
 		if !ok {
 			t.Error("marker has not been registered successfully")
 		}
