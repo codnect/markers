@@ -203,7 +203,7 @@ func (typeInfo ArgumentTypeInfo) parseInteger(scanner *Scanner, out reflect.Valu
 		scanner.Scan()
 	}
 
-	if !scanner.Expect(Integer, "Integer") {
+	if !scanner.Expect(IntegerValue, "Integer") {
 		return nil
 	}
 
@@ -233,7 +233,7 @@ func (typeInfo ArgumentTypeInfo) parseString(scanner *Scanner, out reflect.Value
 
 	token := scanner.Scan()
 
-	if token == String {
+	if token == StringValue {
 
 		value, err := strconv.Unquote(scanner.Token())
 
@@ -467,7 +467,7 @@ func (typeInfo ArgumentTypeInfo) inferType(scanner *Scanner, out reflect.Value, 
 			token = scanner.Scan()
 		}
 
-		if token == Integer {
+		if token == IntegerValue {
 			return ArgumentTypeInfo{
 				ActualType: IntegerType,
 			}, nil

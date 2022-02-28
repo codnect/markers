@@ -16,7 +16,7 @@ func TestScanner_Scan(t *testing.T) {
 	assert.Equal(t, '=', current)
 
 	current = scanner.Scan()
-	assert.Equal(t, Integer, int(current))
+	assert.Equal(t, IntegerValue, int(current))
 	assert.Equal(t, "123", scanner.Token())
 
 	current = scanner.Scan()
@@ -62,7 +62,7 @@ func TestScanner_ScanIdentifier(t *testing.T) {
 	assert.Equal(t, '=', current)
 
 	current = scanner.Scan()
-	assert.Equal(t, Integer, int(current))
+	assert.Equal(t, IntegerValue, int(current))
 	assert.Equal(t, "123", scanner.Token())
 
 	current = scanner.Scan()

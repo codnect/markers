@@ -72,8 +72,7 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 	}
 
 	var fileImportAliases map[*token.File]AliasMap
-	var importMarkers map[string]ImportMarker
-	fileImportAliases, importMarkers, err = collector.extractFileImportAliases(pkg, importNodeMarkers)
+	fileImportAliases, err = collector.extractFileImportAliases(pkg, importNodeMarkers)
 
 	if err != nil {
 		return nil, err
@@ -96,9 +95,8 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 			aliasName = strings.Split(aliasName, " ")[0]
 
 			var definition *Definition
-			if name, ok := importAliases[aliasName]; ok {
-				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", name), 1)
-				importMarker := importMarkers[aliasName]
+			if importMarker, ok := importAliases[aliasName]; ok {
+				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", importMarker.Value), 1)
 				definition = collector.Lookup(markerText, importMarker.GetPkgId())
 			} else {
 				definition = collector.Lookup(markerText, "")
@@ -112,11 +110,6 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 			case *ast.File:
 
 				if definition.Level&PackageLevel != PackageLevel {
-					continue
-				}
-			case *ast.GenDecl:
-
-				if definition.Level&ImportLevel != ImportLevel {
 					continue
 				}
 			case *ast.TypeSpec:
@@ -233,15 +226,14 @@ func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerCo
 	return importNodeMarkers, NewErrorList(errs)
 }
 
-type AliasMap map[string]string
+type AliasMap map[string]ImportMarker
 
-func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, map[string]ImportMarker, error) {
+func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, error) {
 	var errs []error
 	var fileImportAliases = make(map[*token.File]AliasMap, 0)
-	var importMarkers = make(map[string]ImportMarker, 0)
 
 	if importNodeMarkers == nil {
-		return fileImportAliases, importMarkers, nil
+		return fileImportAliases, nil
 	}
 
 	for node, markerValues := range importNodeMarkers {
@@ -273,15 +265,14 @@ func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMar
 			pkgIdMap[importMarker.GetPkgId()] = true
 
 			if importMarker.Alias == "" {
-				aliasMap[importMarker.Value] = importMarker.Value
+				aliasMap[importMarker.Value] = importMarker
 			} else {
-				aliasMap[importMarker.Alias] = importMarker.Value
+				aliasMap[importMarker.Alias] = importMarker
 			}
-			importMarkers[importMarker.Value] = importMarker
 		}
 
 		fileImportAliases[file] = aliasMap
 	}
 
-	return fileImportAliases, importMarkers, NewErrorList(errs)
+	return fileImportAliases, NewErrorList(errs)
 }

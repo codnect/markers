@@ -1,22 +1,33 @@
-//go:build darwin
-// +build darwin
-
-// This is a comment
-// +marker:package-level
-// This is a comment
+// +import=marker, Pkg="github.com/procyon-projects/marker@1.2.4:command"
+// +import=marker, Alias=marker2, Pkg="github.com/procyon-project/marker@1.2.4:command"
+// +import=chrono, Pkg="github.com/procyon-projects/chrono:chrono"
 
 // This is a go document comment
-// +marker:package-level
+// +marker:package-level1
+// +marker2:package-level2
 // This is a go document comment
 package package1
 
-// +import=marker, Pkg="github.com/procyon-projects/marker@1.2.4:command"
-// +import=chrono, Pkg="github.com/procyon-projects/chrono:chrono"
+import (
+	"github.com/procyon-projects/marker/test/package2"
+	_ "strings"
+)
 
-// This is a comment
-// +marker:type-level
-// +chrono:struct-level
-// This is a comment
+type Base struct {
+	Name package2.AnotherType
+}
+
+// This is a go document comment
+// +marker:method-level
+// This is a go document comment
+// +deprecated This method is deprecated
+func (f Fruit) Name() string {
+	return ""
+}
+
+func (f *Fruit) String() interface{} {
+	return ""
+}
 
 // This is a go document comment
 // +marker:type-level
@@ -24,6 +35,9 @@ package package1
 // This is a go document comment
 // +deprecated This struct is deprecated
 type Fruit struct {
+	//package2.IFace
+	//Base
+	x *string `tag1=val1,tag2=val2`
 	// This is a comment
 	// +marker:field-level
 	// This is a comment
@@ -32,7 +46,9 @@ type Fruit struct {
 	// +marker:field-level
 	// This is a go document comment
 	// +deprecated This field is deprecated
-	Apple string
+	Apple interface {
+		Name(x, y int) error
+	}
 	// This is a comment
 	// +marker:field-level
 	// This is a comment
@@ -40,18 +56,14 @@ type Fruit struct {
 	// This is a go document comment
 	// +marker:field-level
 	// This is a go document comment
-	Blackberry string
+	Blackberry <-chan string
 }
 
 // This is a comment
 // +marker:method-level
 // This is a comment
 
-// This is a go document comment
-// +marker:method-level
-// This is a go document comment
-// +deprecated This method is deprecated
-func (f *Fruit) Name() {
+func (f *Fruit) V(x int) {
 
 }
 

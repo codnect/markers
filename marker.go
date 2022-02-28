@@ -13,8 +13,6 @@ type TargetLevel int
 const (
 	// PackageLevel indicates that a marker is associated with a package.
 	PackageLevel TargetLevel = 1 << iota
-	// ImportLevel indicates that a marker is associated with an import block.
-	ImportLevel
 	// StructTypeLevel indicates that a marker is associated with a struct type.
 	StructTypeLevel
 	// InterfaceTypeLevel indicates that a marker is associated with an interface type.

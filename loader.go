@@ -2,14 +2,18 @@ package marker
 
 import (
 	"errors"
+	"fmt"
 	"go/token"
 	"golang.org/x/tools/go/packages"
+	"os/exec"
+	"strings"
 	"sync"
 )
 
 type Package struct {
 	*packages.Package
-	loader *loader
+	loader            *loader
+	isStandardPackage bool
 }
 
 // newPackage returns a wrapped Package for the given packages.Package,
@@ -18,6 +22,10 @@ func newPackage(pkg *packages.Package, loader *loader) *Package {
 		Package: pkg,
 		loader:  loader,
 	}
+}
+
+func (pkg *Package) IsStandardPackage() bool {
+	return pkg.isStandardPackage
 }
 
 func (pkg *Package) Compare(another *Package) bool {
@@ -76,14 +84,55 @@ func (loader *loader) load() ([]*Package, error) {
 	return loader.packages, nil
 }
 
+type LoadResult struct {
+	packages         map[string]*Package
+	standardPackages map[string]*Package
+}
+
+func (result *LoadResult) GetPackages() []*Package {
+	pkgs := make([]*Package, 0)
+
+	for _, pkg := range result.packages {
+		pkgs = append(pkgs, pkg)
+	}
+
+	return pkgs
+}
+
+func (result *LoadResult) Lookup(pkgPath string) (*Package, error) {
+	pkg, ok := result.standardPackages[pkgPath]
+
+	if !ok {
+		pkg, ok = result.packages[pkgPath]
+	} else {
+		return pkg, nil
+	}
+
+	if !ok {
+		return nil, fmt.Errorf("package with id %s not found", pkgPath)
+	}
+
+	return pkg, nil
+}
+
+func (result *LoadResult) GetStandardPackages() []*Package {
+	pkgs := make([]*Package, len(result.standardPackages))
+
+	for _, pkg := range result.standardPackages {
+		pkgs = append(pkgs, pkg)
+	}
+
+	return pkgs
+}
+
 // LoadPackages loads and returns the Go packages by the given patterns.
-func LoadPackages(patterns ...string) ([]*Package, error) {
+func LoadPackages(patterns ...string) (*LoadResult, error) {
 	return LoadPackagesWithConfig(&packages.Config{}, patterns...)
 }
 
 // LoadPackagesWithConfig functions like LoadPackages.
 // Except that it allows passing a custom config.
-func LoadPackagesWithConfig(config *packages.Config, patterns ...string) ([]*Package, error) {
+func LoadPackagesWithConfig(config *packages.Config, patterns ...string) (*LoadResult, error) {
 
 	if config == nil {
 		return nil, errors.New("config must not be nil")
@@ -98,5 +147,44 @@ func LoadPackagesWithConfig(config *packages.Config, patterns ...string) ([]*Pac
 		config.Fset = token.NewFileSet()
 	}
 
-	return newLoader(config, patterns...).load()
+	packagePatterns := append([]string{}, patterns...)
+
+	pkgs, err := newLoader(config, packagePatterns...).load()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// get standard package list
+	cmd := exec.Command("go", "list", "std")
+
+	var stdPackageListOutput []byte
+	stdPackageListOutput, err = cmd.Output()
+
+	if err != nil {
+		return nil, errors.New("std packages could not be loaded")
+	}
+
+	standardPackages := make(map[string]struct{})
+	standardPackageList := strings.Fields(string(stdPackageListOutput))
+
+	for _, standardPackage := range standardPackageList {
+		standardPackages[standardPackage] = struct{}{}
+	}
+
+	loadResult := &LoadResult{
+		packages:         make(map[string]*Package),
+		standardPackages: make(map[string]*Package),
+	}
+
+	for _, pkg := range pkgs {
+		if _, ok := standardPackages[pkg.ID]; ok {
+			pkg.isStandardPackage = true
+			loadResult.standardPackages[pkg.ID] = pkg
+		} else {
+			loadResult.packages[pkg.ID] = pkg
+		}
+	}
+
+	return loadResult, nil
 }
