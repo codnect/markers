@@ -28,18 +28,6 @@ func (pkg *Package) IsStandardPackage() bool {
 	return pkg.isStandardPackage
 }
 
-func (pkg *Package) Compare(another *Package) bool {
-	if another == nil {
-		return false
-	}
-
-	if pkg == another || pkg.ID == another.ID {
-		return true
-	}
-
-	return false
-}
-
 // loader loads Go packages and their imports.
 type loader struct {
 	config       *packages.Config
@@ -77,6 +65,7 @@ func (loader *loader) load() ([]*Package, error) {
 			pkg.Fset = loader.config.Fset
 		}
 
+		//putPackageToCache(pkg.ID, loader.packageMap[pkg])
 		loader.packages = append(loader.packages, loader.packageMap[pkg])
 
 	}

@@ -439,14 +439,21 @@ func getFileImports(fileSet *token.FileSet, file *ast.File) []Import {
 	for _, importInfo := range file.Imports {
 		importPosition := fileSet.Position(importInfo.Pos())
 		importName := ""
+		sideEffect := false
 
 		if importInfo.Name != nil {
 			importName = importInfo.Name.Name
 		}
 
+		if importName == "_" {
+			importName = ""
+			sideEffect = true
+		}
+
 		imports = append(imports, Import{
-			name: importName,
-			path: importInfo.Path.Value[1 : len(importInfo.Path.Value)-1],
+			name:       importName,
+			sideEffect: sideEffect,
+			path:       importInfo.Path.Value[1 : len(importInfo.Path.Value)-1],
 			position: Position{
 				importPosition.Line,
 				importPosition.Column,

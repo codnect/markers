@@ -4,14 +4,15 @@ import (
 	"errors"
 	"go/ast"
 	"go/token"
-	"golang.org/x/tools/go/packages"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type Import struct {
 	name          string
 	path          string
+	sideEffect    bool
 	position      Position
 	rawImportSpec *ast.ImportSpec
 }
@@ -22,6 +23,10 @@ func (i *Import) Name() string {
 
 func (i *Import) Path() string {
 	return i.path
+}
+
+func (i *Import) SideEffect() bool {
+	return i.sideEffect
 }
 
 func (i *Import) Position() Position {
@@ -50,7 +55,7 @@ func (i *Imports) At(index int) *Import {
 
 func (i *Imports) FindByName(name string) (*Import, bool) {
 	for _, importItem := range i.imports {
-		if importItem.name == name {
+		if importItem.name == name || strings.HasSuffix(importItem.path, "/"+name) {
 			return importItem, true
 		}
 	}
@@ -69,35 +74,45 @@ func (i *Imports) FindByPath(path string) (*Import, bool) {
 }
 
 type Functions struct {
-	functions []*Function
+	elements []*Function
 }
 
 func (f *Functions) Len() int {
-	return len(f.functions)
+	return len(f.elements)
 }
 
 func (f *Functions) At(index int) *Function {
-	if index >= 0 && index < len(f.functions) {
-		return f.functions[index]
+	if index >= 0 && index < len(f.elements) {
+		return f.elements[index]
 	}
 
 	return nil
 }
 
 type Structs struct {
-	strutcs []*Struct
+	elements []*Struct
 }
 
 func (s *Structs) Len() int {
-	return len(s.strutcs)
+	return len(s.elements)
 }
 
 func (s *Structs) At(index int) *Struct {
-	if index >= 0 && index < len(s.strutcs) {
-		return s.strutcs[index]
+	if index >= 0 && index < len(s.elements) {
+		return s.elements[index]
 	}
 
 	return nil
+}
+
+func (s *Structs) FindByName(name string) (*Struct, bool) {
+	for _, structType := range s.elements {
+		if structType.name == name {
+			return structType, true
+		}
+	}
+
+	return nil, false
 }
 
 type Interfaces struct {
@@ -111,6 +126,42 @@ func (i *Interfaces) Len() int {
 func (i *Interfaces) At(index int) *Interface {
 	if index >= 0 && index < len(i.interfaces) {
 		return i.interfaces[index]
+	}
+
+	return nil
+}
+
+func (i *Interfaces) FindByName(name string) (*Interface, bool) {
+	for _, interfaceType := range i.interfaces {
+		if interfaceType.name == name {
+			return interfaceType, true
+		}
+	}
+
+	return nil, false
+}
+
+type SourceFiles struct {
+	elements []*SourceFile
+}
+
+func (s *SourceFiles) FindByName(name string) (*SourceFile, bool) {
+	for _, file := range s.elements {
+		if file.name == name {
+			return file, true
+		}
+	}
+
+	return nil, false
+}
+
+func (s *SourceFiles) Len() int {
+	return len(s.elements)
+}
+
+func (s *SourceFiles) At(index int) *SourceFile {
+	if index >= 0 && index < len(s.elements) {
+		return s.elements[index]
 	}
 
 	return nil
@@ -707,31 +758,12 @@ func eachFile(collector *Collector, pkgs []*Package, callback SourceFileCallback
 		callback(nil, errors.New("pkgs(packages) cannot be nil"))
 	}
 
-	var fileMap = make(map[*ast.File]*SourceFile)
+	//var fileMap = make(map[*ast.File]*SourceFile)
 	var errs []error
 
-	pkgList := make([]*packages.Package, 0)
+	packageMarkers := make(map[string]map[ast.Node]MarkerValues)
 
 	for _, pkg := range pkgs {
-		pkgList = append(pkgList, pkg.Package)
-	}
-
-	//pkgMap := make(map[string]*packages.Package)
-
-	//detectAllImports(pkgList, pkgMap)
-
-	for _, pkg := range pkgs {
-
-		if len(pkg.Imports) != 0 {
-			//emptyMarker := make(map[ast.Node]MarkerValues)
-			//for _, imp := range pkg.Imports {
-			//	loadedPackage, _ := LoadPackages(imp.ID)
-			// 	if p, err := loadedPackage.Lookup("strings"); err == nil {
-			//		EachPackage(p, emptyMarker)
-			//	}
-			//}
-		}
-
 		markers, err := collector.Collect(pkg)
 
 		if err != nil {
@@ -739,49 +771,86 @@ func eachFile(collector *Collector, pkgs []*Package, callback SourceFileCallback
 			continue
 		}
 
-		fileNodeMap := EachPackage(pkg, markers)
+		packageMarkers[pkg.ID] = markers
+	}
 
-		for fileNode, file := range fileNodeMap {
-			fileMap[fileNode] = file
-		}
+	VisitPackages(pkgs, packageMarkers)
+
+	/*fileNodeMap := EachPackage(cache, pkg, markers)
+
+	for fileNode, file := range fileNodeMap {
+		fileMap[fileNode] = file
+	}*/
+}
+
+type packageCollector struct {
+	hasSeen map[string]bool
+	files   map[string]*SourceFiles
+}
+
+func newPackageCollector() *packageCollector {
+	return &packageCollector{
+		hasSeen: make(map[string]bool),
+		files:   make(map[string]*SourceFiles),
 	}
 }
 
-func detectAllImports(pkgList []*packages.Package, m map[string]*packages.Package) {
-
-	for _, pkg := range pkgList {
-
-		if len(pkg.Imports) == 0 {
-			continue
-		}
-
-		for pkgName, imp := range pkg.Imports {
-			m[pkgName] = imp
-			detectImports(imp, m)
-		}
-
-	}
-
+func (collector *packageCollector) markAsSeen(pkgId string) {
+	collector.hasSeen[pkgId] = true
 }
 
-func detectImports(p *packages.Package, m map[string]*packages.Package) {
-	if len(p.Imports) == 0 {
+func (collector *packageCollector) isVisited(pkgId string) bool {
+	visited, ok := collector.hasSeen[pkgId]
+
+	if !ok {
+		return false
+	}
+
+	return visited
+}
+
+func (collector *packageCollector) addFile(pkgId string, file *SourceFile) {
+	if _, ok := collector.files[pkgId]; !ok {
+		collector.files[pkgId] = &SourceFiles{
+			elements: make([]*SourceFile, 0),
+		}
+	}
+
+	if _, ok := collector.files[pkgId].FindByName(file.name); ok {
 		return
 	}
 
-	for pkgName, imp := range p.Imports {
-		m[pkgName] = imp
-		detectImports(imp, m)
-	}
+	collector.files[pkgId].elements = append(collector.files[pkgId].elements, file)
 }
 
-type FileElementVisitor struct {
-	pkg         *Package
-	markers     map[ast.Node]MarkerValues
-	fileNodeMap map[*ast.File]*SourceFile
+func (collector *packageCollector) findTypeByPkgIdAndName(pkgId, typeName string) (T, bool) {
+	if files, ok := collector.files[pkgId]; ok {
 
-	files   []*SourceFile
-	structs map[string]*Struct
+		for i := 0; i < files.Len(); i++ {
+			file := files.At(i)
+
+			if structType, ok := file.structs.FindByName(typeName); ok {
+				return structType, true
+			}
+
+			if interfaceType, ok := file.interfaces.FindByName(typeName); ok {
+				return interfaceType, true
+			}
+		}
+
+	}
+
+	return nil, false
+}
+
+type PackageVisitor struct {
+	collector *packageCollector
+
+	pkg               *Package
+	packageMarkers    map[ast.Node]MarkerValues
+	allPackageMarkers map[string]map[ast.Node]MarkerValues
+
+	currentFile *SourceFile
 
 	genDecl  *ast.GenDecl
 	funcDecl *ast.FuncDecl
@@ -789,7 +858,20 @@ type FileElementVisitor struct {
 	typeSpec *ast.TypeSpec
 }
 
-func (visitor *FileElementVisitor) Visit(node ast.Node) ast.Visitor {
+func (visitor *PackageVisitor) VisitPackage() {
+	visitor.packageMarkers = visitor.allPackageMarkers[visitor.pkg.ID]
+	visitor.collector.markAsSeen(visitor.pkg.ID)
+
+	for _, file := range visitor.pkg.Syntax {
+		ast.Walk(visitor, file)
+	}
+
+	if visitor != nil {
+
+	}
+}
+
+func (visitor *PackageVisitor) Visit(node ast.Node) ast.Visitor {
 	if node == nil {
 		return visitor
 	}
@@ -818,20 +900,22 @@ func (visitor *FileElementVisitor) Visit(node ast.Node) ast.Visitor {
 	}
 }
 
-func (visitor *FileElementVisitor) createSourceFile() {
-	_, exists := visitor.fileNodeMap[visitor.file]
-
-	if exists {
-		return
+func (visitor *PackageVisitor) getPosition(tokenPosition token.Pos) Position {
+	position := visitor.pkg.Fset.Position(tokenPosition)
+	return Position{
+		Line:   position.Line,
+		Column: position.Column,
 	}
+}
 
+func (visitor *PackageVisitor) createSourceFile() *SourceFile {
 	position := visitor.pkg.Fset.Position(visitor.file.Pos())
 	fileFullPath := position.Filename
 
 	file := &SourceFile{
 		name:          filepath.Base(fileFullPath),
 		fullPath:      fileFullPath,
-		allMarkers:    visitor.markers[visitor.file],
+		allMarkers:    visitor.packageMarkers[visitor.file],
 		pkg:           visitor.pkg,
 		imports:       visitor.getFileImports(),
 		fileMarkers:   make(MarkerValues, 0),
@@ -852,20 +936,41 @@ func (visitor *FileElementVisitor) createSourceFile() {
 		}
 	}
 
-	visitor.fileNodeMap[visitor.file] = file
+	visitor.currentFile = file
+	visitor.collector.addFile(visitor.pkg.ID, file)
+	return file
 }
 
-func (visitor *FileElementVisitor) collectFunction() {
-	file, exists := visitor.fileNodeMap[visitor.file]
+func (visitor *PackageVisitor) getFileImports() *Imports {
+	imports := &Imports{}
 
-	if !exists {
-		return
+	for _, importPackage := range visitor.file.Imports {
+		importPosition := visitor.getPosition(importPackage.Pos())
+		importName := ""
+
+		if importPackage.Name != nil {
+			importName = importPackage.Name.Name
+		}
+
+		imports.imports = append(imports.imports, &Import{
+			name: importName,
+			path: importPackage.Path.Value[1 : len(importPackage.Path.Value)-1],
+			position: Position{
+				importPosition.Line,
+				importPosition.Column,
+			},
+			rawImportSpec: importPackage,
+		})
 	}
 
+	return imports
+}
+
+func (visitor *PackageVisitor) collectFunction() {
 	function := &Function{
 		name:        visitor.funcDecl.Name.Name,
 		isExported:  ast.IsExported(visitor.funcDecl.Name.Name),
-		file:        file,
+		file:        visitor.currentFile,
 		position:    visitor.getPosition(visitor.funcDecl.Pos()),
 		params:      &Tuple{},
 		results:     &Tuple{},
@@ -885,7 +990,7 @@ func (visitor *FileElementVisitor) collectFunction() {
 	}
 
 	if visitor.funcDecl.Recv == nil {
-		file.functions.functions = append(file.functions.functions, function)
+		visitor.currentFile.functions.elements = append(visitor.currentFile.functions.elements, function)
 	} else {
 		receiverVariable := &Variable{
 			name: visitor.funcDecl.Recv.List[0].Names[0].Name,
@@ -907,11 +1012,15 @@ func (visitor *FileElementVisitor) collectFunction() {
 			isPointerReceiver = true
 		}
 
-		structType, ok := visitor.structs[receiverTypeName]
+		structCandidate, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, receiverTypeName)
+
+		var structType *Struct
 
 		if !ok {
 			structType = visitor.getStruct(receiverTypeSpec)
-			visitor.structs[receiverTypeName] = structType
+			visitor.currentFile.structs.elements = append(visitor.currentFile.structs.elements, structType)
+		} else {
+			structType = structCandidate.(*Struct)
 		}
 
 		if isPointerReceiver {
@@ -927,7 +1036,7 @@ func (visitor *FileElementVisitor) collectFunction() {
 	}
 }
 
-func (visitor *FileElementVisitor) getTypeFromTypeSpec() {
+func (visitor *PackageVisitor) getTypeFromTypeSpec() {
 	typeName := visitor.typeSpec.Name.Name
 
 	switch visitor.typeSpec.Type.(type) {
@@ -938,24 +1047,25 @@ func (visitor *FileElementVisitor) getTypeFromTypeSpec() {
 
 		}
 	case *ast.StructType:
-		structType, ok := visitor.structs[typeName]
+		structCandidate, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, typeName)
 
 		if ok {
+			structType := structCandidate.(*Struct)
 			structType.rawGenDecl = visitor.genDecl
 		} else {
-			structType = visitor.getStruct(visitor.typeSpec)
-			visitor.structs[typeName] = structType
+			structType := visitor.getStruct(visitor.typeSpec)
+			visitor.currentFile.structs.elements = append(visitor.currentFile.structs.elements, structType)
 		}
 	}
 }
 
-func (visitor *FileElementVisitor) getInterface(specType *ast.TypeSpec) *Interface {
+func (visitor *PackageVisitor) getInterface(specType *ast.TypeSpec) *Interface {
 	interfaceType := &Interface{
 		name:        specType.Name.Name,
 		isExported:  ast.IsExported(specType.Name.Name),
 		methods:     visitor.getInterfaceMethods(specType.Type.(*ast.InterfaceType).Methods.List),
 		position:    visitor.getPosition(specType.Pos()),
-		markers:     visitor.markers[specType],
+		markers:     visitor.packageMarkers[specType],
 		rawFile:     visitor.file,
 		rawGenDecl:  visitor.genDecl,
 		rawTypeSpec: specType,
@@ -964,13 +1074,13 @@ func (visitor *FileElementVisitor) getInterface(specType *ast.TypeSpec) *Interfa
 	return interfaceType
 }
 
-func (visitor *FileElementVisitor) getStruct(specType *ast.TypeSpec) *Struct {
+func (visitor *PackageVisitor) getStruct(specType *ast.TypeSpec) *Struct {
 
 	structType := &Struct{
 		name:        specType.Name.Name,
 		isExported:  ast.IsExported(specType.Name.Name),
 		position:    visitor.getPosition(specType.Pos()),
-		markers:     visitor.markers[specType],
+		markers:     visitor.packageMarkers[specType],
 		fields:      make([]*Field, 0),
 		methods:     make([]*Function, 0),
 		rawFile:     visitor.file,
@@ -983,7 +1093,7 @@ func (visitor *FileElementVisitor) getStruct(specType *ast.TypeSpec) *Struct {
 	return structType
 }
 
-func (visitor *FileElementVisitor) getTypeFromExpression(expr ast.Expr) T {
+func (visitor *PackageVisitor) getTypeFromExpression(expr ast.Expr) T {
 
 	switch typed := expr.(type) {
 	case *ast.Ident:
@@ -1004,13 +1114,36 @@ func (visitor *FileElementVisitor) getTypeFromExpression(expr ast.Expr) T {
 		importName := typed.X.(*ast.Ident).Name
 		typeName := typed.Sel.Name
 
-		if importName == "" {
+		packageImport, _ := visitor.currentFile.imports.FindByName(importName)
+		typ, exists := visitor.collector.findTypeByPkgIdAndName(packageImport.path, typeName)
 
+		if exists {
+			return typ
 		}
 
-		if typeName == "" {
+		loadResult, err := LoadPackages(packageImport.path)
 
+		if err != nil {
+			panic(err)
 		}
+
+		importedPackage, _ := loadResult.Lookup(packageImport.path)
+
+		pkgVisitor := &PackageVisitor{
+			collector:         visitor.collector,
+			pkg:               importedPackage,
+			allPackageMarkers: visitor.allPackageMarkers,
+		}
+
+		pkgVisitor.VisitPackage()
+
+		typ, exists = visitor.collector.findTypeByPkgIdAndName(packageImport.path, typeName)
+
+		if exists {
+			return typ
+		}
+
+		return nil
 	case *ast.StarExpr:
 		return &Pointer{
 			base: visitor.getTypeFromExpression(typed.X),
@@ -1068,7 +1201,7 @@ func (visitor *FileElementVisitor) getTypeFromExpression(expr ast.Expr) T {
 	return nil
 }
 
-func (visitor *FileElementVisitor) getVariables(fieldList []*ast.Field) *Tuple {
+func (visitor *PackageVisitor) getVariables(fieldList []*ast.Field) *Tuple {
 	tuple := &Tuple{
 		variables: make([]*Variable, 0),
 	}
@@ -1095,7 +1228,7 @@ func (visitor *FileElementVisitor) getVariables(fieldList []*ast.Field) *Tuple {
 	return tuple
 }
 
-func (visitor *FileElementVisitor) getInterfaceMethods(fieldList []*ast.Field) []*Function {
+func (visitor *PackageVisitor) getInterfaceMethods(fieldList []*ast.Field) []*Function {
 	methods := make([]*Function, 0)
 
 	for _, rawMethod := range fieldList {
@@ -1126,12 +1259,11 @@ func (visitor *FileElementVisitor) getInterfaceMethods(fieldList []*ast.Field) [
 	return methods
 }
 
-func (visitor *FileElementVisitor) getDefinedTypeFromExpression(expr ast.Expr) *DefinedType {
+func (visitor *PackageVisitor) getDefinedTypeFromExpression(expr ast.Expr) *DefinedType {
 	return nil
 }
 
-func (visitor *FileElementVisitor) getFieldsFromFieldList(fieldList []*ast.Field) []*Field {
-	file, _ := visitor.fileNodeMap[visitor.file]
+func (visitor *PackageVisitor) getFieldsFromFieldList(fieldList []*ast.Field) []*Field {
 	fields := make([]*Field, 0)
 
 	for _, rawField := range fieldList {
@@ -1148,8 +1280,8 @@ func (visitor *FileElementVisitor) getFieldsFromFieldList(fieldList []*ast.Field
 				name:       "",
 				isExported: false,
 				position:   Position{},
-				markers:    visitor.markers[rawField],
-				file:       file,
+				markers:    visitor.packageMarkers[rawField],
+				file:       visitor.currentFile,
 				rawFile:    visitor.file,
 				rawField:   rawField,
 				tags:       tags,
@@ -1167,8 +1299,8 @@ func (visitor *FileElementVisitor) getFieldsFromFieldList(fieldList []*ast.Field
 				name:       fieldName.Name,
 				isExported: ast.IsExported(fieldName.Name),
 				position:   visitor.getPosition(fieldName.Pos()),
-				markers:    visitor.markers[rawField],
-				file:       file,
+				markers:    visitor.packageMarkers[rawField],
+				file:       visitor.currentFile,
 				rawFile:    visitor.file,
 				rawField:   rawField,
 				tags:       tags,
@@ -1183,60 +1315,16 @@ func (visitor *FileElementVisitor) getFieldsFromFieldList(fieldList []*ast.Field
 	return fields
 }
 
-func (visitor *FileElementVisitor) getPosition(tokenPosition token.Pos) Position {
-	position := visitor.pkg.Fset.Position(tokenPosition)
-	return Position{
-		Line:   position.Line,
-		Column: position.Column,
-	}
-}
+func VisitPackages(pkgList []*Package, allPackageMarkers map[string]map[ast.Node]MarkerValues) {
+	pkgCollector := newPackageCollector()
 
-func (visitor *FileElementVisitor) getFileImports() *Imports {
-	imports := &Imports{}
-
-	for _, importPackage := range visitor.file.Imports {
-		importPosition := visitor.getPosition(importPackage.Pos())
-		importName := ""
-
-		if importPackage.Name != nil {
-			importName = importPackage.Name.Name
+	for _, pkg := range pkgList {
+		pkgVisitor := &PackageVisitor{
+			collector:         pkgCollector,
+			pkg:               pkg,
+			allPackageMarkers: allPackageMarkers,
 		}
 
-		imports.imports = append(imports.imports, &Import{
-			name: importName,
-			path: importPackage.Path.Value[1 : len(importPackage.Path.Value)-1],
-			position: Position{
-				importPosition.Line,
-				importPosition.Column,
-			},
-			rawImportSpec: importPackage,
-		})
+		pkgVisitor.VisitPackage()
 	}
-
-	return imports
-}
-
-func EachPackage(pkg *Package, markers map[ast.Node]MarkerValues) map[*ast.File]*SourceFile {
-	visitor := visitPackage(pkg, markers)
-
-	if visitor != nil {
-
-	}
-
-	return nil
-}
-
-func visitPackage(pkg *Package, markers map[ast.Node]MarkerValues) *FileElementVisitor {
-	visitor := &FileElementVisitor{
-		pkg:         pkg,
-		markers:     markers,
-		fileNodeMap: make(map[*ast.File]*SourceFile),
-		structs:     make(map[string]*Struct),
-	}
-
-	for _, file := range pkg.Syntax {
-		ast.Walk(visitor, file)
-	}
-
-	return visitor
 }

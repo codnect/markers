@@ -10,7 +10,6 @@ type X interface {
 }
 
 type TestOutput struct {
-	X
 }
 
 type Z struct {
@@ -25,12 +24,8 @@ func n(x X) {
 }
 
 func TestCollector_Collect(t *testing.T) {
-	c := TestOutput{
-		&Z{},
-	}
-	n(c)
-	c.Print()
-	result, _ := LoadPackages("./test/package1", "./test/package2")
+
+	result, _ := LoadPackages("./test/package1")
 	/*pkg, _ := result.Lookup("fmt")
 	stringInterface := pkg.Types.Scope().Lookup("Stringer")
 
