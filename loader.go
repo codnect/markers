@@ -105,7 +105,7 @@ func (result *LoadResult) Lookup(pkgPath string) (*Package, error) {
 }
 
 func (result *LoadResult) GetStandardPackages() []*Package {
-	pkgs := make([]*Package, len(result.standardPackages))
+	pkgs := make([]*Package, 0)
 
 	for _, pkg := range result.standardPackages {
 		pkgs = append(pkgs, pkg)
@@ -167,7 +167,7 @@ func LoadPackagesWithConfig(config *packages.Config, patterns ...string) (*LoadR
 	}
 
 	for _, pkg := range pkgs {
-		if _, ok := standardPackages[pkg.ID]; ok {
+		if _, ok := standardPackages[pkg.ID]; ok || pkg.ID == "builtin" {
 			pkg.isStandardPackage = true
 			loadResult.standardPackages[pkg.ID] = pkg
 		} else {

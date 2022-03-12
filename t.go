@@ -116,25 +116,51 @@ func (s *Structs) FindByName(name string) (*Struct, bool) {
 }
 
 type Interfaces struct {
-	interfaces []*Interface
+	elements []*Interface
 }
 
 func (i *Interfaces) Len() int {
-	return len(i.interfaces)
+	return len(i.elements)
 }
 
 func (i *Interfaces) At(index int) *Interface {
-	if index >= 0 && index < len(i.interfaces) {
-		return i.interfaces[index]
+	if index >= 0 && index < len(i.elements) {
+		return i.elements[index]
 	}
 
 	return nil
 }
 
 func (i *Interfaces) FindByName(name string) (*Interface, bool) {
-	for _, interfaceType := range i.interfaces {
+	for _, interfaceType := range i.elements {
 		if interfaceType.name == name {
 			return interfaceType, true
+		}
+	}
+
+	return nil, false
+}
+
+type CustomTypes struct {
+	elements []*CustomType
+}
+
+func (c *CustomTypes) Len() int {
+	return len(c.elements)
+}
+
+func (c *CustomTypes) At(index int) *CustomType {
+	if index >= 0 && index < len(c.elements) {
+		return c.elements[index]
+	}
+
+	return nil
+}
+
+func (c *CustomTypes) FindByName(name string) (*CustomType, bool) {
+	for _, customType := range c.elements {
+		if customType.name == name {
+			return customType, true
 		}
 	}
 
@@ -178,9 +204,10 @@ type SourceFile struct {
 	imports       *Imports
 	importMarkers []ImportMarker
 
-	functions  *Functions
-	structs    *Structs
-	interfaces *Interfaces
+	functions   *Functions
+	structs     *Structs
+	interfaces  *Interfaces
+	customTypes *CustomTypes
 
 	rawFile *ast.File
 }
@@ -290,6 +317,7 @@ const (
 )
 
 var basicTypesMap = map[string]*Basic{
+	"bool":       basicTypes[Bool],
 	"int":        basicTypes[Int],
 	"int8":       basicTypes[Int8],
 	"int16":      basicTypes[Int16],
@@ -597,6 +625,22 @@ func (d *DefinedType) String() string {
 	return ""
 }
 
+type ImportedType struct {
+	typ T
+}
+
+func (i *ImportedType) Underlying() T {
+	return i.typ
+}
+
+func (i *ImportedType) String() string {
+	return ""
+}
+
+func (i *ImportedType) Name() string {
+	return ""
+}
+
 type Struct struct {
 	name       string
 	isExported bool
@@ -723,6 +767,35 @@ func (i *Interface) ExplicitMethod(index int) *Function {
 	return nil
 }
 
+type CustomType struct {
+	name       string
+	aliasType  T
+	isExported bool
+	position   Position
+	markers    MarkerValues
+	file       *SourceFile
+
+	rawFile     *ast.File
+	rawGenDecl  *ast.GenDecl
+	rawTypeSpec *ast.TypeSpec
+}
+
+func (c *CustomType) Name() string {
+	return c.name
+}
+
+func (c *CustomType) AliasType() T {
+	return c.aliasType
+}
+
+func (c *CustomType) Underlying() T {
+	return c
+}
+
+func (c *CustomType) String() string {
+	return ""
+}
+
 func (i *Interface) NumMethods() int {
 	return len(i.allMethods)
 }
@@ -836,6 +909,10 @@ func (collector *packageCollector) findTypeByPkgIdAndName(pkgId, typeName string
 			if interfaceType, ok := file.interfaces.FindByName(typeName); ok {
 				return interfaceType, true
 			}
+
+			if customType, ok := file.customTypes.FindByName(typeName); ok {
+				return customType, true
+			}
 		}
 
 	}
@@ -923,6 +1000,7 @@ func (visitor *PackageVisitor) createSourceFile() *SourceFile {
 		functions:     &Functions{},
 		structs:       &Structs{},
 		interfaces:    &Interfaces{},
+		customTypes:   &CustomTypes{},
 		rawFile:       visitor.file,
 	}
 
@@ -1036,27 +1114,32 @@ func (visitor *PackageVisitor) collectFunction() {
 	}
 }
 
-func (visitor *PackageVisitor) getTypeFromTypeSpec() {
+func (visitor *PackageVisitor) getTypeFromTypeSpec() T {
 	typeName := visitor.typeSpec.Name.Name
 
 	switch visitor.typeSpec.Type.(type) {
 	case *ast.InterfaceType:
 		interfaceType := visitor.getInterface(visitor.typeSpec)
-
-		if interfaceType != nil {
-
-		}
+		visitor.currentFile.interfaces.elements = append(visitor.currentFile.interfaces.elements, interfaceType)
+		return interfaceType
 	case *ast.StructType:
 		structCandidate, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, typeName)
 
+		var structType *Struct
 		if ok {
-			structType := structCandidate.(*Struct)
+			structType = structCandidate.(*Struct)
 			structType.rawGenDecl = visitor.genDecl
 		} else {
-			structType := visitor.getStruct(visitor.typeSpec)
+			structType = visitor.getStruct(visitor.typeSpec)
 			visitor.currentFile.structs.elements = append(visitor.currentFile.structs.elements, structType)
 		}
+
+		return structType
 	}
+
+	customType := visitor.getCustomType(visitor.typeSpec)
+	visitor.currentFile.customTypes.elements = append(visitor.currentFile.customTypes.elements, customType)
+	return customType
 }
 
 func (visitor *PackageVisitor) getInterface(specType *ast.TypeSpec) *Interface {
@@ -1066,6 +1149,7 @@ func (visitor *PackageVisitor) getInterface(specType *ast.TypeSpec) *Interface {
 		methods:     visitor.getInterfaceMethods(specType.Type.(*ast.InterfaceType).Methods.List),
 		position:    visitor.getPosition(specType.Pos()),
 		markers:     visitor.packageMarkers[specType],
+		file:        visitor.currentFile,
 		rawFile:     visitor.file,
 		rawGenDecl:  visitor.genDecl,
 		rawTypeSpec: specType,
@@ -1081,6 +1165,7 @@ func (visitor *PackageVisitor) getStruct(specType *ast.TypeSpec) *Struct {
 		isExported:  ast.IsExported(specType.Name.Name),
 		position:    visitor.getPosition(specType.Pos()),
 		markers:     visitor.packageMarkers[specType],
+		file:        visitor.currentFile,
 		fields:      make([]*Field, 0),
 		methods:     make([]*Function, 0),
 		rawFile:     visitor.file,
@@ -1093,57 +1178,67 @@ func (visitor *PackageVisitor) getStruct(specType *ast.TypeSpec) *Struct {
 	return structType
 }
 
+func (visitor *PackageVisitor) getCustomType(specType *ast.TypeSpec) *CustomType {
+
+	customType := &CustomType{
+		name:        specType.Name.Name,
+		aliasType:   visitor.getTypeFromExpression(specType.Type),
+		isExported:  ast.IsExported(specType.Name.Name),
+		position:    visitor.getPosition(specType.Pos()),
+		markers:     visitor.packageMarkers[specType],
+		file:        visitor.currentFile,
+		rawFile:     visitor.file,
+		rawGenDecl:  nil,
+		rawTypeSpec: specType,
+	}
+
+	return customType
+}
+
 func (visitor *PackageVisitor) getTypeFromExpression(expr ast.Expr) T {
 
 	switch typed := expr.(type) {
 	case *ast.Ident:
-		typ, ok := basicTypesMap[typed.Name]
+		var typ T
+		var ok bool
+		typ, ok = basicTypesMap[typed.Name]
 
 		if ok {
 			return typ
 		}
 
 		if typed.Name == "error" {
-			return &Interface{
-				name:    typed.Name,
-				isError: true,
+			errorType, exists := visitor.collector.findTypeByPkgIdAndName("builtin", "error")
+
+			if !exists {
+				visitor.loadPackageAndVisit("builtin")
 			}
+
+			errorType, _ = visitor.collector.findTypeByPkgIdAndName("builtin", "error")
+
+			return errorType
+
 		}
 
+		typ, ok = visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, typed.Name)
+
+		if ok {
+			return typ
+		}
+		/*
+			visitor.typeSpec = typed.Obj.Decl.(*ast.TypeSpec)
+
+			x := visitor.getTypeFromTypeSpec()
+
+			if x == nil {
+				return nil
+			}
+
+			return x*/
 	case *ast.SelectorExpr:
 		importName := typed.X.(*ast.Ident).Name
 		typeName := typed.Sel.Name
-
-		packageImport, _ := visitor.currentFile.imports.FindByName(importName)
-		typ, exists := visitor.collector.findTypeByPkgIdAndName(packageImport.path, typeName)
-
-		if exists {
-			return typ
-		}
-
-		loadResult, err := LoadPackages(packageImport.path)
-
-		if err != nil {
-			panic(err)
-		}
-
-		importedPackage, _ := loadResult.Lookup(packageImport.path)
-
-		pkgVisitor := &PackageVisitor{
-			collector:         visitor.collector,
-			pkg:               importedPackage,
-			allPackageMarkers: visitor.allPackageMarkers,
-		}
-
-		pkgVisitor.VisitPackage()
-
-		typ, exists = visitor.collector.findTypeByPkgIdAndName(packageImport.path, typeName)
-
-		if exists {
-			return typ
-		}
-
-		return nil
+		return visitor.findTypeByImportAndTypeName(importName, typeName)
 	case *ast.StarExpr:
 		return &Pointer{
 			base: visitor.getTypeFromExpression(typed.X),
@@ -1196,6 +1291,45 @@ func (visitor *PackageVisitor) getTypeFromExpression(expr ast.Expr) T {
 		}
 
 		return structType
+	}
+
+	return nil
+}
+
+func (visitor *PackageVisitor) loadPackageAndVisit(pkgId string) {
+	if visitor.collector.isVisited(pkgId) {
+		return
+	}
+
+	loadResult, err := LoadPackages(pkgId)
+
+	if err != nil {
+		panic(err)
+	}
+
+	pkg, _ := loadResult.Lookup(pkgId)
+
+	visitPackage(pkg, visitor.collector, visitor.allPackageMarkers)
+}
+
+func (visitor *PackageVisitor) findTypeByImportAndTypeName(importName, typeName string) *ImportedType {
+	packageImport, _ := visitor.currentFile.imports.FindByName(importName)
+	typ, exists := visitor.collector.findTypeByPkgIdAndName(packageImport.path, typeName)
+
+	if exists {
+		return &ImportedType{
+			typ,
+		}
+	}
+
+	visitor.loadPackageAndVisit(packageImport.path)
+
+	typ, exists = visitor.collector.findTypeByPkgIdAndName(packageImport.path, typeName)
+
+	if exists {
+		return &ImportedType{
+			typ,
+		}
 	}
 
 	return nil
@@ -1319,12 +1453,41 @@ func VisitPackages(pkgList []*Package, allPackageMarkers map[string]map[ast.Node
 	pkgCollector := newPackageCollector()
 
 	for _, pkg := range pkgList {
-		pkgVisitor := &PackageVisitor{
-			collector:         pkgCollector,
-			pkg:               pkg,
-			allPackageMarkers: allPackageMarkers,
+		if !pkgCollector.isVisited(pkg.ID) {
+			visitPackage(pkg, pkgCollector, allPackageMarkers)
 		}
-
-		pkgVisitor.VisitPackage()
 	}
+}
+
+func visitPackage(pkg *Package, collector *packageCollector, allPackageMarkers map[string]map[ast.Node]MarkerValues) {
+	pkgVisitor := &PackageVisitor{
+		collector:         collector,
+		pkg:               pkg,
+		allPackageMarkers: allPackageMarkers,
+	}
+
+	pkgVisitor.VisitPackage()
+}
+
+func IsInterfaceType(t T) bool {
+	_, ok := t.(*Interface)
+	return ok
+}
+
+func IsStructType(t T) bool {
+	_, ok := t.(*Struct)
+	return ok
+}
+
+func IsErrorType(t T) bool {
+	interfaceType, ok := t.(*Interface)
+	if !ok {
+		return false
+	}
+
+	if interfaceType.file == nil || interfaceType.file.pkg == nil {
+		return false
+	}
+
+	return interfaceType.file.pkg.ID == "builtin"
 }
