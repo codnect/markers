@@ -773,6 +773,7 @@ type CustomType struct {
 	isExported bool
 	position   Position
 	markers    MarkerValues
+	methods    []*Function
 	file       *SourceFile
 
 	rawFile     *ast.File
@@ -1076,41 +1077,60 @@ func (visitor *PackageVisitor) collectFunction() {
 
 		var receiverTypeSpec *ast.TypeSpec
 		receiver := visitor.funcDecl.Recv.List[0].Type
+
 		receiverTypeName := ""
 		isPointerReceiver := false
+		isStructMethod := false
 
 		switch typedReceiver := receiver.(type) {
 		case *ast.Ident:
 			receiverTypeSpec = typedReceiver.Obj.Decl.(*ast.TypeSpec)
 			receiverTypeName = receiverTypeSpec.Name.Name
-
+			_, isStructMethod = receiverTypeSpec.Type.(*ast.StructType)
 		case *ast.StarExpr:
 			receiverTypeSpec = typedReceiver.X.(*ast.Ident).Obj.Decl.(*ast.TypeSpec)
 			receiverTypeName = receiverTypeSpec.Name.Name
 			isPointerReceiver = true
+			_, isStructMethod = receiverTypeSpec.Type.(*ast.StructType)
 		}
 
-		structCandidate, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, receiverTypeName)
+		candidateType, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, receiverTypeName)
 
-		var structType *Struct
+		if isStructMethod {
+			var structType *Struct
 
-		if !ok {
-			structType = visitor.getStruct(receiverTypeSpec)
-			visitor.currentFile.structs.elements = append(visitor.currentFile.structs.elements, structType)
+			if !ok {
+				structType = visitor.getStruct(receiverTypeSpec)
+				visitor.currentFile.structs.elements = append(visitor.currentFile.structs.elements, structType)
+				candidateType = structType
+			} else {
+				structType = candidateType.(*Struct)
+			}
+
+			structType.methods = append(structType.methods, function)
 		} else {
-			structType = structCandidate.(*Struct)
+			var customType *CustomType
+
+			if !ok {
+				customType = visitor.getCustomType(receiverTypeSpec)
+				visitor.currentFile.customTypes.elements = append(visitor.currentFile.customTypes.elements, customType)
+				candidateType = customType
+			} else {
+				customType = candidateType.(*CustomType)
+			}
+
+			customType.methods = append(customType.methods, function)
 		}
 
 		if isPointerReceiver {
 			receiverVariable.typ = &Pointer{
-				base: structType,
+				base: candidateType,
 			}
 		} else {
-			receiverVariable.typ = structType
+			receiverVariable.typ = candidateType
 		}
 
 		function.receiver = receiverVariable
-		structType.methods = append(structType.methods, function)
 	}
 }
 
@@ -1137,8 +1157,17 @@ func (visitor *PackageVisitor) getTypeFromTypeSpec() T {
 		return structType
 	}
 
-	customType := visitor.getCustomType(visitor.typeSpec)
-	visitor.currentFile.customTypes.elements = append(visitor.currentFile.customTypes.elements, customType)
+	customTypeCandidate, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, typeName)
+
+	var customType *CustomType
+	if ok {
+		customType = customTypeCandidate.(*CustomType)
+		customType.rawGenDecl = visitor.genDecl
+	} else {
+		customType := visitor.getCustomType(visitor.typeSpec)
+		visitor.currentFile.customTypes.elements = append(visitor.currentFile.customTypes.elements, customType)
+	}
+
 	return customType
 }
 
@@ -1186,6 +1215,7 @@ func (visitor *PackageVisitor) getCustomType(specType *ast.TypeSpec) *CustomType
 		isExported:  ast.IsExported(specType.Name.Name),
 		position:    visitor.getPosition(specType.Pos()),
 		markers:     visitor.packageMarkers[specType],
+		methods:     make([]*Function, 0),
 		file:        visitor.currentFile,
 		rawFile:     visitor.file,
 		rawGenDecl:  nil,
@@ -1225,6 +1255,9 @@ func (visitor *PackageVisitor) getTypeFromExpression(expr ast.Expr) T {
 		if ok {
 			return typ
 		}
+
+		visitor.typeSpec = typed.Obj.Decl.(*ast.TypeSpec)
+		return visitor.getTypeFromTypeSpec()
 		/*
 			visitor.typeSpec = typed.Obj.Decl.(*ast.TypeSpec)
 
@@ -1456,6 +1489,10 @@ func VisitPackages(pkgList []*Package, allPackageMarkers map[string]map[ast.Node
 		if !pkgCollector.isVisited(pkg.ID) {
 			visitPackage(pkg, pkgCollector, allPackageMarkers)
 		}
+	}
+
+	if pkgCollector == nil {
+
 	}
 }
 
