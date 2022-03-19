@@ -2,8 +2,10 @@ package marker
 
 import (
 	"errors"
+	"github.com/Knetic/govaluate"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -141,6 +143,63 @@ func (i *Interfaces) FindByName(name string) (*Interface, bool) {
 	return nil, false
 }
 
+type Constant struct {
+	name       string
+	isExported bool
+	value      string
+	typ        T
+}
+
+func (c *Constant) Name() string {
+	return c.name
+}
+
+func (c *Constant) Value() string {
+	return c.value
+}
+
+func (c *Constant) Type() T {
+	return c.typ
+}
+
+func (c *Constant) IsExported() string {
+	return c.name
+}
+
+func (c *Constant) Underlying() T {
+	return c
+}
+
+func (c *Constant) String() string {
+	return ""
+}
+
+type Constants struct {
+	elements []*Constant
+}
+
+func (c *Constants) Len() int {
+	return len(c.elements)
+}
+
+func (c *Constants) At(index int) *Constant {
+	if index >= 0 && index < len(c.elements) {
+		return c.elements[index]
+	}
+
+	return nil
+}
+
+func (c *Constants) FindByName(name string) (*Constant, bool) {
+	for _, constant := range c.elements {
+		if constant.name == name {
+			return constant, true
+		}
+	}
+
+	return nil, false
+}
+
 type CustomTypes struct {
 	elements []*CustomType
 }
@@ -208,6 +267,7 @@ type SourceFile struct {
 	structs     *Structs
 	interfaces  *Interfaces
 	customTypes *CustomTypes
+	constants   *Constants
 
 	rawFile *ast.File
 }
@@ -593,6 +653,7 @@ type Field struct {
 	position   Position
 	markers    MarkerValues
 	file       *SourceFile
+	isEmbedded bool
 	rawFile    *ast.File
 	rawField   *ast.Field
 }
@@ -609,24 +670,21 @@ func (f *Field) IsExported() bool {
 	return f.isExported
 }
 
+func (f *Field) IsEmbedded() bool {
+	return f.isEmbedded
+}
+
 func (f *Field) Tags() string {
 	return f.tags
 }
 
-type DefinedType struct {
-	underlying T
-}
-
-func (d *DefinedType) Underlying() T {
-	return d.underlying
-}
-
-func (d *DefinedType) String() string {
-	return ""
-}
-
 type ImportedType struct {
+	pkg *Package
 	typ T
+}
+
+func (i *ImportedType) Package() *Package {
+	return i.pkg
 }
 
 func (i *ImportedType) Underlying() T {
@@ -642,17 +700,19 @@ func (i *ImportedType) Name() string {
 }
 
 type Struct struct {
-	name       string
-	isExported bool
-	position   Position
-	markers    MarkerValues
-	fields     []*Field
-	methods    []*Function
-	file       *SourceFile
+	name        string
+	isExported  bool
+	isAnonymous bool
+	position    Position
+	markers     MarkerValues
+	fields      []*Field
+	methods     []*Function
+	file        *SourceFile
 
 	rawFile     *ast.File
 	rawGenDecl  *ast.GenDecl
 	rawTypeSpec *ast.TypeSpec
+	namedType   *types.Named
 }
 
 func (s *Struct) File() *SourceFile {
@@ -679,6 +739,10 @@ func (s *Struct) IsExported() bool {
 	return s.isExported
 }
 
+func (s *Struct) IsAnonymous() bool {
+	return s.isAnonymous
+}
+
 func (s *Struct) Markers() MarkerValues {
 	return s.markers
 }
@@ -695,36 +759,167 @@ func (s *Struct) RawTypeSpec() *ast.TypeSpec {
 	return s.rawTypeSpec
 }
 
+func (s *Struct) NamedType() *types.Named {
+	return s.namedType
+}
+
+func (s *Struct) NumEmbeddedStructFields() int {
+	return 0
+}
+
+func (s *Struct) EmbeddedStructFields() []*Field {
+	return nil
+}
+
+func (s *Struct) NumEmbeddedInterfaceFields() int {
+	return 0
+}
+
+func (s *Struct) EmbeddedInterfaceFields() []*Field {
+	return nil
+}
+
+func (s *Struct) NumEmbeddedFields() int {
+	numEmbeddedFields := 0
+
+	for _, field := range s.fields {
+		if field.IsEmbedded() {
+			numEmbeddedFields++
+		}
+	}
+
+	return numEmbeddedFields
+}
+
+func (s *Struct) EmbeddedFields() []*Field {
+	embeddedFields := make([]*Field, 0)
+
+	for _, field := range s.fields {
+		if field.IsEmbedded() {
+			embeddedFields = append(embeddedFields, field)
+		}
+	}
+
+	return embeddedFields
+}
+
+func (s *Struct) NumFields() int {
+	return len(s.fields)
+}
+
+func (s *Struct) Fields() []*Field {
+	return s.fields
+}
+
+func (s *Struct) NumAllFields() int {
+	numFields := 0
+
+	for _, field := range s.fields {
+
+		if !field.IsEmbedded() {
+			numFields++
+			continue
+		}
+
+		var baseType T
+		pointerType, ok := field.Type().(*Pointer)
+
+		if ok {
+			baseType = pointerType.Elem()
+		}
+
+		importedType, ok := baseType.(*ImportedType)
+
+		if ok {
+			baseType = importedType.Underlying()
+		}
+
+		structType, ok := baseType.(*Struct)
+
+		if ok {
+			numFields = structType.NumAllFields()
+		}
+
+	}
+
+	return numFields
+}
+
+func (s *Struct) AllFields() []*Field {
+	allFields := make([]*Field, 0)
+
+	for _, field := range s.fields {
+
+		if !field.IsEmbedded() {
+			allFields = append(allFields, field)
+			continue
+		}
+
+		var baseType T = field.Type()
+		pointerType, ok := field.Type().(*Pointer)
+
+		if ok {
+			baseType = pointerType.Elem()
+		}
+
+		importedType, ok := baseType.(*ImportedType)
+
+		if ok {
+			baseType = importedType.Underlying()
+		}
+
+		structType, ok := baseType.(*Struct)
+
+		if ok {
+			allFields = append(allFields, structType.AllFields()...)
+		}
+
+	}
+
+	return allFields
+}
+
 func (s *Struct) Implements(i *Interface) bool {
-	if i == nil {
+	if i == nil || i.interfaceType == nil || s.namedType == nil {
 		return false
+	}
+
+	if types.Implements(s.namedType, i.interfaceType) {
+		return true
+	}
+
+	pointerType := types.NewPointer(s.namedType)
+
+	if types.Implements(pointerType, i.interfaceType) {
+		return true
 	}
 
 	return false
 }
 
 type Interface struct {
-	name       string
-	isError    bool
-	isExported bool
-	position   Position
-	markers    MarkerValues
-	embeddeds  []Type
-	allMethods []*Function
-	methods    []*Function
-	file       *SourceFile
+	name        string
+	isExported  bool
+	isAnonymous bool
+	position    Position
+	markers     MarkerValues
+	embeddeds   []T
+	allMethods  []*Function
+	methods     []*Function
+	file        *SourceFile
 
-	rawFile     *ast.File
-	rawGenDecl  *ast.GenDecl
-	rawTypeSpec *ast.TypeSpec
-}
-
-func (i *Interface) IsError() bool {
-	return i.isError
+	rawFile       *ast.File
+	rawGenDecl    *ast.GenDecl
+	rawTypeSpec   *ast.TypeSpec
+	interfaceType *types.Interface
 }
 
 func (i *Interface) IsEmptyInterface() bool {
-	return false
+	return len(i.embeddeds) == 0 && len(i.methods) == 0
+}
+
+func (i *Interface) IsAnonymous() bool {
+	return i.isAnonymous
 }
 
 func (i *Interface) File() *SourceFile {
@@ -767,6 +962,34 @@ func (i *Interface) ExplicitMethod(index int) *Function {
 	return nil
 }
 
+func (i *Interface) NumMethods() int {
+	return len(i.allMethods)
+}
+
+func (i *Interface) Method(index int) *Function {
+	if index >= 0 && index < len(i.allMethods) {
+		return i.allMethods[index]
+	}
+
+	return nil
+}
+
+func (i *Interface) RawFile() *ast.File {
+	return i.rawFile
+}
+
+func (i *Interface) RawGenDecl() *ast.GenDecl {
+	return i.rawGenDecl
+}
+
+func (i *Interface) RawTypeSpec() *ast.TypeSpec {
+	return i.rawTypeSpec
+}
+
+func (i *Interface) InterfaceType() *types.Interface {
+	return i.interfaceType
+}
+
 type CustomType struct {
 	name       string
 	aliasType  T
@@ -795,30 +1018,6 @@ func (c *CustomType) Underlying() T {
 
 func (c *CustomType) String() string {
 	return ""
-}
-
-func (i *Interface) NumMethods() int {
-	return len(i.allMethods)
-}
-
-func (i *Interface) Method(index int) *Function {
-	if index >= 0 && index < len(i.allMethods) {
-		return i.allMethods[index]
-	}
-
-	return nil
-}
-
-func (i *Interface) RawFile() *ast.File {
-	return i.rawFile
-}
-
-func (i *Interface) RawGenDecl() *ast.GenDecl {
-	return i.rawGenDecl
-}
-
-func (i *Interface) RawTypeSpec() *ast.TypeSpec {
-	return i.rawTypeSpec
 }
 
 type SourceFileCallback func(file *SourceFile, err error)
@@ -858,15 +1057,21 @@ func eachFile(collector *Collector, pkgs []*Package, callback SourceFileCallback
 }
 
 type packageCollector struct {
-	hasSeen map[string]bool
-	files   map[string]*SourceFiles
+	hasSeen  map[string]bool
+	files    map[string]*SourceFiles
+	packages map[string]*Package
 }
 
 func newPackageCollector() *packageCollector {
 	return &packageCollector{
-		hasSeen: make(map[string]bool),
-		files:   make(map[string]*SourceFiles),
+		hasSeen:  make(map[string]bool),
+		files:    make(map[string]*SourceFiles),
+		packages: make(map[string]*Package),
 	}
+}
+
+func (collector *packageCollector) getPackage(pkgId string) *Package {
+	return collector.packages[pkgId]
 }
 
 func (collector *packageCollector) markAsSeen(pkgId string) {
@@ -913,6 +1118,10 @@ func (collector *packageCollector) findTypeByPkgIdAndName(pkgId, typeName string
 
 			if customType, ok := file.customTypes.FindByName(typeName); ok {
 				return customType, true
+			}
+
+			if constant, ok := file.constants.FindByName(typeName); ok {
+				return constant, true
 			}
 		}
 
@@ -962,6 +1171,7 @@ func (visitor *PackageVisitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.GenDecl:
 		visitor.genDecl = typedNode
 		if typedNode.Tok == token.CONST {
+			visitor.collectConstants(typedNode.Specs)
 			//visitor.constCallback(visitor.file, visitor.genDecl)
 		}
 		return visitor
@@ -1002,6 +1212,7 @@ func (visitor *PackageVisitor) createSourceFile() *SourceFile {
 		structs:       &Structs{},
 		interfaces:    &Interfaces{},
 		customTypes:   &CustomTypes{},
+		constants:     &Constants{},
 		rawFile:       visitor.file,
 	}
 
@@ -1043,6 +1254,73 @@ func (visitor *PackageVisitor) getFileImports() *Imports {
 	}
 
 	return imports
+}
+
+func (visitor *PackageVisitor) collectConstants(specs []ast.Spec) {
+	constants := make([]*Constant, 0)
+	var typ T
+	for _, spec := range specs {
+		valueSpec, ok := spec.(*ast.ValueSpec)
+
+		if !ok {
+			continue
+		}
+
+		if valueSpec.Type != nil {
+			typ = visitor.getTypeFromExpression(valueSpec.Type)
+		}
+
+		for index, name := range valueSpec.Names {
+			constant := &Constant{
+				name:       name.Name,
+				isExported: ast.IsExported(name.Name),
+				typ:        typ,
+			}
+
+			if valueSpec.Values == nil {
+				continue
+			}
+
+			value := valueSpec.Values[index]
+
+			parameters := make(map[string]interface{}, 8)
+			parameters["iota"] = 0
+
+			evaluatedExpression, _ := govaluate.NewEvaluableExpression(visitor.getExpressionString(value))
+
+			x, _ := evaluatedExpression.Evaluate(parameters)
+
+			if x == nil {
+
+			}
+
+			constants = append(constants, constant)
+		}
+	}
+}
+
+func (visitor *PackageVisitor) getExpressionString(expr ast.Expr) string {
+	str := ""
+
+	switch typedExpr := expr.(type) {
+	case *ast.Ident:
+		str = str + typedExpr.Name
+	case *ast.BasicLit:
+		str = str + typedExpr.Value
+	case *ast.UnaryExpr:
+		str = str + typedExpr.Op.String()
+		str = str + visitor.getExpressionString(typedExpr.X)
+	case *ast.ParenExpr:
+		str = str + "("
+		str = str + visitor.getExpressionString(typedExpr.X)
+		str = str + ")"
+	case *ast.BinaryExpr:
+		str = str + visitor.getExpressionString(typedExpr.X)
+		str = str + typedExpr.Op.String()
+		str = str + visitor.getExpressionString(typedExpr.Y)
+	}
+
+	return str
 }
 
 func (visitor *PackageVisitor) collectFunction() {
@@ -1139,8 +1417,17 @@ func (visitor *PackageVisitor) getTypeFromTypeSpec() T {
 
 	switch visitor.typeSpec.Type.(type) {
 	case *ast.InterfaceType:
-		interfaceType := visitor.getInterface(visitor.typeSpec)
-		visitor.currentFile.interfaces.elements = append(visitor.currentFile.interfaces.elements, interfaceType)
+		interfaceCandidate, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, typeName)
+
+		var interfaceType *Interface
+		if ok {
+			interfaceType = interfaceCandidate.(*Interface)
+			interfaceType.rawGenDecl = visitor.genDecl
+		} else {
+			interfaceType = visitor.getInterface(visitor.typeSpec)
+			visitor.currentFile.interfaces.elements = append(visitor.currentFile.interfaces.elements, interfaceType)
+		}
+
 		return interfaceType
 	case *ast.StructType:
 		structCandidate, ok := visitor.collector.findTypeByPkgIdAndName(visitor.pkg.ID, typeName)
@@ -1173,15 +1460,17 @@ func (visitor *PackageVisitor) getTypeFromTypeSpec() T {
 
 func (visitor *PackageVisitor) getInterface(specType *ast.TypeSpec) *Interface {
 	interfaceType := &Interface{
-		name:        specType.Name.Name,
-		isExported:  ast.IsExported(specType.Name.Name),
-		methods:     visitor.getInterfaceMethods(specType.Type.(*ast.InterfaceType).Methods.List),
-		position:    visitor.getPosition(specType.Pos()),
-		markers:     visitor.packageMarkers[specType],
-		file:        visitor.currentFile,
-		rawFile:     visitor.file,
-		rawGenDecl:  visitor.genDecl,
-		rawTypeSpec: specType,
+		name:          specType.Name.Name,
+		isExported:    ast.IsExported(specType.Name.Name),
+		methods:       visitor.getInterfaceMethods(specType.Type.(*ast.InterfaceType).Methods.List),
+		embeddeds:     visitor.getInterfaceEmbeddedTypes(specType.Type.(*ast.InterfaceType).Methods.List),
+		position:      visitor.getPosition(specType.Pos()),
+		markers:       visitor.packageMarkers[specType],
+		file:          visitor.currentFile,
+		rawFile:       visitor.file,
+		rawGenDecl:    visitor.genDecl,
+		rawTypeSpec:   specType,
+		interfaceType: visitor.pkg.Types.Scope().Lookup(specType.Name.Name).Type().Underlying().(*types.Interface),
 	}
 
 	return interfaceType
@@ -1200,10 +1489,12 @@ func (visitor *PackageVisitor) getStruct(specType *ast.TypeSpec) *Struct {
 		rawFile:     visitor.file,
 		rawGenDecl:  nil,
 		rawTypeSpec: specType,
+		namedType:   visitor.pkg.Types.Scope().Lookup(specType.Name.Name).Type().(*types.Named),
 	}
 
 	fieldList := specType.Type.(*ast.StructType).Fields.List
-	visitor.getFieldsFromFieldList(fieldList)
+
+	structType.fields = append(structType.fields, visitor.getFieldsFromFieldList(fieldList)...)
 	return structType
 }
 
@@ -1258,16 +1549,6 @@ func (visitor *PackageVisitor) getTypeFromExpression(expr ast.Expr) T {
 
 		visitor.typeSpec = typed.Obj.Decl.(*ast.TypeSpec)
 		return visitor.getTypeFromTypeSpec()
-		/*
-			visitor.typeSpec = typed.Obj.Decl.(*ast.TypeSpec)
-
-			x := visitor.getTypeFromTypeSpec()
-
-			if x == nil {
-				return nil
-			}
-
-			return x*/
 	case *ast.SelectorExpr:
 		importName := typed.X.(*ast.Ident).Name
 		typeName := typed.Sel.Name
@@ -1312,15 +1593,17 @@ func (visitor *PackageVisitor) getTypeFromExpression(expr ast.Expr) T {
 		}
 	case *ast.InterfaceType:
 		interfaceType := &Interface{
-			position: visitor.getPosition(typed.Pos()),
-			rawFile:  visitor.file,
+			position:    visitor.getPosition(typed.Pos()),
+			rawFile:     visitor.file,
+			isAnonymous: true,
 		}
-		visitor.getInterfaceMethods(typed.Methods.List)
+		interfaceType.methods = append(interfaceType.methods, visitor.getInterfaceMethods(typed.Methods.List)...)
 		return interfaceType
 	case *ast.StructType:
 		structType := &Struct{
-			position: visitor.getPosition(typed.Pos()),
-			rawFile:  visitor.file,
+			position:    visitor.getPosition(typed.Pos()),
+			rawFile:     visitor.file,
+			isAnonymous: true,
 		}
 
 		return structType
@@ -1351,6 +1634,7 @@ func (visitor *PackageVisitor) findTypeByImportAndTypeName(importName, typeName 
 
 	if exists {
 		return &ImportedType{
+			visitor.collector.packages[packageImport.path],
 			typ,
 		}
 	}
@@ -1361,6 +1645,7 @@ func (visitor *PackageVisitor) findTypeByImportAndTypeName(importName, typeName 
 
 	if exists {
 		return &ImportedType{
+			visitor.collector.packages[packageImport.path],
 			typ,
 		}
 	}
@@ -1426,8 +1711,18 @@ func (visitor *PackageVisitor) getInterfaceMethods(fieldList []*ast.Field) []*Fu
 	return methods
 }
 
-func (visitor *PackageVisitor) getDefinedTypeFromExpression(expr ast.Expr) *DefinedType {
-	return nil
+func (visitor *PackageVisitor) getInterfaceEmbeddedTypes(fieldList []*ast.Field) []T {
+	embeddedTypes := make([]T, 0)
+
+	for _, field := range fieldList {
+		_, ok := field.Type.(*ast.FuncType)
+
+		if !ok {
+			embeddedTypes = append(embeddedTypes, visitor.getTypeFromExpression(field.Type))
+		}
+	}
+
+	return embeddedTypes
 }
 
 func (visitor *PackageVisitor) getFieldsFromFieldList(fieldList []*ast.Field) []*Field {
@@ -1441,7 +1736,7 @@ func (visitor *PackageVisitor) getFieldsFromFieldList(fieldList []*ast.Field) []
 		}
 
 		if rawField.Names == nil {
-			embeddedType := visitor.getDefinedTypeFromExpression(rawField.Type)
+			embeddedType := visitor.getTypeFromExpression(rawField.Type)
 
 			field := &Field{
 				name:       "",
@@ -1453,6 +1748,7 @@ func (visitor *PackageVisitor) getFieldsFromFieldList(fieldList []*ast.Field) []
 				rawField:   rawField,
 				tags:       tags,
 				typ:        embeddedType,
+				isEmbedded: true,
 			}
 
 			fields = append(fields, field)
@@ -1472,6 +1768,7 @@ func (visitor *PackageVisitor) getFieldsFromFieldList(fieldList []*ast.Field) []
 				rawField:   rawField,
 				tags:       tags,
 				typ:        typ,
+				isEmbedded: false,
 			}
 
 			fields = append(fields, field)
@@ -1494,6 +1791,14 @@ func VisitPackages(pkgList []*Package, allPackageMarkers map[string]map[ast.Node
 	if pkgCollector == nil {
 
 	}
+
+	file, _ := pkgCollector.files["github.com/procyon-projects/marker/test/package1"].FindByName("mac_file.go")
+
+	file.structs.At(0).AllFields()
+	file.structs.At(0).NumAllFields()
+
+	i, _ := file.interfaces.FindByName("Dessert")
+	file.structs.At(0).Implements(i)
 }
 
 func visitPackage(pkg *Package, collector *packageCollector, allPackageMarkers map[string]map[ast.Node]MarkerValues) {
@@ -1501,6 +1806,10 @@ func visitPackage(pkg *Package, collector *packageCollector, allPackageMarkers m
 		collector:         collector,
 		pkg:               pkg,
 		allPackageMarkers: allPackageMarkers,
+	}
+
+	if _, ok := collector.packages[pkg.ID]; !ok {
+		collector.packages[pkg.ID] = pkg
 	}
 
 	pkgVisitor.VisitPackage()

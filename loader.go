@@ -85,6 +85,10 @@ func (result *LoadResult) GetPackages() []*Package {
 		pkgs = append(pkgs, pkg)
 	}
 
+	for _, pkg := range result.standardPackages {
+		pkgs = append(pkgs, pkg)
+	}
+
 	return pkgs
 }
 
@@ -102,16 +106,6 @@ func (result *LoadResult) Lookup(pkgPath string) (*Package, error) {
 	}
 
 	return pkg, nil
-}
-
-func (result *LoadResult) GetStandardPackages() []*Package {
-	pkgs := make([]*Package, 0)
-
-	for _, pkg := range result.standardPackages {
-		pkgs = append(pkgs, pkg)
-	}
-
-	return pkgs
 }
 
 // LoadPackages loads and returns the Go packages by the given patterns.
