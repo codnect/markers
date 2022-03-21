@@ -458,7 +458,6 @@ func getFileImports(fileSet *token.FileSet, file *ast.File) []Import {
 				importPosition.Line,
 				importPosition.Column,
 			},
-			rawImportSpec: importInfo,
 		})
 	}
 

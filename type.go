@@ -1,561 +1,1162 @@
 package marker
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
+	"go/ast"
+	"go/token"
+	"go/types"
 	"strconv"
+	"strings"
 )
 
-type ArgumentType int
-
-func (argumentType ArgumentType) String() string {
-	return argumentTypeText[argumentType]
+type T interface {
+	Underlying() T
+	String() string
 }
+
+type ImportedType struct {
+	pkg *Package
+	typ T
+}
+
+func (i *ImportedType) Package() *Package {
+	return i.pkg
+}
+
+func (i *ImportedType) Underlying() T {
+	return i.typ
+}
+
+func (i *ImportedType) String() string {
+	return ""
+}
+
+func (i *ImportedType) Name() string {
+	return ""
+}
+
+type BasicKind int
 
 const (
-	InvalidType ArgumentType = iota
-	RawType
-	AnyType
-	BoolType
-	IntegerType
-	StringType
-	SliceType
-	MapType
+	Invalid BasicKind = iota
+
+	Bool
+	Int
+	Int8
+	Int16
+	Int32
+	Int64
+	Uint
+	Uint8
+	Uint16
+	Uint32
+	Uint64
+	Uintptr
+	Float32
+	Float64
+	Complex64
+	Complex128
+	String
+	UnsafePointer
+
+	UntypedBool
+	UntypedInt
+	UntypedRune
+	UntypedFloat
+	UntypedComplex
+	UntypedString
+	UntypedNil
+
+	Byte = Uint8
+	Rune = Int32
 )
 
-var argumentTypeText = map[ArgumentType]string{
-	InvalidType: "InvalidType",
-	RawType:     "RawType",
-	AnyType:     "AnyType",
-	BoolType:    "BoolType",
-	IntegerType: "IntegerType",
-	StringType:  "StringType",
-	SliceType:   "SliceType",
-	MapType:     "MapType",
-}
+// BasicInfo is a set of flags describing properties of a basic type.
+type BasicInfo int
 
-var (
-	interfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
-	rawType       = reflect.TypeOf((*[]byte)(nil)).Elem()
+// Properties of basic types.
+const (
+	IsBoolean BasicInfo = 1 << iota
+	IsInteger
+	IsUnsigned
+	IsFloat
+	IsComplex
+	IsString
+	IsUntyped
+
+	IsOrdered   = IsInteger | IsFloat | IsString
+	IsNumeric   = IsInteger | IsFloat | IsComplex
+	IsConstType = IsBoolean | IsNumeric | IsString
 )
 
-type ArgumentTypeInfo struct {
-	ActualType ArgumentType
-	ItemType   *ArgumentTypeInfo
+var basicTypesMap = map[string]*Basic{
+	"bool":       basicTypes[Bool],
+	"int":        basicTypes[Int],
+	"int8":       basicTypes[Int8],
+	"int16":      basicTypes[Int16],
+	"int32":      basicTypes[Int32],
+	"int64":      basicTypes[Int64],
+	"uint":       basicTypes[Uint],
+	"uint8":      basicTypes[Uint8],
+	"uint16":     basicTypes[Uint16],
+	"uint32":     basicTypes[Uint32],
+	"uint64":     basicTypes[Uint64],
+	"uintptr":    basicTypes[Uintptr],
+	"float32":    basicTypes[Float32],
+	"float64":    basicTypes[Float64],
+	"complex64":  basicTypes[Complex64],
+	"complex128": basicTypes[Complex128],
+	"string":     basicTypes[String],
+	"byte":       basicTypes[Byte],
+	"rune":       basicTypes[Rune],
 }
 
-func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
-	typeInfo := &ArgumentTypeInfo{}
+var basicTypes = []*Basic{
+	Invalid: {Invalid, 0, "invalid type"},
 
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-	}
+	Bool:          {Bool, IsBoolean, "bool"},
+	Int:           {Int, IsInteger, "int"},
+	Int8:          {Int8, IsInteger, "int8"},
+	Int16:         {Int16, IsInteger, "int16"},
+	Int32:         {Int32, IsInteger, "int32"},
+	Int64:         {Int64, IsInteger, "int64"},
+	Uint:          {Uint, IsInteger | IsUnsigned, "uint"},
+	Uint8:         {Uint8, IsInteger | IsUnsigned, "uint8"},
+	Uint16:        {Uint16, IsInteger | IsUnsigned, "uint16"},
+	Uint32:        {Uint32, IsInteger | IsUnsigned, "uint32"},
+	Uint64:        {Uint64, IsInteger | IsUnsigned, "uint64"},
+	Uintptr:       {Uintptr, IsInteger | IsUnsigned, "uintptr"},
+	Float32:       {Float32, IsFloat, "float32"},
+	Float64:       {Float64, IsFloat, "float64"},
+	Complex64:     {Complex64, IsComplex, "complex64"},
+	Complex128:    {Complex128, IsComplex, "complex128"},
+	String:        {String, IsString, "string"},
+	UnsafePointer: {UnsafePointer, 0, "Pointer"},
 
-	if typ == rawType {
-		typeInfo.ActualType = RawType
-		return *typeInfo, nil
-	}
+	UntypedBool:    {UntypedBool, IsBoolean | IsUntyped, "untyped bool"},
+	UntypedInt:     {UntypedInt, IsInteger | IsUntyped, "untyped int"},
+	UntypedRune:    {UntypedRune, IsInteger | IsUntyped, "untyped rune"},
+	UntypedFloat:   {UntypedFloat, IsFloat | IsUntyped, "untyped float"},
+	UntypedComplex: {UntypedComplex, IsComplex | IsUntyped, "untyped complex"},
+	UntypedString:  {UntypedString, IsString | IsUntyped, "untyped string"},
+	UntypedNil:     {UntypedNil, IsUntyped, "untyped nil"},
 
-	if typ == interfaceType {
-		typeInfo.ActualType = AnyType
-		return *typeInfo, nil
-	}
-
-	switch typ.Kind() {
-	case reflect.String:
-		typeInfo.ActualType = StringType
-	case reflect.Uint8, reflect.Uint16, reflect.Uint, reflect.Uint32, reflect.Uint64:
-		typeInfo.ActualType = IntegerType
-	case reflect.Int8, reflect.Int16, reflect.Int, reflect.Int32, reflect.Int64:
-		typeInfo.ActualType = IntegerType
-	case reflect.Bool:
-		typeInfo.ActualType = BoolType
-	case reflect.Slice:
-		typeInfo.ActualType = SliceType
-		itemType, err := GetArgumentTypeInfo(typ.Elem())
-
-		if err != nil {
-			return ArgumentTypeInfo{}, fmt.Errorf("bad slice item type: %w", err)
-		}
-
-		typeInfo.ItemType = &itemType
-	case reflect.Map:
-		if typ.Key().Kind() != reflect.String {
-			return ArgumentTypeInfo{}, fmt.Errorf("map key must be string")
-		}
-
-		typeInfo.ActualType = MapType
-		itemType, err := GetArgumentTypeInfo(typ.Elem())
-
-		if err != nil {
-			return ArgumentTypeInfo{}, fmt.Errorf("bad map item type: %w", err)
-		}
-
-		typeInfo.ItemType = &itemType
-	default:
-		return ArgumentTypeInfo{}, fmt.Errorf("type has unsupported kind %s", typ.Kind())
-	}
-
-	return *typeInfo, nil
+	{Byte, IsInteger | IsUnsigned, "byte"},
+	{Rune, IsInteger, "rune"},
 }
 
-func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) error {
-	switch typeInfo.ActualType {
-	case BoolType:
-		return typeInfo.parseBoolean(scanner, out)
-	case IntegerType:
-		return typeInfo.parseInteger(scanner, out)
-	case StringType:
-		return typeInfo.parseString(scanner, out)
-	case SliceType:
-		return typeInfo.parseSlice(scanner, out)
-	case MapType:
-		return typeInfo.parseMap(scanner, out)
-	case AnyType:
-		inferredType, _ := typeInfo.inferType(scanner, out, false)
-		newOut := out
+type Basic struct {
+	kind BasicKind
+	info BasicInfo
+	name string
+}
 
-		switch inferredType.ActualType {
-		case SliceType:
-			newType, err := inferredType.makeSliceType()
+func (b *Basic) Kind() BasicKind {
+	return b.kind
+}
 
-			if err != nil {
-				return err
-			}
+func (b *Basic) Name() string {
+	return b.name
+}
 
-			newOut = reflect.Indirect(reflect.New(newType))
-		case MapType:
-			newType, err := inferredType.makeMapType()
+func (b *Basic) Underlying() T {
+	return b
+}
 
-			if err != nil {
-				return err
-			}
+func (b *Basic) String() string {
+	return b.name
+}
 
-			newOut = reflect.Indirect(reflect.New(newType))
-		}
+type Array struct {
+	len  int64
+	elem T
+}
 
-		if newOut.Kind() == reflect.Ptr {
-			newOut = newOut.Elem()
-		}
+func (a *Array) Len() int64 {
+	return a.len
+}
 
-		if !newOut.CanSet() {
-			return nil
-		}
+func (a *Array) Elem() T {
+	return a.elem
+}
 
-		err := inferredType.Parse(scanner, newOut)
+func (a *Array) Underlying() T {
+	return a
+}
 
-		if err != nil {
-			return err
-		}
+func (a *Array) String() string {
+	if a.len != -1 {
+		return "[" + fmt.Sprintf("%d", a.len) + "]" + a.elem.String()
+	}
 
-		inferredType.setValue(out, newOut)
+	return ""
+}
+
+type Slice struct {
+	elem T
+}
+
+func (s *Slice) Elem() T {
+	return s.elem
+}
+
+func (s *Slice) Underlying() T {
+	return s
+}
+
+func (s *Slice) String() string {
+	return "[]" + s.elem.String()
+}
+
+type Map struct {
+	key  T
+	elem T
+}
+
+func (m *Map) Key() T {
+	return m.key
+}
+
+func (m *Map) Elem() T {
+	return m.elem
+}
+
+func (m *Map) Underlying() T {
+	return m
+}
+
+func (m *Map) String() string {
+	return "map[" + m.key.String() + "]" + m.elem.String()
+}
+
+type ChanDirection int
+
+const (
+	SEND ChanDirection = 1 << iota
+	RECEIVE
+)
+
+type Chan struct {
+	direction ChanDirection
+	elem      T
+}
+
+func (c *Chan) Direction() ChanDirection {
+	return c.direction
+}
+
+func (c *Chan) Elem() T {
+	return c.elem
+}
+
+func (c *Chan) Underlying() T {
+	return c
+}
+
+func (c *Chan) String() string {
+	return ""
+}
+
+type Pointer struct {
+	base T
+}
+
+func (p *Pointer) Elem() T {
+	return p.base
+}
+
+func (p *Pointer) Underlying() T {
+	return p
+}
+
+func (p *Pointer) String() string {
+	return "*" + p.base.String()
+}
+
+type Position struct {
+	Line   int
+	Column int
+}
+
+type Import struct {
+	name       string
+	path       string
+	sideEffect bool
+	position   Position
+}
+
+func (i *Import) Name() string {
+	return i.name
+}
+
+func (i *Import) Path() string {
+	return i.path
+}
+
+func (i *Import) SideEffect() bool {
+	return i.sideEffect
+}
+
+func (i *Import) Position() Position {
+	return i.position
+}
+
+type Imports struct {
+	imports []*Import
+}
+
+func (i *Imports) Len() int {
+	return len(i.imports)
+}
+
+func (i *Imports) At(index int) *Import {
+	if index >= 0 && index < len(i.imports) {
+		return i.imports[index]
 	}
 
 	return nil
 }
 
-func (typeInfo ArgumentTypeInfo) setValue(out, value reflect.Value) {
-	outType := out.Type()
-
-	if outType.Kind() == reflect.Ptr {
-		outType = outType.Elem()
-		out = out.Elem()
+func (i *Imports) FindByName(name string) (*Import, bool) {
+	for _, importItem := range i.imports {
+		if importItem.name == name || strings.HasSuffix(importItem.path, "/"+name) {
+			return importItem, true
+		}
 	}
 
-	if outType != value.Type() {
-		value = value.Convert(outType)
-	}
-
-	out.Set(value)
+	return nil, false
 }
 
-func (typeInfo ArgumentTypeInfo) parseBoolean(scanner *Scanner, out reflect.Value) error {
-	if scanner == nil {
-		return errors.New("scanner cannot be nil")
+func (i *Imports) FindByPath(path string) (*Import, bool) {
+	for _, importItem := range i.imports {
+		if importItem.path == path {
+			return importItem, true
+		}
 	}
 
-	if !scanner.Expect(Identifier, "Boolean (true or false)") {
-		return nil
-	}
-
-	switch scanner.Token() {
-	case "false":
-		typeInfo.setValue(out, reflect.ValueOf(false))
-	case "true":
-		typeInfo.setValue(out, reflect.ValueOf(true))
-	}
-
-	return fmt.Errorf("expected true or false, got %q", scanner.Token())
+	return nil, false
 }
 
-func (typeInfo ArgumentTypeInfo) parseInteger(scanner *Scanner, out reflect.Value) error {
-	if scanner == nil {
-		return errors.New("scanner cannot be nil")
+type Constant struct {
+	name       string
+	isExported bool
+	value      interface{}
+	typ        T
+	expression ast.Expr
+	initType   ast.Expr
+
+	iota                int
+	expressionEvaluated bool
+
+	pkg     *Package
+	visitor *PackageVisitor
+}
+
+func (c *Constant) Name() string {
+	return c.name
+}
+
+func (c *Constant) Value() interface{} {
+	c.evaluateExpression()
+	return c.value
+}
+
+func (c *Constant) evaluateExpression() {
+	if c.expressionEvaluated {
+		return
 	}
 
-	nextCharacter := scanner.Peek()
+	defer func() {
+		if r := recover(); r != nil {
+		}
+	}()
 
-	isNegative := false
+	params := make(map[string]interface{}, 0)
+	params["iota"] = c.iota
+	c.value, c.typ = c.evalConstantExpression(c.expression, params)
 
-	if nextCharacter == '-' {
-		isNegative = true
-		scanner.Scan()
+	if c.initType != nil {
+		switch typed := c.initType.(type) {
+		case *ast.Ident:
+			c.typ, _ = c.visitor.collector.findTypeByPkgIdAndName(c.pkg.ID, typed.Name)
+		case *ast.SelectorExpr:
+			c.typ = c.visitor.findTypeByImportAndTypeName(typed.X.(*ast.Ident).Name, typed.Sel.Name)
+		}
 	}
 
-	if !scanner.Expect(IntegerValue, "Integer") {
-		return nil
+	c.expressionEvaluated = true
+}
+
+func (c *Constant) Type() T {
+	return c.typ
+}
+
+func (c *Constant) IsExported() string {
+	return c.name
+}
+
+func (c *Constant) Underlying() T {
+	return c
+}
+
+func (c *Constant) String() string {
+	return ""
+}
+
+func (c *Constant) evalConstantExpression(exp ast.Expr, variableMap map[string]interface{}) (interface{}, T) {
+	switch exp := exp.(type) {
+	case *ast.Ident:
+		if value, ok := variableMap[exp.Name]; ok {
+			return value, basicTypes[UntypedInt]
+		}
+
+		candidateConstant, ok := c.visitor.collector.findTypeByPkgIdAndName(c.pkg.ID, exp.Name)
+		if ok {
+			constant := candidateConstant.(*Constant)
+			return constant.Value(), constant.Type()
+		}
+
+		return nil, nil
+	case *ast.SelectorExpr:
+		importedType := c.visitor.findTypeByImportAndTypeName(exp.X.(*ast.Ident).Name, exp.Sel.Name)
+		if importedType != nil {
+			constant := importedType.Underlying().(*Constant)
+			return constant.Value(), constant.Type()
+		}
+	case *ast.BinaryExpr:
+		return c.evalBinaryExpr(exp, variableMap)
+	case *ast.BasicLit:
+		switch exp.Kind {
+		case token.INT:
+			i, _ := strconv.Atoi(exp.Value)
+			return i, basicTypes[UntypedInt]
+		case token.FLOAT:
+			f, _ := strconv.ParseFloat(exp.Value, 64)
+			return f, basicTypes[UntypedFloat]
+		case token.STRING:
+			return exp.Value[1 : len(exp.Value)-1], basicTypes[String]
+		}
+	case *ast.UnaryExpr:
+		result, typ := c.evalConstantExpression(exp.X, variableMap)
+
+		switch result.(type) {
+		case int:
+			return -1 * result.(int), typ
+		case float64:
+			return -1.0 * result.(float64), typ
+		}
+	case *ast.ParenExpr:
+		return c.evalConstantExpression(exp.X, variableMap)
 	}
 
-	text := scanner.Token()
+	return nil, nil
+}
 
-	if isNegative {
-		text = "-" + text
+func (c *Constant) evalBinaryExpr(exp *ast.BinaryExpr, variableMap map[string]interface{}) (interface{}, T) {
+	var expressionType T
+	left, typLeft := c.evalConstantExpression(exp.X, variableMap)
+	right, typRight := c.evalConstantExpression(exp.Y, variableMap)
+
+	_, isTypeLeftBasic := typLeft.(*Basic)
+	_, isTypeRightBasic := typRight.(*Basic)
+
+	if isTypeLeftBasic && isTypeRightBasic {
+		expressionType = typLeft
+	} else if !isTypeLeftBasic {
+		expressionType = typLeft
+	} else if !isTypeRightBasic {
+		expressionType = typRight
 	}
 
-	intValue, err := strconv.Atoi(text)
+	switch left.(type) {
+	case int:
+		switch exp.Op {
+		case token.ADD:
+			return left.(int) + right.(int), expressionType
+		case token.SUB:
+			return left.(int) - right.(int), expressionType
+		case token.MUL:
+			return left.(int) * right.(int), expressionType
+		case token.QUO:
+			return left.(int) / right.(int), expressionType
+		case token.REM:
+			return left.(int) % right.(int), expressionType
+		case token.AND:
+			return left.(int) & right.(int), expressionType
+		case token.OR:
+			return left.(int) | right.(int), expressionType
+		case token.XOR:
+			return left.(int) ^ right.(int), expressionType
+		case token.SHL:
+			return left.(int) << right.(int), expressionType
+		case token.SHR:
+			return left.(int) >> right.(int), expressionType
+		case token.AND_NOT:
+			return left.(int) &^ right.(int), expressionType
+		case token.EQL:
+			return left.(int) == right.(int), basicTypes[Bool]
+		case token.NEQ:
+			return left.(int) != right.(int), basicTypes[Bool]
+		case token.LSS:
+			return left.(int) < right.(int), basicTypes[Bool]
+		case token.GTR:
+			return left.(int) > right.(int), basicTypes[Bool]
+		case token.LEQ:
+			return left.(int) <= right.(int), basicTypes[Bool]
+		case token.GEQ:
+			return left.(int) >= right.(int), basicTypes[Bool]
+		}
+	case float64:
+		switch exp.Op {
+		case token.ADD:
+			return left.(float64) + right.(float64), expressionType
+		case token.SUB:
+			return left.(float64) - right.(float64), expressionType
+		case token.MUL:
+			return left.(float64) * right.(float64), expressionType
+		case token.QUO:
+			return left.(float64) / right.(float64), expressionType
+		}
+	case string:
+		switch exp.Op {
+		case token.ADD:
+			return left.(string) + right.(string), expressionType
+		}
+	}
 
-	typeInfo.setValue(out, reflect.ValueOf(intValue))
+	return nil, nil
+}
 
-	if err != nil {
-		return fmt.Errorf("unable to parse integer: %v", err)
+type Constants struct {
+	elements []*Constant
+}
+
+func (c *Constants) Len() int {
+	return len(c.elements)
+}
+
+func (c *Constants) At(index int) *Constant {
+	if index >= 0 && index < len(c.elements) {
+		return c.elements[index]
 	}
 
 	return nil
 }
 
-func (typeInfo ArgumentTypeInfo) parseString(scanner *Scanner, out reflect.Value) error {
-	if scanner == nil {
-		return errors.New("scanner cannot be nil")
-	}
-
-	startPosition := scanner.searchIndex
-
-	token := scanner.Scan()
-
-	if token == StringValue {
-
-		value, err := strconv.Unquote(scanner.Token())
-
-		if err != nil {
-			return err
+func (c *Constants) FindByName(name string) (*Constant, bool) {
+	for _, constant := range c.elements {
+		if constant.name == name {
+			return constant, true
 		}
-
-		typeInfo.setValue(out, reflect.ValueOf(value))
-		return nil
 	}
 
-	for character := scanner.SkipWhitespaces(); character != ',' && character != ';' && character != ':' && character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
-		scanner.Scan()
+	return nil, false
+}
+
+type Variable struct {
+	name string
+	typ  T
+}
+
+func (v *Variable) Name() string {
+	return v.name
+}
+
+func (v *Variable) Type() T {
+	return v.typ
+}
+
+type Tuple struct {
+	variables []*Variable
+}
+
+func (t *Tuple) Len() int {
+	return len(t.variables)
+}
+
+func (t *Tuple) At(index int) *Variable {
+	if index >= 0 && index < len(t.variables) {
+		return t.variables[index]
 	}
-
-	endPosition := scanner.searchIndex
-
-	value := string(scanner.source[startPosition:endPosition])
-	typeInfo.setValue(out, reflect.ValueOf(value))
 
 	return nil
 }
 
-func (typeInfo ArgumentTypeInfo) parseSlice(scanner *Scanner, out reflect.Value) error {
-	if scanner == nil {
-		return errors.New("scanner cannot be nil")
-	}
+type Function struct {
+	name       string
+	isExported bool
+	position   Position
+	receiver   *Variable
+	params     *Tuple
+	results    *Tuple
+	variadic   bool
 
-	sliceType := reflect.Zero(out.Type())
-	sliceItemType := reflect.Indirect(reflect.New(out.Type().Elem()))
-
-	if scanner.SkipWhitespaces() == '{' {
-
-		scanner.Scan()
-
-		for character := scanner.SkipWhitespaces(); character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
-			err := typeInfo.ItemType.Parse(scanner, sliceItemType)
-
-			if err != nil {
-				return err
-			}
-
-			sliceType = reflect.Append(sliceType, sliceItemType)
-
-			token := scanner.SkipWhitespaces()
-
-			if token == '}' {
-				break
-			}
-
-			if !scanner.Expect(',', "Comma ','") {
-				return nil
-			}
-		}
-
-		if !scanner.Expect('}', "Right Curly Bracket '}'") {
-			return nil
-		}
-
-		typeInfo.setValue(out, sliceType)
-		return nil
-	}
-
-	for character := scanner.SkipWhitespaces(); character != ',' && character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
-		err := typeInfo.ItemType.Parse(scanner, sliceItemType)
-
-		if err != nil {
-			return err
-		}
-
-		sliceType = reflect.Append(sliceType, sliceItemType)
-
-		token := scanner.SkipWhitespaces()
-
-		if token == ',' || token == '}' || token == EOF {
-			break
-		}
-
-		scanner.Scan()
-
-		if token != ';' {
-			return nil
-		}
-	}
-
-	typeInfo.setValue(out, sliceType)
-	return nil
+	file *SourceFile
 }
 
-func (typeInfo ArgumentTypeInfo) parseMap(scanner *Scanner, out reflect.Value) error {
-	if scanner == nil {
-		return errors.New("scanner cannot be nil")
+func (f *Function) File() *SourceFile {
+	return f.file
+}
+
+func (f *Function) Position() Position {
+	return f.position
+}
+
+func (f *Function) Underlying() T {
+	return f
+}
+
+func (f *Function) String() string {
+	return ""
+}
+
+func (f *Function) Receiver() *Variable {
+	return f.receiver
+}
+
+func (f *Function) Params() *Tuple {
+	return f.params
+}
+
+func (f *Function) Results() *Tuple {
+	return f.results
+}
+
+func (f *Function) IsVariadic() bool {
+	return f.variadic
+}
+
+type Functions struct {
+	elements []*Function
+}
+
+func (f *Functions) Len() int {
+	return len(f.elements)
+}
+
+func (f *Functions) At(index int) *Function {
+	if index >= 0 && index < len(f.elements) {
+		return f.elements[index]
 	}
-
-	mapType := reflect.MakeMap(out.Type())
-	key := reflect.Indirect(reflect.New(out.Type().Key()))
-	value := reflect.Indirect(reflect.New(out.Type().Elem()))
-
-	if !scanner.Expect('{', "Left Curly Bracket") {
-		return nil
-	}
-
-	for character := scanner.SkipWhitespaces(); character != '}' && character != EOF; character = scanner.SkipWhitespaces() {
-		err := typeInfo.parseString(scanner, key)
-
-		if err != nil {
-			return err
-		}
-
-		if !scanner.Expect(':', "Colon ':'") {
-			return nil
-		}
-
-		err = typeInfo.ItemType.Parse(scanner, value)
-
-		if err != nil {
-			return err
-		}
-
-		mapType.SetMapIndex(key, value)
-
-		if scanner.SkipWhitespaces() == '}' {
-			break
-		}
-
-		if !scanner.Expect(',', "Comma ','") {
-			return nil
-		}
-	}
-
-	if !scanner.Expect('}', "Right Curly Bracket '}'") {
-		return nil
-	}
-
-	typeInfo.setValue(out, mapType)
 
 	return nil
 }
 
-func (typeInfo ArgumentTypeInfo) inferType(scanner *Scanner, out reflect.Value, ignoreLegacySlice bool) (ArgumentTypeInfo, error) {
-
-	character := scanner.SkipWhitespaces()
-	searchIndex := scanner.searchIndex
-
-	if !ignoreLegacySlice {
-		itemType, _ := typeInfo.inferType(scanner, out, true)
-
-		var token rune
-		for token = scanner.Scan(); token != ',' && token != EOF && token != ';'; token = scanner.Scan() {
-		}
-
-		scanner.SetSearchIndex(searchIndex)
-
-		if token == ';' {
-			return ArgumentTypeInfo{
-				ActualType: SliceType,
-				ItemType:   &itemType,
-			}, nil
-		}
-
-		return itemType, nil
-	}
-
-	switch character {
-	case '"', '\'', '`':
-		return ArgumentTypeInfo{
-			ActualType: StringType,
-		}, nil
-	}
-
-	if character == '{' {
-		scanner.Scan()
-
-		elementType, _ := typeInfo.inferType(scanner, out, true)
-
-		// skip left curly bracket character
-		scanner.SetSearchIndex(searchIndex + 1)
-
-		if elementType.ActualType == StringType {
-
-			var keyString string
-			(ArgumentTypeInfo{ActualType: StringType}).parseString(scanner, reflect.Indirect(reflect.ValueOf(&keyString)))
-
-			if scanner.Scan() == ':' {
-				scanner.SetSearchIndex(searchIndex)
-
-				return ArgumentTypeInfo{
-					ActualType: MapType,
-					ItemType: &ArgumentTypeInfo{
-						ActualType: AnyType,
-					},
-				}, nil
-			}
-		}
-
-		scanner.SetSearchIndex(searchIndex)
-
-		return ArgumentTypeInfo{
-			ActualType: SliceType,
-			ItemType:   &elementType,
-		}, nil
-	}
-
-	canBeString := false
-
-	if character == 't' || character == 'f' {
-
-		if token := scanner.Scan(); token == Identifier {
-
-			switch scanner.Token() {
-			case "true", "false":
-				scanner.SetSearchIndex(searchIndex)
-				return ArgumentTypeInfo{
-					ActualType: BoolType,
-				}, nil
-			}
-
-			canBeString = true
-		} else {
-			return ArgumentTypeInfo{
-				ActualType: InvalidType,
-			}, nil
-		}
-	}
-
-	if !canBeString {
-
-		token := scanner.Scan()
-
-		if token == '-' {
-			token = scanner.Scan()
-		}
-
-		if token == IntegerValue {
-			return ArgumentTypeInfo{
-				ActualType: IntegerType,
-			}, nil
-		}
-
-	}
-
-	return ArgumentTypeInfo{
-		ActualType: StringType,
-	}, nil
+type Field struct {
+	name       string
+	isExported bool
+	tags       string
+	typ        T
+	position   Position
+	markers    MarkerValues
+	file       *SourceFile
+	isEmbedded bool
 }
 
-func (typeInfo ArgumentTypeInfo) makeSliceType() (reflect.Type, error) {
-	if typeInfo.ActualType != SliceType {
-		return nil, errors.New("this is not slice type")
-	}
-
-	if typeInfo.ItemType == nil {
-		return nil, errors.New("item type cannot be nil for slice type")
-	}
-
-	var itemType reflect.Type
-	switch typeInfo.ItemType.ActualType {
-	case IntegerType:
-		itemType = reflect.TypeOf(int(0))
-	case BoolType:
-		itemType = reflect.TypeOf(false)
-	case StringType:
-		itemType = reflect.TypeOf("")
-	case SliceType:
-		subItemType, err := typeInfo.ItemType.makeSliceType()
-
-		if err != nil {
-			return nil, err
-		}
-
-		itemType = subItemType
-	case MapType:
-		subItemType, err := typeInfo.ItemType.makeMapType()
-
-		if err != nil {
-			return nil, err
-		}
-
-		itemType = subItemType
-	default:
-		return nil, fmt.Errorf("invalid type: %v", typeInfo.ItemType.ActualType)
-	}
-
-	return reflect.SliceOf(itemType), nil
+func (f *Field) Name() string {
+	return f.name
 }
 
-func (typeInfo ArgumentTypeInfo) makeMapType() (reflect.Type, error) {
-	if typeInfo.ActualType != MapType {
-		return nil, errors.New("this is not map type")
+func (f *Field) Type() T {
+	return f.typ
+}
+
+func (f *Field) IsExported() bool {
+	return f.isExported
+}
+
+func (f *Field) IsEmbedded() bool {
+	return f.isEmbedded
+}
+
+func (f *Field) Tags() string {
+	return f.tags
+}
+
+type Struct struct {
+	name        string
+	isExported  bool
+	isAnonymous bool
+	position    Position
+	markers     MarkerValues
+	fields      []*Field
+	allFields   []*Field
+	methods     []*Function
+	file        *SourceFile
+
+	isProcessed bool
+
+	specType  *ast.TypeSpec
+	namedType *types.Named
+
+	fieldsLoaded    bool
+	allFieldsLoaded bool
+	visitor         *PackageVisitor
+}
+
+func (s *Struct) loadFields() {
+	if s.fieldsLoaded {
+		return
 	}
 
-	if typeInfo.ItemType == nil {
-		return nil, errors.New("item type cannot be nil for map type")
+	s.fields = append(s.fields, s.visitor.getFieldsFromFieldList(s.specType.Type.(*ast.StructType).Fields.List)...)
+	s.fieldsLoaded = true
+}
+
+func (s *Struct) loadAllFields() {
+	if s.allFieldsLoaded {
+		return
 	}
 
-	var itemType reflect.Type
-	switch typeInfo.ItemType.ActualType {
-	case IntegerType:
-		itemType = reflect.TypeOf(int(0))
-	case BoolType:
-		itemType = reflect.TypeOf(false)
-	case StringType:
-		itemType = reflect.TypeOf("")
-	case SliceType:
-		subItemType, err := typeInfo.ItemType.makeSliceType()
+	s.loadFields()
 
-		if err != nil {
-			return nil, err
+	for _, field := range s.fields {
+
+		if !field.IsEmbedded() {
+			s.allFields = append(s.allFields, field)
+			continue
 		}
 
-		itemType = subItemType
-	case MapType:
-		subItemType, err := typeInfo.ItemType.makeMapType()
-		if err != nil {
-			return nil, err
+		var baseType = field.Type()
+		pointerType, ok := field.Type().(*Pointer)
+
+		if ok {
+			baseType = pointerType.Elem()
 		}
-		itemType = subItemType
-	case AnyType:
-		itemType = interfaceType
-	default:
-		return nil, fmt.Errorf("invalid type: %v", typeInfo.ItemType.ActualType)
+
+		importedType, ok := baseType.(*ImportedType)
+
+		if ok {
+			baseType = importedType.Underlying()
+		}
+
+		structType, ok := baseType.(*Struct)
+
+		if ok {
+			s.allFields = append(s.allFields, structType.AllFields()...)
+		}
+
 	}
 
-	return reflect.MapOf(reflect.TypeOf(""), itemType), nil
+	s.allFieldsLoaded = true
+}
+
+func (s *Struct) File() *SourceFile {
+	return s.file
+}
+
+func (s *Struct) Position() Position {
+	return s.position
+}
+
+func (s *Struct) Underlying() T {
+	return s
+}
+
+func (s *Struct) String() string {
+	return ""
+}
+
+func (s *Struct) Name() string {
+	return s.name
+}
+
+func (s *Struct) IsExported() bool {
+	return s.isExported
+}
+
+func (s *Struct) IsAnonymous() bool {
+	return s.isAnonymous
+}
+
+func (s *Struct) Markers() MarkerValues {
+	return s.markers
+}
+
+func (s *Struct) NamedType() *types.Named {
+	return s.namedType
+}
+
+func (s *Struct) NumEmbeddedFields() int {
+	s.loadFields()
+
+	numEmbeddedFields := 0
+
+	for _, field := range s.fields {
+		if field.IsEmbedded() {
+			numEmbeddedFields++
+		}
+	}
+
+	return numEmbeddedFields
+}
+
+func (s *Struct) EmbeddedFields() []*Field {
+	s.loadFields()
+
+	embeddedFields := make([]*Field, 0)
+
+	for _, field := range s.fields {
+		if field.IsEmbedded() {
+			embeddedFields = append(embeddedFields, field)
+		}
+	}
+
+	return embeddedFields
+}
+
+func (s *Struct) NumFields() int {
+	s.loadFields()
+	return len(s.fields)
+}
+
+func (s *Struct) Fields() []*Field {
+	s.loadFields()
+	return s.fields
+}
+
+func (s *Struct) NumAllFields() int {
+	s.loadAllFields()
+	return len(s.allFields)
+}
+
+func (s *Struct) AllFields() []*Field {
+	s.loadAllFields()
+	return s.allFields
+}
+
+func (s *Struct) Implements(i *Interface) bool {
+	if i == nil || i.interfaceType == nil || s.namedType == nil {
+		return false
+	}
+
+	if types.Implements(s.namedType, i.interfaceType) {
+		return true
+	}
+
+	pointerType := types.NewPointer(s.namedType)
+
+	if types.Implements(pointerType, i.interfaceType) {
+		return true
+	}
+
+	return false
+}
+
+type Structs struct {
+	elements []*Struct
+}
+
+func (s *Structs) Len() int {
+	return len(s.elements)
+}
+
+func (s *Structs) At(index int) *Struct {
+	if index >= 0 && index < len(s.elements) {
+		return s.elements[index]
+	}
+
+	return nil
+}
+
+func (s *Structs) FindByName(name string) (*Struct, bool) {
+	for _, structType := range s.elements {
+		if structType.name == name {
+			return structType, true
+		}
+	}
+
+	return nil, false
+}
+
+type Interface struct {
+	name        string
+	isExported  bool
+	isAnonymous bool
+	position    Position
+	markers     MarkerValues
+	embeddeds   []T
+	allMethods  []*Function
+	methods     []*Function
+	file        *SourceFile
+
+	isProcessed bool
+
+	specType      *ast.TypeSpec
+	interfaceType *types.Interface
+
+	embeddedTypesLoaded bool
+	methodsLoaded       bool
+	allMethodsLoaded    bool
+	visitor             *PackageVisitor
+}
+
+func (i *Interface) loadEmbeddedTypes() {
+	if i.embeddedTypesLoaded {
+		return
+	}
+
+	i.embeddeds = i.visitor.getInterfaceEmbeddedTypes(i.specType.Type.(*ast.InterfaceType).Methods.List)
+	i.embeddedTypesLoaded = true
+}
+
+func (i *Interface) loadMethods() {
+	if i.methodsLoaded {
+		return
+	}
+
+	i.methods = i.visitor.getInterfaceMethods(i.specType.Type.(*ast.InterfaceType).Methods.List)
+	i.allMethods = append(i.allMethods, i.methods...)
+	i.methodsLoaded = true
+}
+
+func (i *Interface) loadAllMethods() {
+	if i.allMethodsLoaded {
+		return
+	}
+
+	i.loadMethods()
+	i.loadEmbeddedTypes()
+
+	for _, embeddedType := range i.embeddeds {
+		interfaceType, ok := embeddedType.(*Interface)
+
+		if ok {
+			interfaceType.loadAllMethods()
+			i.allMethods = append(i.allMethods, interfaceType.allMethods...)
+		}
+	}
+
+	i.allMethodsLoaded = true
+}
+
+func (i *Interface) IsEmptyInterface() bool {
+	return len(i.embeddeds) == 0 && len(i.methods) == 0
+}
+
+func (i *Interface) IsAnonymous() bool {
+	return i.isAnonymous
+}
+
+func (i *Interface) File() *SourceFile {
+	return i.file
+}
+
+func (i *Interface) Position() Position {
+	return i.position
+}
+
+func (i *Interface) Underlying() T {
+	return i
+}
+
+func (i *Interface) String() string {
+	var builder strings.Builder
+	return builder.String()
+}
+
+func (i *Interface) Name() string {
+	return i.name
+}
+
+func (i *Interface) IsExported() bool {
+	return i.isExported
+}
+
+func (i *Interface) Markers() MarkerValues {
+	return i.markers
+}
+
+func (i *Interface) NumExplicitMethods() int {
+	i.loadMethods()
+	return len(i.methods)
+}
+
+func (i *Interface) ExplicitMethods() []*Function {
+	i.loadMethods()
+	return i.methods
+}
+
+func (i *Interface) NumEmbeddedTypes() int {
+	i.loadEmbeddedTypes()
+	return len(i.embeddeds)
+}
+
+func (i *Interface) EmbeddedTypes() []T {
+	i.loadEmbeddedTypes()
+	return i.embeddeds
+}
+
+func (i *Interface) NumMethods() int {
+	i.loadAllMethods()
+	return len(i.allMethods)
+}
+
+func (i *Interface) Methods() []*Function {
+	i.loadAllMethods()
+	return i.allMethods
+}
+
+func (i *Interface) InterfaceType() *types.Interface {
+	return i.interfaceType
+}
+
+type Interfaces struct {
+	elements []*Interface
+}
+
+func (i *Interfaces) Len() int {
+	return len(i.elements)
+}
+
+func (i *Interfaces) At(index int) *Interface {
+	if index >= 0 && index < len(i.elements) {
+		return i.elements[index]
+	}
+
+	return nil
+}
+
+func (i *Interfaces) FindByName(name string) (*Interface, bool) {
+	for _, interfaceType := range i.elements {
+		if interfaceType.name == name {
+			return interfaceType, true
+		}
+	}
+
+	return nil, false
+}
+
+type CustomType struct {
+	name       string
+	aliasType  T
+	isExported bool
+	position   Position
+	markers    MarkerValues
+	methods    []*Function
+	file       *SourceFile
+
+	isProcessed bool
+}
+
+func (c *CustomType) Name() string {
+	return c.name
+}
+
+func (c *CustomType) AliasType() T {
+	return c.aliasType
+}
+
+func (c *CustomType) Underlying() T {
+	return c
+}
+
+func (c *CustomType) String() string {
+	return ""
+}
+
+type CustomTypes struct {
+	elements []*CustomType
+}
+
+func (c *CustomTypes) Len() int {
+	return len(c.elements)
+}
+
+func (c *CustomTypes) At(index int) *CustomType {
+	if index >= 0 && index < len(c.elements) {
+		return c.elements[index]
+	}
+
+	return nil
+}
+
+func (c *CustomTypes) FindByName(name string) (*CustomType, bool) {
+	for _, customType := range c.elements {
+		if customType.name == name {
+			return customType, true
+		}
+	}
+
+	return nil, false
+}
+
+type SourceFile struct {
+	name     string
+	fullPath string
+	pkg      *Package
+
+	allMarkers  MarkerValues
+	fileMarkers MarkerValues
+
+	imports       *Imports
+	importMarkers []ImportMarker
+
+	functions   *Functions
+	structs     *Structs
+	interfaces  *Interfaces
+	customTypes *CustomTypes
+	constants   *Constants
+}
+
+func (s *SourceFile) Name() string {
+	return s.name
+}
+
+func (s *SourceFile) FullPath() string {
+	return s.name
+}
+
+func (s *SourceFile) Markers() MarkerValues {
+	return s.fileMarkers
+}
+
+func (s *SourceFile) Package() *Package {
+	return s.pkg
+}
+
+func (s *SourceFile) Imports() *Imports {
+	return s.imports
+}
+
+func (s *SourceFile) ImportMarkers() []ImportMarker {
+	return s.importMarkers
+}
+
+func (s *SourceFile) Functions() *Functions {
+	return s.functions
+}
+
+func (s *SourceFile) Structs() *Structs {
+	return s.structs
+}
+
+func (s *SourceFile) Interfaces() *Interfaces {
+	return s.interfaces
+}
+
+type SourceFiles struct {
+	elements []*SourceFile
+}
+
+func (s *SourceFiles) FindByName(name string) (*SourceFile, bool) {
+	for _, file := range s.elements {
+		if file.name == name {
+			return file, true
+		}
+	}
+
+	return nil, false
+}
+
+func (s *SourceFiles) Len() int {
+	return len(s.elements)
+}
+
+func (s *SourceFiles) At(index int) *SourceFile {
+	if index >= 0 && index < len(s.elements) {
+		return s.elements[index]
+	}
+
+	return nil
 }

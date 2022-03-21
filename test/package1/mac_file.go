@@ -9,24 +9,71 @@
 package package1
 
 import (
-	"github.com/procyon-projects/marker/test/package2"
 	_ "strings"
 )
 
+/*
+type ABC int
+
+const (
+	Z     = 0
+	C     = true || true
+	X 		ABC = iota
+	Y
+	M = 2.4
+)*/
+
+type HttpStatus int
+
+const (
+	TEST HttpStatus = 2
+	ACCESS_DENIED
+)
+
+const (
+	OKAY = 23
+	NOTFOUND
+	X = "hello" + "hello2"
+)
+
+type Test interface {
+	Dessert
+}
+
+func (a app) sort() {
+}
+
+func (f Fruit) Name() string {
+	return ""
+}
+
+type app Fruit
+
 type Base struct {
-	Name package2.AnotherType
+	Name int
 }
 
 // This is a go document comment
 // +marker:method-level
 // This is a go document comment
 // +deprecated This method is deprecated
-func (f Fruit) Name() string {
-	return ""
-}
 
 func (f *Fruit) String() interface{} {
 	return ""
+}
+
+type y struct {
+}
+
+func (yx *y) Name(x, y int) error {
+	return nil
+}
+
+func x() {
+	d := &Fruit{
+		Apple: &y{},
+	}
+	d.Apple.Name(3, 4)
 }
 
 // This is a go document comment
@@ -75,51 +122,9 @@ func (f *Fruit) V(x int) {
 // +marker:function-level
 // This is a go document comment
 // +deprecated This function is deprecated
-func Coconut() {
-
+func Coconut() *Fruit {
+	return &Fruit{}
 }
 
-// This is a comment
-// +marker:type-level
-// +marker:interface-level
-// This is a comment
-
-// This is a go document comment
-// +marker:type-level
-// +marker:interface-level
-// This is a go document comment
-// +deprecated This interface is deprecated
-type Dessert interface {
-	// This is a comment
-	// +marker:method-level
-	// This is a comment
-
-	// This is a go document comment
-	// +marker:method-level
-	// This is a go document comment
-	IceCream(s string) string
-	// This is a comment
-	// +marker:method-level
-	// This is a comment
-
-	// This is a go document comment
-	// +marker:method-level
-	// This is a go document comment
-	Cupcake() int
-	// This is a comment
-	// +marker:method-level
-	// This is a comment
-
-	// This is a go document comment
-	// +marker:method-level
-	// This is a go document comment
-	Tart()
-	// This is a comment
-	// +marker:method-level
-	// This is a comment
-
-	// This is a go document comment
-	// +marker:method-level
-	// This is a go document comment
-	Donut() interface{}
+type Request struct {
 }
