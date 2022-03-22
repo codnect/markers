@@ -1,4 +1,4 @@
-package marker
+package packages
 
 import (
 	"testing"

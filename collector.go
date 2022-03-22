@@ -3,6 +3,7 @@ package marker
 import (
 	"errors"
 	"fmt"
+	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -18,7 +19,7 @@ func NewCollector(registry *Registry) *Collector {
 	}
 }
 
-func (collector *Collector) Collect(pkg *Package) (map[ast.Node]MarkerValues, error) {
+func (collector *Collector) Collect(pkg *packages.Package) (map[ast.Node]MarkerValues, error) {
 
 	if pkg == nil {
 		return nil, errors.New("pkg(package) cannot be nil")
@@ -34,7 +35,7 @@ func (collector *Collector) Collect(pkg *Package) (map[ast.Node]MarkerValues, er
 	return markers, nil
 }
 
-func (collector *Collector) collectPackageMarkerComments(pkg *Package) map[ast.Node][]markerComment {
+func (collector *Collector) collectPackageMarkerComments(pkg *packages.Package) map[ast.Node][]markerComment {
 	packageNodeMarkers := make(map[ast.Node][]markerComment)
 
 	for _, file := range pkg.Syntax {
@@ -56,7 +57,7 @@ func (collector *Collector) collectFileMarkerComments(file *ast.File) map[ast.No
 	return visitor.nodeMarkers
 }
 
-func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
+func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
 	importNodeMarkers, err := collector.parseImportMarkerComments(pkg, nodeMarkerComments)
 
 	if err != nil {
@@ -176,7 +177,7 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 	return nodeMarkerValues, NewErrorList(errs)
 }
 
-func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
+func (collector *Collector) parseImportMarkerComments(pkg *packages.Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
 	var errs []error
 	importNodeMarkers := make(map[ast.Node]MarkerValues)
 
@@ -228,7 +229,7 @@ func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerCo
 
 type AliasMap map[string]ImportMarker
 
-func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, error) {
+func (collector *Collector) extractFileImportAliases(pkg *packages.Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, error) {
 	var errs []error
 	var fileImportAliases = make(map[*token.File]AliasMap, 0)
 
