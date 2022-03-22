@@ -18,6 +18,8 @@ package main
 import (
 	"fmt"
 	"github.com/procyon-projects/marker"
+	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/marker/visitor"
 	"log"
 	"os/exec"
 	"strings"
@@ -41,8 +43,8 @@ var (
 
 // ProcessMarkers gets the import markers in the given directories.
 // Then, it fetches marker processors and run them for code generation.
-func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []string) error {
-	err := collectMarkers(collector, pkgs)
+func ProcessMarkers(collector *marker.Collector, loadResult *packages.LoadResult, dirs []string) error {
+	err := collectMarkers(collector, loadResult.GetPackages())
 
 	if validationErrors != nil {
 		switch typedErr := err.(type) {
@@ -65,45 +67,35 @@ func ProcessMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []
 }
 
 // CollectMarkers collects markers by scanning metadata
-func collectMarkers(collector *marker.Collector, pkgs []*marker.Package) error {
-	marker.EachFile(collector, pkgs, func(file *marker.File, fileErr error) {
+func collectMarkers(collector *marker.Collector, pkgs []*packages.Package) error {
+	visitor.EachFile(collector, pkgs, func(file *visitor.File, fileErr error) {
 		if fileErr != nil {
 			validationErrors = append(validationErrors, fileErr)
 			return
 		}
 
-		if file.ImportMarkers == nil || len(file.ImportMarkers) == 0 {
+		if file.NumImportMarkers() == 0 {
 			return
 		}
 
-		for _, markerValues := range file.ImportMarkers {
-			importMarkers := markerValues[marker.ImportMarkerName]
+		for _, importMarker := range file.ImportMarkers() {
+			pkgId := importMarker.GetPkgId()
 
-			if importMarkers == nil || len(importMarkers) == 0 {
-				continue
-			}
+			_, ok := processors[pkgId]
 
-			for _, value := range importMarkers {
-				importMarker := value.(marker.ImportMarker)
-				pkgId := importMarker.GetPkgId()
+			if !ok {
+				command := importMarker.GetCommand()
 
-				_, ok := processors[pkgId]
+				if command == "" {
+					command = importMarker.Value
+				}
 
-				if !ok {
-					command := importMarker.GetCommand()
-
-					if command == "" {
-						command = importMarker.Value
-					}
-
-					processors[pkgId] = MarkerProcessor{
-						Module:  pkgId,
-						Version: importMarker.GetPkgVersion(),
-						Command: command,
-					}
+				processors[pkgId] = MarkerProcessor{
+					Module:  pkgId,
+					Version: importMarker.GetPkgVersion(),
+					Command: command,
 				}
 			}
-
 		}
 	})
 
@@ -112,7 +104,7 @@ func collectMarkers(collector *marker.Collector, pkgs []*marker.Package) error {
 
 // ProcessMarkers gets the import markers in the given directories.
 // Then, it fetches marker processors and run them for validation.
-func validateMarkers(collector *marker.Collector, pkgs []*marker.Package, dirs []string) error {
+func validateMarkers(collector *marker.Collector, pkgs []*packages.Package, dirs []string) error {
 	err := collectMarkers(collector, pkgs)
 
 	if err != nil {

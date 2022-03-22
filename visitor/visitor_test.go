@@ -19,7 +19,11 @@ func TestEachFile(t *testing.T) {
 
 	collector := marker.NewCollector(registry)
 
-	EachFile(collector, result.GetPackages(), func(file *File, err error) {
-
+	err := EachFile(collector, result.GetPackages(), func(file *File, err error) error {
+		return nil
 	})
+
+	if err != nil {
+
+	}
 }

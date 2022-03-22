@@ -2,6 +2,7 @@ package visitor
 
 import (
 	"github.com/procyon-projects/marker"
+	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/types"
 	"strings"
@@ -26,7 +27,24 @@ type Interface struct {
 	embeddedTypesLoaded bool
 	methodsLoaded       bool
 	allMethodsLoaded    bool
-	visitor             *PackageVisitor
+	visitor             *packageVisitor
+}
+
+func newInterface(specType *ast.TypeSpec, file *File, pkg *packages.Package, markers marker.MarkerValues) *Interface {
+	interfaceType := &Interface{
+		name:          specType.Name.Name,
+		isExported:    ast.IsExported(specType.Name.Name),
+		methods:       make([]*Function, 0),
+		embeddeds:     make([]Type, 0),
+		position:      getPosition(pkg, specType.Pos()),
+		markers:       markers,
+		file:          file,
+		isProcessed:   true,
+		specType:      specType,
+		interfaceType: pkg.Types.Scope().Lookup(specType.Name.Name).Type().Underlying().(*types.Interface),
+	}
+
+	return interfaceType
 }
 
 func (i *Interface) loadEmbeddedTypes() {

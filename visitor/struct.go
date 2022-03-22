@@ -55,7 +55,25 @@ type Struct struct {
 
 	fieldsLoaded    bool
 	allFieldsLoaded bool
-	visitor         *PackageVisitor
+	visitor         *packageVisitor
+}
+
+func newStruct(specType *ast.TypeSpec, file *File, markers marker.MarkerValues) *Struct {
+	structType := &Struct{
+		name:        specType.Name.Name,
+		isExported:  ast.IsExported(specType.Name.Name),
+		position:    getPosition(file.Package(), specType.Pos()),
+		markers:     markers,
+		file:        file,
+		fields:      make([]*Field, 0),
+		allFields:   make([]*Field, 0),
+		methods:     make([]*Function, 0),
+		isProcessed: true,
+		specType:    specType,
+		namedType:   file.pkg.Types.Scope().Lookup(specType.Name.Name).Type().(*types.Named),
+	}
+
+	return structType
 }
 
 func (s *Struct) loadFields() {

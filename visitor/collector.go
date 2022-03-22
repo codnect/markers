@@ -93,6 +93,22 @@ func (collector *packageCollector) findTypeByPkgIdAndName(pkgId, typeName string
 			}
 		}
 
+	} else if !collector.isVisited(pkgId) {
+		loadResult, err := packages.LoadPackages(pkgId)
+
+		if err != nil {
+			panic(err)
+		}
+
+		pkg, _ := loadResult.Lookup(pkgId)
+
+		visitPackage(pkg, collector, nil) //collector.allPackageMarkers)
+
+		typ, ok := collector.findTypeByPkgIdAndName(pkgId, typeName)
+
+		if ok {
+			return typ, true
+		}
 	}
 
 	if typ, ok := collector.unprocessedTypes[pkgId][typeName]; ok {

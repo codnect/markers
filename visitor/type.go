@@ -2,12 +2,26 @@ package visitor
 
 import (
 	"github.com/procyon-projects/marker/packages"
+	"go/token"
 	"strings"
 )
 
 type Type interface {
 	Underlying() Type
 	String() string
+}
+
+type Position struct {
+	Line   int
+	Column int
+}
+
+func getPosition(pkg *packages.Package, tokenPosition token.Pos) Position {
+	position := pkg.Fset.Position(tokenPosition)
+	return Position{
+		Line:   position.Line,
+		Column: position.Column,
+	}
 }
 
 type ImportedType struct {
@@ -29,11 +43,6 @@ func (i *ImportedType) String() string {
 
 func (i *ImportedType) Name() string {
 	return ""
-}
-
-type Position struct {
-	Line   int
-	Column int
 }
 
 type Pointer struct {

@@ -1,6 +1,9 @@
 package visitor
 
-import "github.com/procyon-projects/marker"
+import (
+	"github.com/procyon-projects/marker"
+	"go/ast"
+)
 
 type CustomType struct {
 	name       string
@@ -12,6 +15,21 @@ type CustomType struct {
 	file       *File
 
 	isProcessed bool
+}
+
+func newCustomType(specType *ast.TypeSpec, file *File, markers marker.MarkerValues, collector *packageCollector) *CustomType {
+	customType := &CustomType{
+		name:        specType.Name.Name,
+		aliasType:   getTypeFromExpression(specType.Type, file.Package(), collector),
+		isExported:  ast.IsExported(specType.Name.Name),
+		position:    getPosition(file.Package(), specType.Pos()),
+		markers:     markers,
+		methods:     make([]*Function, 0),
+		file:        file,
+		isProcessed: true,
+	}
+
+	return customType
 }
 
 func (c *CustomType) Name() string {

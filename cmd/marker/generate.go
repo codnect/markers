@@ -17,6 +17,7 @@ package main
 
 import (
 	"github.com/procyon-projects/marker"
+	"github.com/procyon-projects/marker/packages"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -41,8 +42,8 @@ var generateCmd = &cobra.Command{
 			return
 		}
 
-		var packages []*marker.Package
-		packages, err = marker.LoadPackages(dirs...)
+		var loadResult *packages.LoadResult
+		loadResult, err = packages.LoadPackages(dirs...)
 
 		if err != nil {
 			log.Println(err)
@@ -57,7 +58,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		collector := marker.NewCollector(registry)
-		err = ProcessMarkers(collector, packages, dirs)
+		err = ProcessMarkers(collector, loadResult, dirs)
 
 		if err != nil {
 			log.Println(err)
