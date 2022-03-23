@@ -23,6 +23,7 @@ type Interface struct {
 
 	specType      *ast.TypeSpec
 	interfaceType *types.Interface
+	fieldList     []*ast.Field
 
 	embeddedTypesLoaded bool
 	methodsLoaded       bool
@@ -30,21 +31,57 @@ type Interface struct {
 	visitor             *packageVisitor
 }
 
-func newInterface(specType *ast.TypeSpec, file *File, pkg *packages.Package, markers marker.MarkerValues) *Interface {
-	interfaceType := &Interface{
-		name:          specType.Name.Name,
-		isExported:    ast.IsExported(specType.Name.Name),
-		methods:       make([]*Function, 0),
-		embeddeds:     make([]Type, 0),
-		position:      getPosition(pkg, specType.Pos()),
-		markers:       markers,
-		file:          file,
-		isProcessed:   true,
-		specType:      specType,
-		interfaceType: pkg.Types.Scope().Lookup(specType.Name.Name).Type().Underlying().(*types.Interface),
+func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, markers marker.MarkerValues) *Interface {
+	i := &Interface{
+		methods:     make([]*Function, 0),
+		embeddeds:   make([]Type, 0),
+		markers:     markers,
+		file:        file,
+		isProcessed: true,
+		specType:    specType,
 	}
 
-	return interfaceType
+	if specType != nil {
+		i.name = specType.Name.Name
+		i.isExported = ast.IsExported(specType.Name.Name)
+		i.position = getPosition(pkg, specType.Pos())
+		i.interfaceType = pkg.Types.Scope().Lookup(specType.Name.Name).Type().Underlying().(*types.Interface)
+		i.fieldList = i.specType.Type.(*ast.InterfaceType).Methods.List
+	} else if interfaceType != nil {
+		i.position = getPosition(pkg, interfaceType.Pos())
+		i.fieldList = interfaceType.Methods.List
+		i.isAnonymous = true
+	}
+
+	return i
+}
+
+func (i *Interface) getInterfaceMethods() []*Function {
+	methods := make([]*Function, 0)
+
+	for _, rawMethod := range i.fieldList {
+		_, ok := rawMethod.Type.(*ast.FuncType)
+
+		if ok {
+			methods = append(methods, newFunction(nil, rawMethod, i.file))
+		}
+	}
+
+	return methods
+}
+
+func (i *Interface) getInterfaceEmbeddedTypes() []Type {
+	embeddedTypes := make([]Type, 0)
+
+	for _, field := range i.fieldList {
+		_, ok := field.Type.(*ast.FuncType)
+
+		if !ok {
+			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.file.pkg, nil))
+		}
+	}
+
+	return embeddedTypes
 }
 
 func (i *Interface) loadEmbeddedTypes() {
@@ -52,7 +89,7 @@ func (i *Interface) loadEmbeddedTypes() {
 		return
 	}
 
-	i.embeddeds = i.visitor.getInterfaceEmbeddedTypes(i.specType.Type.(*ast.InterfaceType).Methods.List)
+	i.embeddeds = i.getInterfaceEmbeddedTypes()
 	i.embeddedTypesLoaded = true
 }
 
@@ -61,7 +98,7 @@ func (i *Interface) loadMethods() {
 		return
 	}
 
-	i.methods = i.visitor.getInterfaceMethods(i.specType.Type.(*ast.InterfaceType).Methods.List)
+	i.methods = i.getInterfaceMethods()
 	i.allMethods = append(i.allMethods, i.methods...)
 	i.methodsLoaded = true
 }

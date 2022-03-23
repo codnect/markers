@@ -18,8 +18,9 @@ type Constant struct {
 	iota                int
 	expressionEvaluated bool
 
+	file    *File
 	pkg     *packages.Package
-	visitor *PackageVisitor
+	visitor *packageVisitor
 }
 
 func (c *Constant) Name() string {
@@ -50,7 +51,7 @@ func (c *Constant) evaluateExpression() {
 		case *ast.Ident:
 			c.typ, _ = c.visitor.collector.findTypeByPkgIdAndName(c.pkg.ID, typed.Name)
 		case *ast.SelectorExpr:
-			c.typ = c.visitor.findTypeByImportAndTypeName(typed.X.(*ast.Ident).Name, typed.Sel.Name)
+			c.typ = c.visitor.collector.findTypeByImportAndTypeName(typed.X.(*ast.Ident).Name, typed.Sel.Name, c.file)
 		}
 	}
 
@@ -88,7 +89,7 @@ func (c *Constant) evalConstantExpression(exp ast.Expr, variableMap map[string]i
 
 		return nil, nil
 	case *ast.SelectorExpr:
-		importedType := c.visitor.findTypeByImportAndTypeName(exp.X.(*ast.Ident).Name, exp.Sel.Name)
+		importedType := c.visitor.collector.findTypeByImportAndTypeName(exp.X.(*ast.Ident).Name, exp.Sel.Name, c.file)
 		if importedType != nil {
 			constant := importedType.Underlying().(*Constant)
 			return constant.Value(), constant.Type()
@@ -221,4 +222,42 @@ func (c *Constants) FindByName(name string) (*Constant, bool) {
 	}
 
 	return nil, false
+}
+
+func collectConstantsFromSpecs(specs []ast.Spec, file *File) {
+	var last *ast.ValueSpec
+	for iota, s := range specs {
+		valueSpec := s.(*ast.ValueSpec)
+
+		switch {
+		case valueSpec.Type != nil || len(valueSpec.Values) > 0:
+			last = valueSpec
+		case last == nil:
+			last = new(ast.ValueSpec)
+		}
+
+		collectConstants(valueSpec, last, iota, file)
+	}
+}
+
+func collectConstants(valueSpec *ast.ValueSpec, lastValueSpec *ast.ValueSpec, iota int, file *File) {
+	for _, name := range valueSpec.Names {
+		constant := &Constant{
+			name:       name.Name,
+			isExported: ast.IsExported(name.Name),
+			iota:       iota,
+			pkg:        file.pkg,
+			//visitor:    visitor,
+		}
+
+		if valueSpec.Values != nil {
+			constant.expression = valueSpec.Values[0]
+			constant.initType = valueSpec.Type
+		} else {
+			constant.expression = lastValueSpec.Values[0]
+			constant.initType = lastValueSpec.Type
+		}
+
+		file.constants.elements = append(file.constants.elements, constant)
+	}
 }

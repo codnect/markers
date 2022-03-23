@@ -25,9 +25,11 @@ type File struct {
 	constants   *Constants
 
 	rawFile *ast.File
+
+	visitor *packageVisitor
 }
 
-func newFile(rawFile *ast.File, pkg *packages.Package, markers marker.MarkerValues) *File {
+func newFile(rawFile *ast.File, pkg *packages.Package, markers marker.MarkerValues, visitor *packageVisitor) *File {
 	position := pkg.Fset.Position(rawFile.Pos())
 	fileFullPath := position.Filename
 
@@ -45,6 +47,7 @@ func newFile(rawFile *ast.File, pkg *packages.Package, markers marker.MarkerValu
 		customTypes:   &CustomTypes{},
 		constants:     &Constants{},
 		rawFile:       rawFile,
+		visitor:       visitor,
 	}
 
 	return file.initialize()

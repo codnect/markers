@@ -70,6 +70,39 @@ func (collector *packageCollector) addFile(pkgId string, file *File) {
 	collector.files[pkgId].elements = append(collector.files[pkgId].elements, file)
 }
 
+func (collector *packageCollector) findTypeByImportAndTypeName(importName, typeName string, file *File) *ImportedType {
+	if importedType, ok := collector.importTypes[importName+"#"+typeName]; ok {
+		return importedType
+	}
+
+	packageImport, _ := file.imports.FindByName(importName)
+
+	if packageImport == nil {
+		packageImport, _ = file.imports.FindByPath(importName)
+	}
+
+	if importedType, ok := collector.importTypes[packageImport.path+"#"+typeName]; ok {
+		return importedType
+	}
+
+	typ, exists := collector.findTypeByPkgIdAndName(packageImport.path, typeName)
+
+	if exists {
+		importedType := &ImportedType{
+			collector.packages[packageImport.path],
+			typ,
+		}
+		collector.importTypes[packageImport.path+"#"+typeName] = importedType
+	}
+
+	importedType := &ImportedType{
+		pkg: collector.packages[packageImport.path],
+		typ: typ,
+	}
+	collector.importTypes[packageImport.path+"#"+typeName] = importedType
+	return importedType
+}
+
 func (collector *packageCollector) findTypeByPkgIdAndName(pkgId, typeName string) (Type, bool) {
 	if files, ok := collector.files[pkgId]; ok {
 
