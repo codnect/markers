@@ -25,34 +25,43 @@ type Interface struct {
 	interfaceType *types.Interface
 	fieldList     []*ast.Field
 
+	pkg     *packages.Package
+	visitor *packageVisitor
+
 	embeddedTypesLoaded bool
 	methodsLoaded       bool
 	allMethodsLoaded    bool
-	visitor             *packageVisitor
 }
 
-func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, markers marker.MarkerValues) *Interface {
+func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Interface {
 	i := &Interface{
 		methods:     make([]*Function, 0),
+		allMethods:  make([]*Function, 0),
 		embeddeds:   make([]Type, 0),
 		markers:     markers,
 		file:        file,
 		isProcessed: true,
 		specType:    specType,
+		pkg:         pkg,
+		visitor:     visitor,
 	}
 
+	return i.initialize(specType, interfaceType, pkg)
+}
+
+func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, pkg *packages.Package) *Interface {
 	if specType != nil {
 		i.name = specType.Name.Name
 		i.isExported = ast.IsExported(specType.Name.Name)
 		i.position = getPosition(pkg, specType.Pos())
 		i.interfaceType = pkg.Types.Scope().Lookup(specType.Name.Name).Type().Underlying().(*types.Interface)
 		i.fieldList = i.specType.Type.(*ast.InterfaceType).Methods.List
+		i.file.interfaces.elements = append(i.file.interfaces.elements, i)
 	} else if interfaceType != nil {
 		i.position = getPosition(pkg, interfaceType.Pos())
 		i.fieldList = interfaceType.Methods.List
 		i.isAnonymous = true
 	}
-
 	return i
 }
 
@@ -63,7 +72,7 @@ func (i *Interface) getInterfaceMethods() []*Function {
 		_, ok := rawMethod.Type.(*ast.FuncType)
 
 		if ok {
-			methods = append(methods, newFunction(nil, rawMethod, i.file))
+			methods = append(methods, newFunction(nil, rawMethod, i.file, i.pkg, i.visitor))
 		}
 	}
 
@@ -77,7 +86,7 @@ func (i *Interface) getInterfaceEmbeddedTypes() []Type {
 		_, ok := field.Type.(*ast.FuncType)
 
 		if !ok {
-			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.file.pkg, nil))
+			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.visitor))
 		}
 	}
 

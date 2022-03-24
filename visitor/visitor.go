@@ -6,8 +6,6 @@ import (
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
-	"go/types"
-	"strconv"
 )
 
 type FileCallback func(file *File, err error) error
@@ -56,7 +54,7 @@ func (visitor *packageVisitor) Visit(node ast.Node) ast.Visitor {
 		return visitor
 	case *ast.FuncDecl:
 		visitor.funcDecl = typedNode
-		newFunction(typedNode, nil, visitor.file)
+		newFunction(typedNode, nil, visitor.file, visitor.pkg, visitor)
 		return nil
 	case *ast.TypeSpec:
 		collectTypeFromTypeSpec(typedNode, visitor)
@@ -64,173 +62,6 @@ func (visitor *packageVisitor) Visit(node ast.Node) ast.Visitor {
 	default:
 		return nil
 	}
-}
-
-func getTypeFromScope(name string, visitor *packageVisitor) Type {
-	pkg := visitor.pkg
-	typ := pkg.Types.Scope().Lookup(name)
-
-	typedName, ok := typ.Type().(*types.Named)
-
-	if _, ok := visitor.collector.unprocessedTypes[pkg.ID]; !ok {
-		visitor.collector.unprocessedTypes[pkg.ID] = make(map[string]Type)
-	}
-
-	if ok {
-		switch typedName.Underlying().(type) {
-		case *types.Struct:
-			structType := &Struct{
-				name:        name,
-				isProcessed: false,
-			}
-			visitor.collector.unprocessedTypes[pkg.ID][name] = structType
-			return structType
-		case *types.Interface:
-			interfaceType := &Interface{
-				name:        name,
-				isProcessed: false,
-			}
-			visitor.collector.unprocessedTypes[pkg.ID][name] = interfaceType
-			return interfaceType
-		default:
-			customType := &CustomType{
-				name:        name,
-				isProcessed: false,
-			}
-			visitor.collector.unprocessedTypes[pkg.ID][name] = customType
-			return customType
-		}
-	}
-
-	return nil
-}
-
-func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Type {
-	file := visitor.file
-	pkg := visitor.pkg
-	typeName := typeSpec.Name.Name
-
-	typ, ok := visitor.collector.findTypeByPkgIdAndName(pkg.ID, typeName)
-
-	if ok {
-		switch t := typ.(type) {
-		case *Interface:
-			if !t.isProcessed {
-				file.interfaces.elements = append(file.interfaces.elements, t)
-			}
-			return t
-		case *Struct:
-			if !t.isProcessed {
-				file.structs.elements = append(file.structs.elements, t)
-			}
-			return t
-		case *CustomType:
-			if !t.isProcessed {
-				file.customTypes.elements = append(file.customTypes.elements, t)
-			}
-			return t
-		}
-	}
-
-	switch typeSpec.Type.(type) {
-	case *ast.InterfaceType:
-		return newInterface(typeSpec, nil, file, pkg, nil)
-	case *ast.StructType:
-		return newStruct(typeSpec, nil, file, pkg, nil)
-	default:
-		return newCustomType(typeSpec, file, pkg, nil, nil)
-	}
-}
-
-func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
-	file := visitor.file
-	pkg := visitor.pkg
-	collector := visitor.collector
-
-	switch typed := expr.(type) {
-	case *ast.Ident:
-		var typ Type
-		var ok bool
-		typ, ok = basicTypesMap[typed.Name]
-
-		if ok {
-			return typ
-		}
-
-		if typed.Name == "error" {
-			errorType, _ := collector.findTypeByPkgIdAndName("builtin", "error")
-			return errorType
-		}
-
-		typ, ok = collector.findTypeByPkgIdAndName(pkg.ID, typed.Name)
-
-		if ok {
-			return typ
-		}
-
-		if typed.Obj == nil {
-			return getTypeFromScope(typed.Name, visitor)
-		}
-
-		return collectTypeFromTypeSpec(typed.Obj.Decl.(*ast.TypeSpec), nil)
-	case *ast.SelectorExpr:
-		importName := typed.X.(*ast.Ident).Name
-		typeName := typed.Sel.Name
-		return collector.findTypeByImportAndTypeName(importName, typeName, file)
-	case *ast.StarExpr:
-		return &Pointer{
-			base: getTypeFromExpression(typed.X, visitor),
-		}
-	case *ast.ArrayType:
-
-		if typed.Len == nil {
-			return &Slice{
-				elem: getTypeFromExpression(typed.Elt, visitor),
-			}
-		} else {
-			basicLit, isBasicLit := typed.Len.(*ast.BasicLit)
-
-			if isBasicLit {
-				length, _ := strconv.ParseInt(basicLit.Value, 10, 64)
-				return &Array{
-					elem: getTypeFromExpression(typed.Elt, visitor),
-					len:  length,
-				}
-			}
-
-			return &Array{
-				elem: getTypeFromExpression(typed.Elt, visitor),
-				len:  -1,
-			}
-		}
-	case *ast.ChanType:
-		chanType := &Chan{
-			elem: getTypeFromExpression(typed.Value, visitor),
-		}
-
-		if typed.Dir&ast.SEND == ast.SEND {
-			chanType.direction |= SEND
-		}
-
-		if typed.Dir&ast.RECV == ast.RECV {
-			chanType.direction |= RECEIVE
-		}
-
-		return chanType
-	case *ast.FuncType:
-		return &Function{}
-	case *ast.MapType:
-		return &Map{
-			key:  getTypeFromExpression(typed.Key, visitor),
-			elem: getTypeFromExpression(typed.Value, visitor),
-		}
-	case *ast.InterfaceType:
-		return newInterface(nil, typed, nil, nil, nil)
-	case *ast.StructType:
-		return newStruct(nil, typed, nil, nil, nil)
-	}
-
-	return nil
 }
 
 func visitPackage(pkg *packages.Package, collector *packageCollector, allPackageMarkers map[string]map[ast.Node]marker.MarkerValues) {
@@ -279,6 +110,12 @@ func EachFile(collector *marker.Collector, pkgs []*packages.Package, callback Fi
 	for _, pkg := range pkgs {
 		if !pkgCollector.isVisited(pkg.ID) || !pkgCollector.isProcessed(pkg.ID) {
 			visitPackage(pkg, pkgCollector, packageMarkers)
+		}
+	}
+
+	for _, pkg := range pkgCollector.files {
+		for _, file := range pkg.elements {
+			callback(file, nil)
 		}
 	}
 

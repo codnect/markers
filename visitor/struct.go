@@ -47,6 +47,7 @@ type Struct struct {
 	fields      []*Field
 	allFields   []*Field
 	methods     []*Function
+	allMethods  []*Function
 	file        *File
 
 	isProcessed bool
@@ -55,12 +56,17 @@ type Struct struct {
 	namedType *types.Named
 	fieldList []*ast.Field
 
+	pkg     *packages.Package
+	visitor *packageVisitor
+
+	methodsLoaded    bool
+	allMethodsLoaded bool
+
 	fieldsLoaded    bool
 	allFieldsLoaded bool
-	visitor         *packageVisitor
 }
 
-func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package, markers marker.MarkerValues) *Struct {
+func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Struct {
 	s := &Struct{
 		markers:     markers,
 		file:        file,
@@ -69,14 +75,21 @@ func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, p
 		methods:     make([]*Function, 0),
 		isProcessed: true,
 		specType:    specType,
+		pkg:         pkg,
+		visitor:     visitor,
 	}
 
+	return s.initialize(specType, structType, file, pkg)
+}
+
+func (s *Struct) initialize(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package) *Struct {
 	if specType != nil {
 		s.name = specType.Name.Name
 		s.isExported = ast.IsExported(specType.Name.Name)
 		s.position = getPosition(pkg, specType.Pos())
 		s.namedType = file.pkg.Types.Scope().Lookup(specType.Name.Name).Type().(*types.Named)
 		s.fieldList = s.specType.Type.(*ast.StructType).Fields.List
+		s.file.structs.elements = append(s.file.structs.elements, s)
 	} else {
 		s.position = getPosition(pkg, structType.Pos())
 		s.fieldList = structType.Fields.List
@@ -97,7 +110,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 		}
 
 		if rawField.Names == nil {
-			embeddedType := getTypeFromExpression(rawField.Type, s.file.pkg, nil)
+			embeddedType := getTypeFromExpression(rawField.Type, s.visitor)
 
 			field := &Field{
 				name:       "",
@@ -115,7 +128,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 		}
 
 		for _, fieldName := range rawField.Names {
-			typ := getTypeFromExpression(rawField.Type, s.file.pkg, nil)
+			typ := getTypeFromExpression(rawField.Type, s.visitor)
 
 			field := &Field{
 				name:       fieldName.Name,
@@ -181,6 +194,57 @@ func (s *Struct) loadAllFields() {
 	}
 
 	s.allFieldsLoaded = true
+}
+
+func (s *Struct) loadMethods() {
+	if s.methodsLoaded {
+		return
+	}
+
+	s.allMethods = append(s.allMethods, s.methods...)
+	s.methodsLoaded = true
+}
+
+func (s *Struct) loadAllMethods() {
+	if s.allMethodsLoaded {
+		return
+	}
+
+	s.loadMethods()
+
+	for _, field := range s.fields {
+
+		if !field.IsEmbedded() {
+			continue
+		}
+
+		var baseType = field.Type()
+		pointerType, ok := field.Type().(*Pointer)
+
+		if ok {
+			baseType = pointerType.Elem()
+		}
+
+		importedType, ok := baseType.(*ImportedType)
+
+		if ok {
+			baseType = importedType.Underlying()
+		}
+
+		structType, ok := baseType.(*Struct)
+
+		if ok {
+			s.allMethods = append(s.allMethods, structType.AllMethods()...)
+		}
+
+		interfaceType, ok := baseType.(*Interface)
+
+		if ok {
+			s.allMethods = append(s.allMethods, interfaceType.Methods()...)
+		}
+	}
+
+	s.allMethodsLoaded = true
 }
 
 func (s *Struct) File() *File {
@@ -265,6 +329,26 @@ func (s *Struct) NumAllFields() int {
 func (s *Struct) AllFields() []*Field {
 	s.loadAllFields()
 	return s.allFields
+}
+
+func (s *Struct) NumMethods() int {
+	s.loadMethods()
+	return len(s.methods)
+}
+
+func (s *Struct) Methods() []*Function {
+	s.loadMethods()
+	return s.methods
+}
+
+func (s *Struct) NumAllMethods() int {
+	s.loadAllMethods()
+	return len(s.allMethods)
+}
+
+func (s *Struct) AllMethods() []*Function {
+	s.loadAllMethods()
+	return s.allMethods
 }
 
 func (s *Struct) Implements(i *Interface) bool {

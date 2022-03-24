@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"strings"
 )
@@ -53,18 +54,22 @@ type Function struct {
 	funcField *ast.Field
 	funcType  *ast.FuncType
 
-	visitor            *packageVisitor
+	pkg     *packages.Package
+	visitor *packageVisitor
+
 	loadedParams       bool
 	loadedReturnValues bool
 }
 
-func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File) *Function {
+func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor) *Function {
 	function := &Function{
 		file:      file,
 		params:    &Tuple{},
 		results:   &Tuple{},
 		funcDecl:  funcDecl,
 		funcField: funcField,
+		pkg:       pkg,
+		visitor:   visitor,
 	}
 
 	if funcDecl != nil {
@@ -135,7 +140,7 @@ func (f *Function) receiverType(receiverExpr ast.Expr) Type {
 
 	if isStructMethod {
 		if !ok {
-			candidateType = newStruct(receiverTypeSpec, nil, f.file, f.file.pkg, nil)
+			candidateType = newStruct(receiverTypeSpec, nil, f.file, f.pkg, f.visitor, nil)
 		}
 
 		structType := candidateType.(*Struct)
@@ -192,6 +197,10 @@ func (f *Function) loadParams() {
 
 	if f.funcType.Params != nil {
 		f.params.variables = append(f.params.variables, f.getVariables(f.funcType.Params.List).variables...)
+	}
+
+	if f.params.Len() != 0 {
+		_, f.variadic = f.params.At(f.params.Len() - 1).Type().(*Variadic)
 	}
 
 	f.loadedParams = true

@@ -16,18 +16,20 @@ type CustomType struct {
 	file       *File
 
 	isProcessed bool
+	visitor     *packageVisitor
 }
 
-func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, markers marker.MarkerValues, collector *packageCollector) *CustomType {
+func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *CustomType {
 	customType := &CustomType{
 		name:        specType.Name.Name,
-		aliasType:   getTypeFromExpression(specType.Type, file.Package(), collector),
+		aliasType:   getTypeFromExpression(specType.Type, visitor),
 		isExported:  ast.IsExported(specType.Name.Name),
 		position:    getPosition(file.Package(), specType.Pos()),
 		markers:     markers,
 		methods:     make([]*Function, 0),
 		file:        file,
 		isProcessed: true,
+		visitor:     visitor,
 	}
 
 	return customType

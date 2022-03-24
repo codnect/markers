@@ -11,7 +11,7 @@ type TestOutput struct {
 
 func TestEachFile(t *testing.T) {
 
-	result, _ := packages.LoadPackages("std")
+	result, _ := packages.LoadPackages("../test/package2")
 	registry := marker.NewRegistry()
 
 	registry.Register("marker:package-level1", "github.com/procyon-projects/marker", marker.PackageLevel, &TestOutput{})
@@ -20,6 +20,37 @@ func TestEachFile(t *testing.T) {
 	collector := marker.NewCollector(registry)
 
 	err := EachFile(collector, result.GetPackages(), func(file *File, err error) error {
+		function := file.Functions().At(0)
+		params := function.Params()
+		results := function.Results()
+		isVariadic := function.IsVariadic()
+		if params != nil {
+
+		}
+
+		if results != nil {
+
+		}
+
+		if isVariadic {
+
+		}
+
+		structType := file.Structs().At(0)
+		fieldList := structType.AllFields()
+		methods := structType.Methods()
+
+		if methods != nil {
+
+		}
+
+		if fieldList != nil {
+
+		}
+		if structType != nil {
+
+		}
+
 		return nil
 	})
 
