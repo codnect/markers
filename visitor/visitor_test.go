@@ -3,6 +3,7 @@ package visitor
 import (
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -34,17 +35,78 @@ type FunctionLevel struct {
 	Name string `marker:"Name"`
 }
 
-func TestEachFile(t *testing.T) {
+func TestVisitor_VisitPackage1(t *testing.T) {
+	markers := []struct {
+		Name   string
+		Level  marker.TargetLevel
+		Output interface{}
+	}{
+		{Name: "marker:package-level", Level: marker.PackageLevel, Output: &PackageLevel{}},
+		{Name: "marker:interface-type-level", Level: marker.InterfaceTypeLevel, Output: &InterfaceTypeLevel{}},
+		{Name: "marker:interface-method-level", Level: marker.InterfaceMethodLevel, Output: &InterfaceMethodLevel{}},
+		{Name: "marker:function-level", Level: marker.FunctionLevel, Output: &FunctionLevel{}},
+		{Name: "marker:struct-type-level", Level: marker.StructTypeLevel, Output: &StructTypeLevel{}},
+		{Name: "marker:struct-method-level", Level: marker.StructMethodLevel, Output: &StructMethodLevel{}},
+		{Name: "marker:struct-field-level", Level: marker.FieldLevel, Output: &StructFieldLevel{}},
+	}
+
+	testCases := map[string]struct {
+		interfaces map[string]struct {
+			markers marker.MarkerValues
+		}
+		structs map[string]struct {
+			markers marker.MarkerValues
+		}
+	}{
+		"dessert.go": {
+			interfaces: map[string]struct {
+				markers marker.MarkerValues
+			}{
+				"Dessert": {
+					markers: marker.MarkerValues{
+						"marker:interface-type-level": {
+							InterfaceTypeLevel{
+								Name: "Dessert",
+							},
+						},
+					},
+				},
+			},
+			structs: map[string]struct {
+				markers marker.MarkerValues
+			}{
+				"FriedCookie": {
+					markers: marker.MarkerValues{
+						"marker:struct-type-level": {
+							StructTypeLevel{
+								Name: "FriedCookie",
+							},
+						},
+					},
+				},
+				"Cookie": {
+					markers: marker.MarkerValues{
+						"marker:struct-type-level": {
+							StructTypeLevel{
+								Name: "Cookie",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	result, _ := packages.LoadPackages("../test/package1")
 	registry := marker.NewRegistry()
 
-	registry.Register("marker:package-level", "github.com/procyon-projects/marker", marker.PackageLevel, &PackageLevel{})
-	registry.Register("marker:interface-type-level", "github.com/procyon-projects/marker", marker.InterfaceTypeLevel, &InterfaceTypeLevel{})
-	registry.Register("marker:interface-method-level", "github.com/procyon-projects/marker", marker.InterfaceMethodLevel, &InterfaceMethodLevel{})
-	registry.Register("marker:function-level", "github.com/procyon-projects/marker", marker.FunctionLevel, &FunctionLevel{})
-	registry.Register("marker:struct-type-level", "github.com/procyon-projects/marker", marker.StructTypeLevel, &StructTypeLevel{})
-	registry.Register("marker:struct-method-level", "github.com/procyon-projects/marker", marker.StructMethodLevel, &StructMethodLevel{})
-	registry.Register("marker:struct-field-level", "github.com/procyon-projects/marker", marker.FieldLevel, &StructFieldLevel{})
+	for _, m := range markers {
+		err := registry.Register(m.Name, "github.com/procyon-projects/marker", m.Level, m.Output)
+		if err != nil {
+			t.Errorf("marker %s could not be registered", m.Name)
+			return
+		}
+	}
 
 	collector := marker.NewCollector(registry)
 
@@ -53,47 +115,76 @@ func TestEachFile(t *testing.T) {
 			return nil
 		}
 
-		iface := file.Interfaces().At(0)
-		methods := iface.getInterfaceMethods()
-		methods[5].Results()
+		testCase := testCases[file.Name()]
 
-		if methods != nil {
-
+		if len(testCase.interfaces) != file.Interfaces().Len() {
+			t.Errorf("interface count is wrong!")
+			return nil
 		}
 
-		function := file.Functions().At(0)
-		fResults := function.Results()
-		fParams := function.Params()
+		for expectedInterfaceName, expectedInterface := range testCase.interfaces {
+			actualInterface, ok := file.Interfaces().FindByName(expectedInterfaceName)
+			if !ok {
+				t.Errorf("interface with name %s is not found", expectedInterfaceName)
+				continue
+			}
 
-		if fResults != nil {
+			if actualInterface.Markers().Count() != expectedInterface.markers.Count() {
+				t.Errorf("marker count is wrong!")
+				continue
+			}
 
+			for markerName, markerValues := range expectedInterface.markers {
+				if actualInterface.Markers().CountByName(markerName) != len(markerValues) {
+					t.Errorf("marker count is wrong!")
+					continue
+				}
+
+				actualMarkerValues := actualInterface.Markers().AllMarkers(markerName)
+
+				for index, expectedMarkerValue := range markerValues {
+					actualMarker := actualMarkerValues[index]
+					assert.Equal(t, expectedMarkerValue, actualMarker)
+				}
+			}
 		}
 
-		if fParams != nil {
-
+		if len(testCase.structs) != file.Structs().Len() {
+			t.Errorf("structs count is wrong!")
+			return nil
 		}
 
-		s := file.Structs().At(0)
-		s.Fields()
-		s.AllFields()
-		s.NumEmbeddedFields()
-		s.AllMethods()
-		s.EmbeddedFields()
-		sMethods := s.Methods()
-		sFields := s.Fields()
+		for expectedStructName, expectedStruct := range testCase.structs {
+			actualStruct, ok := file.Structs().FindByName(expectedStructName)
+			if !ok {
+				t.Errorf("struct with name %s is not found", expectedStruct)
+				continue
+			}
 
-		if sMethods != nil {
+			if actualStruct.Markers().Count() != expectedStruct.markers.Count() {
+				t.Errorf("marker count is wrong!")
+				continue
+			}
 
-		}
+			for markerName, markerValues := range expectedStruct.markers {
+				if actualStruct.Markers().CountByName(markerName) != len(markerValues) {
+					t.Errorf("marker count is wrong!")
+					continue
+				}
 
-		if sFields != nil {
+				actualMarkerValues := actualStruct.Markers().AllMarkers(markerName)
 
+				for index, expectedMarkerValue := range markerValues {
+					actualMarker := actualMarkerValues[index]
+					assert.Equal(t, expectedMarkerValue, actualMarker)
+				}
+			}
 		}
 
 		return nil
 	})
 
 	if err != nil {
-
+		t.Errorf("traverval is not completed successfully")
 	}
 }
