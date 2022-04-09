@@ -133,13 +133,13 @@ func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarke
 
 				if !isFuncType && definition.Level&FieldLevel != FieldLevel {
 					continue
-				} else if isFuncType && !(definition.Level&MethodLevel != MethodLevel || definition.Level&InterfaceMethodLevel != InterfaceMethodLevel) {
+				} else if isFuncType && (definition.Level&MethodLevel != MethodLevel && definition.Level&InterfaceMethodLevel != InterfaceMethodLevel) {
 					continue
 				}
 
 			case *ast.FuncDecl:
 
-				if typedNode.Recv != nil && !(definition.Level&MethodLevel != MethodLevel || definition.Level&StructMethodLevel != StructMethodLevel) {
+				if typedNode.Recv != nil && (definition.Level&MethodLevel != MethodLevel && definition.Level&StructMethodLevel != StructMethodLevel) {
 					continue
 				} else if typedNode.Recv == nil && definition.Level&FunctionLevel != FunctionLevel {
 					continue

@@ -83,6 +83,39 @@ func (p *Pointer) String() string {
 	return builder.String()
 }
 
+type TypeParam struct {
+	name string
+	typ  Type
+}
+
+func (t *TypeParam) Name() string {
+	return t.name
+}
+
+func (t *TypeParam) Type() Type {
+	return t.typ
+}
+
+type Generic struct {
+	typeParam *TypeParam
+}
+
+func (g *Generic) Name() string {
+	return g.typeParam.name
+}
+
+func (g *Generic) TypeParam() *TypeParam {
+	return g.typeParam
+}
+
+func (g *Generic) Underlying() Type {
+	return g.typeParam.typ
+}
+
+func (g *Generic) String() string {
+	return ""
+}
+
 func getTypeFromScope(name string, visitor *packageVisitor) Type {
 	pkg := visitor.pkg
 	typ := pkg.Types.Scope().Lookup(name)
@@ -151,9 +184,9 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 
 	switch typeSpec.Type.(type) {
 	case *ast.InterfaceType:
-		return newInterface(typeSpec, nil, file, pkg, visitor, nil)
+		return newInterface(typeSpec, nil, file, pkg, visitor, visitor.packageMarkers[typeSpec])
 	case *ast.StructType:
-		return newStruct(typeSpec, nil, file, pkg, visitor, nil)
+		return newStruct(typeSpec, nil, file, pkg, visitor, visitor.packageMarkers[typeSpec])
 	default:
 		return newCustomType(typeSpec, file, pkg, visitor, nil)
 	}
@@ -177,6 +210,9 @@ func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
 		if typed.Name == "error" {
 			errorType, _ := collector.findTypeByPkgIdAndName("builtin", "error")
 			return errorType
+		} else if typed.Name == "any" {
+			anyType, _ := collector.findTypeByPkgIdAndName("builtin", "any")
+			return anyType
 		}
 
 		typ, ok = collector.findTypeByPkgIdAndName(pkg.ID, typed.Name)

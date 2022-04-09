@@ -8,6 +8,17 @@ import (
 	"strings"
 )
 
+type Constraint struct {
+}
+
+func (c *Constraint) Underlying() Type {
+	return c
+}
+
+func (c *Constraint) String() string {
+	return ""
+}
+
 type Interface struct {
 	name        string
 	isExported  bool
@@ -15,6 +26,7 @@ type Interface struct {
 	position    Position
 	markers     marker.MarkerValues
 	embeddeds   []Type
+	constrains  []*Constraint
 	allMethods  []*Function
 	methods     []*Function
 	file        *File
@@ -28,6 +40,7 @@ type Interface struct {
 	pkg     *packages.Package
 	visitor *packageVisitor
 
+	constraintsLoaded   bool
 	embeddedTypesLoaded bool
 	methodsLoaded       bool
 	allMethodsLoaded    bool
@@ -38,6 +51,7 @@ func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file
 		methods:     make([]*Function, 0),
 		allMethods:  make([]*Function, 0),
 		embeddeds:   make([]Type, 0),
+		constrains:  make([]*Constraint, 0),
 		markers:     markers,
 		file:        file,
 		isProcessed: true,
@@ -54,8 +68,16 @@ func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.Interf
 		i.name = specType.Name.Name
 		i.isExported = ast.IsExported(specType.Name.Name)
 		i.position = getPosition(pkg, specType.Pos())
-		i.interfaceType = pkg.Types.Scope().Lookup(specType.Name.Name).Type().Underlying().(*types.Interface)
-		i.fieldList = i.specType.Type.(*ast.InterfaceType).Methods.List
+		typ := pkg.Types.Scope().Lookup(specType.Name.Name).Type()
+		underlyingType := typ.Underlying()
+
+		switch underlyingType.(type) {
+		case *types.Interface:
+			i.interfaceType = underlyingType.(*types.Interface)
+			i.fieldList = i.specType.Type.(*ast.InterfaceType).Methods.List
+		default:
+		}
+
 		i.file.interfaces.elements = append(i.file.interfaces.elements, i)
 	} else if interfaceType != nil {
 		i.position = getPosition(pkg, interfaceType.Pos())
@@ -68,11 +90,13 @@ func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.Interf
 func (i *Interface) getInterfaceMethods() []*Function {
 	methods := make([]*Function, 0)
 
+	markers := i.visitor.allPackageMarkers[i.pkg.ID]
+
 	for _, rawMethod := range i.fieldList {
 		_, ok := rawMethod.Type.(*ast.FuncType)
 
 		if ok {
-			methods = append(methods, newFunction(nil, rawMethod, i.file, i.pkg, i.visitor))
+			methods = append(methods, newFunction(nil, rawMethod, i.file, i.pkg, i.visitor, markers[rawMethod]))
 		}
 	}
 
@@ -155,6 +179,14 @@ func (i *Interface) Underlying() Type {
 func (i *Interface) String() string {
 	var builder strings.Builder
 	return builder.String()
+}
+
+func (i *Interface) IsConstraint() bool {
+	return false
+}
+
+func (i *Interface) Constraints() []*Constraint {
+	return i.constrains
 }
 
 func (i *Interface) Name() string {

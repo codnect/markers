@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"strings"
@@ -23,29 +24,15 @@ func (v *Variable) String() string {
 	return ""
 }
 
-type Tuple struct {
-	variables []*Variable
-}
-
-func (t *Tuple) Len() int {
-	return len(t.variables)
-}
-
-func (t *Tuple) At(index int) *Variable {
-	if index >= 0 && index < len(t.variables) {
-		return t.variables[index]
-	}
-
-	return nil
-}
-
 type Function struct {
 	name       string
 	isExported bool
+	markers    marker.MarkerValues
 	position   Position
 	receiver   *Variable
-	params     *Tuple
-	results    *Tuple
+	typeParams *Tuple[*TypeParam]
+	params     *Tuple[*Variable]
+	results    *Tuple[*Variable]
 	variadic   bool
 
 	file *File
@@ -57,19 +44,22 @@ type Function struct {
 	pkg     *packages.Package
 	visitor *packageVisitor
 
+	loadedTypeParams   bool
 	loadedParams       bool
 	loadedReturnValues bool
 }
 
-func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor) *Function {
+func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Function {
 	function := &Function{
-		file:      file,
-		params:    &Tuple{},
-		results:   &Tuple{},
-		funcDecl:  funcDecl,
-		funcField: funcField,
-		pkg:       pkg,
-		visitor:   visitor,
+		file:       file,
+		typeParams: &Tuple[*TypeParam]{},
+		params:     &Tuple[*Variable]{},
+		results:    &Tuple[*Variable]{},
+		markers:    markers,
+		funcDecl:   funcDecl,
+		funcField:  funcField,
+		pkg:        pkg,
+		visitor:    visitor,
 	}
 
 	if funcDecl != nil {
@@ -82,6 +72,8 @@ func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *
 			function.name = funcField.Names[0].Name
 		}
 		function.funcType = funcField.Type.(*ast.FuncType)
+		function.isExported = ast.IsExported(function.name)
+		function.position = getPosition(file.pkg, function.funcType.Pos())
 	}
 
 	return function.initialize()
@@ -163,9 +155,9 @@ func (f *Function) receiverType(receiverExpr ast.Expr) Type {
 	return candidateType
 }
 
-func (f *Function) getVariables(fieldList []*ast.Field) *Tuple {
-	tuple := &Tuple{
-		variables: make([]*Variable, 0),
+func (f *Function) getTypeParams(fieldList []*ast.Field) *Tuple[*TypeParam] {
+	tuple := &Tuple[*TypeParam]{
+		items: make([]*TypeParam, 0),
 	}
 
 	for _, field := range fieldList {
@@ -173,13 +165,13 @@ func (f *Function) getVariables(fieldList []*ast.Field) *Tuple {
 		typ := getTypeFromExpression(field.Type, f.visitor)
 
 		if field.Names == nil {
-			tuple.variables = append(tuple.variables, &Variable{
+			tuple.items = append(tuple.items, &TypeParam{
 				typ: typ,
 			})
 		}
 
 		for _, fieldName := range field.Names {
-			tuple.variables = append(tuple.variables, &Variable{
+			tuple.items = append(tuple.items, &TypeParam{
 				name: fieldName.Name,
 				typ:  typ,
 			})
@@ -190,13 +182,85 @@ func (f *Function) getVariables(fieldList []*ast.Field) *Tuple {
 	return tuple
 }
 
+func (f *Function) getTypeParameterByName(name string) *TypeParam {
+	f.loadTypeParams()
+	for _, typeParam := range f.typeParams.items {
+		if typeParam.name == name {
+			return typeParam
+		}
+	}
+
+	return nil
+}
+
+func (f *Function) getGenericTypeFromExpression(exp ast.Expr) Type {
+	var typeParam *TypeParam
+
+	switch t := exp.(type) {
+	case *ast.Ident:
+		typeParam = f.getTypeParameterByName(t.Name)
+	case *ast.SelectorExpr:
+	}
+
+	if typeParam == nil {
+		return nil
+	}
+
+	return &Generic{
+		typeParam,
+	}
+}
+
+func (f *Function) getVariables(fieldList []*ast.Field) *Tuple[*Variable] {
+	tuple := &Tuple[*Variable]{
+		items: make([]*Variable, 0),
+	}
+
+	for _, field := range fieldList {
+		typ := f.getGenericTypeFromExpression(field.Type)
+
+		if typ == nil {
+			typ = getTypeFromExpression(field.Type, f.visitor)
+		}
+
+		if field.Names == nil {
+			tuple.items = append(tuple.items, &Variable{
+				typ: typ,
+			})
+		}
+
+		for _, fieldName := range field.Names {
+			tuple.items = append(tuple.items, &Variable{
+				name: fieldName.Name,
+				typ:  typ,
+			})
+		}
+
+	}
+
+	return tuple
+}
+
+func (f *Function) loadTypeParams() {
+
+	if f.loadedTypeParams {
+		return
+	}
+
+	if f.funcType.TypeParams != nil {
+		f.typeParams.items = append(f.typeParams.items, f.getTypeParams(f.funcType.TypeParams.List).items...)
+	}
+
+	f.loadedTypeParams = true
+}
+
 func (f *Function) loadParams() {
 	if f.loadedParams {
 		return
 	}
 
 	if f.funcType.Params != nil {
-		f.params.variables = append(f.params.variables, f.getVariables(f.funcType.Params.List).variables...)
+		f.params.items = append(f.params.items, f.getVariables(f.funcType.Params.List).items...)
 	}
 
 	if f.params.Len() != 0 {
@@ -211,10 +275,8 @@ func (f *Function) loadResultValues() {
 		return
 	}
 
-	funcType := f.funcDecl.Type
-
-	if funcType.Results != nil {
-		f.results.variables = append(f.results.variables, f.getVariables(f.funcType.Results.List).variables...)
+	if f.funcType.Results != nil {
+		f.results.items = append(f.results.items, f.getVariables(f.funcType.Results.List).items...)
 	}
 
 	f.loadedReturnValues = true
@@ -293,12 +355,17 @@ func (f *Function) Receiver() *Variable {
 	return f.receiver
 }
 
-func (f *Function) Params() *Tuple {
+func (f *Function) TypeParams() *Tuple[*TypeParam] {
+	f.loadTypeParams()
+	return f.typeParams
+}
+
+func (f *Function) Params() *Tuple[*Variable] {
 	f.loadParams()
 	return f.params
 }
 
-func (f *Function) Results() *Tuple {
+func (f *Function) Results() *Tuple[*Variable] {
 	f.loadResultValues()
 	return f.results
 }
@@ -306,6 +373,10 @@ func (f *Function) Results() *Tuple {
 func (f *Function) IsVariadic() bool {
 	f.loadParams()
 	return f.variadic
+}
+
+func (f *Function) Markers() marker.MarkerValues {
+	return f.markers
 }
 
 type Functions struct {

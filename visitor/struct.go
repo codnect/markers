@@ -102,6 +102,8 @@ func (s *Struct) initialize(specType *ast.TypeSpec, structType *ast.StructType, 
 func (s *Struct) getFieldsFromFieldList() []*Field {
 	fields := make([]*Field, 0)
 
+	markers := s.visitor.allPackageMarkers[s.pkg.ID]
+
 	for _, rawField := range s.fieldList {
 		tags := ""
 
@@ -116,7 +118,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 				name:       "",
 				isExported: false,
 				position:   Position{},
-				//markers:    visitor.packageMarkers[rawField],
+				markers:    markers[rawField],
 				file:       s.file,
 				tags:       tags,
 				typ:        embeddedType,
@@ -134,7 +136,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 				name:       fieldName.Name,
 				isExported: ast.IsExported(fieldName.Name),
 				position:   getPosition(s.file.pkg, fieldName.Pos()),
-				//markers:    visitor.packageMarkers[rawField],
+				markers:    markers[rawField],
 				file:       s.file,
 				tags:       tags,
 				typ:        typ,

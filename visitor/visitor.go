@@ -54,7 +54,7 @@ func (visitor *packageVisitor) Visit(node ast.Node) ast.Visitor {
 		return visitor
 	case *ast.FuncDecl:
 		visitor.funcDecl = typedNode
-		newFunction(typedNode, nil, visitor.file, visitor.pkg, visitor)
+		newFunction(typedNode, nil, visitor.file, visitor.pkg, visitor, visitor.packageMarkers[typedNode])
 		return nil
 	case *ast.TypeSpec:
 		collectTypeFromTypeSpec(typedNode, visitor)

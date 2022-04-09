@@ -81,7 +81,7 @@ func (scanner *Scanner) Reset() {
 
 func (scanner *Scanner) SetSearchIndex(searchIndex int) {
 	if searchIndex >= scanner.SourceLength() {
-		searchIndex = scanner.SourceLength()
+		scanner.searchIndex = scanner.SourceLength()
 		return
 	}
 

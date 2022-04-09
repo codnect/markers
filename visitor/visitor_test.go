@@ -6,48 +6,75 @@ import (
 	"testing"
 )
 
-type TestOutput struct {
+type PackageLevel struct {
+}
+
+type StructTypeLevel struct {
+}
+
+type StructMethodLevel struct {
+}
+
+type StructFieldLevel struct {
+}
+
+type InterfaceTypeLevel struct {
+}
+
+type InterfaceMethodLevel struct {
+}
+
+type FunctionLevel struct {
 }
 
 func TestEachFile(t *testing.T) {
-
-	result, _ := packages.LoadPackages("../test/package2")
+	result, _ := packages.LoadPackages("../test/package1")
 	registry := marker.NewRegistry()
 
-	registry.Register("marker:package-level1", "github.com/procyon-projects/marker", marker.PackageLevel, &TestOutput{})
-	registry.Register("marker:package-level2", "github.com/procyon-project/marker", marker.PackageLevel, &TestOutput{})
+	registry.Register("marker:package-level", "github.com/procyon-projects/marker", marker.PackageLevel, &PackageLevel{})
+	registry.Register("marker:interface-type-level", "github.com/procyon-projects/marker", marker.InterfaceTypeLevel, &InterfaceTypeLevel{})
+	registry.Register("marker:interface-method-level", "github.com/procyon-projects/marker", marker.InterfaceMethodLevel, &InterfaceMethodLevel{})
+	registry.Register("marker:function-level", "github.com/procyon-projects/marker", marker.FunctionLevel, &FunctionLevel{})
+	registry.Register("marker:struct-type-level", "github.com/procyon-projects/marker", marker.StructTypeLevel, &StructTypeLevel{})
+	registry.Register("marker:struct-method-level", "github.com/procyon-projects/marker", marker.StructMethodLevel, &StructMethodLevel{})
+	registry.Register("marker:struct-field-level", "github.com/procyon-projects/marker", marker.FieldLevel, &StructFieldLevel{})
 
 	collector := marker.NewCollector(registry)
 
 	err := EachFile(collector, result.GetPackages(), func(file *File, err error) error {
-		function := file.Functions().At(0)
-		params := function.Params()
-		results := function.Results()
-		isVariadic := function.IsVariadic()
-		if params != nil {
-
+		if file.pkg.ID == "builtin" {
+			return nil
 		}
 
-		if results != nil {
-
-		}
-
-		if isVariadic {
-
-		}
-
-		structType := file.Structs().At(0)
-		fieldList := structType.AllFields()
-		methods := structType.Methods()
+		iface := file.Interfaces().At(0)
+		methods := iface.getInterfaceMethods()
+		methods[5].Results()
 
 		if methods != nil {
 
 		}
 
-		if fieldList != nil {
+		function := file.Functions().At(0)
+		fResults := function.Results()
+		fParams := function.Params()
+
+		if fResults != nil {
 
 		}
-		if structType != nil {
+
+		if fParams != nil {
+
+		}
+
+		s := file.Structs().At(0)
+		sMethods := s.Methods()
+		sFields := s.Fields()
+
+		if sMethods != nil {
+
+		}
+
+		if sFields != nil {
 
 		}
 
