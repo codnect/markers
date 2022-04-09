@@ -7,24 +7,31 @@ import (
 )
 
 type PackageLevel struct {
+	Name string `marker:"Name"`
 }
 
 type StructTypeLevel struct {
+	Name string `marker:"Name"`
 }
 
 type StructMethodLevel struct {
+	Name string `marker:"Name"`
 }
 
 type StructFieldLevel struct {
+	Name string `marker:"Name"`
 }
 
 type InterfaceTypeLevel struct {
+	Name string `marker:"Name"`
 }
 
 type InterfaceMethodLevel struct {
+	Name string `marker:"Name"`
 }
 
 type FunctionLevel struct {
+	Name string `marker:"Name"`
 }
 
 func TestEachFile(t *testing.T) {
@@ -67,6 +74,11 @@ func TestEachFile(t *testing.T) {
 		}
 
 		s := file.Structs().At(0)
+		s.Fields()
+		s.AllFields()
+		s.NumEmbeddedFields()
+		s.AllMethods()
+		s.EmbeddedFields()
 		sMethods := s.Methods()
 		sFields := s.Fields()
 

@@ -96,6 +96,22 @@ func (t *TypeParam) Type() Type {
 	return t.typ
 }
 
+type TypeParams struct {
+	params []*TypeParam
+}
+
+func (t *TypeParams) Len() int {
+	return len(t.params)
+}
+
+func (t *TypeParams) At(index int) *TypeParam {
+	if index >= 0 && index < len(t.params) {
+		return t.params[index]
+	}
+
+	return nil
+}
+
 type Generic struct {
 	typeParam *TypeParam
 }

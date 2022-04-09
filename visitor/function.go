@@ -24,15 +24,31 @@ func (v *Variable) String() string {
 	return ""
 }
 
+type Tuple struct {
+	variables []*Variable
+}
+
+func (t *Tuple) Len() int {
+	return len(t.variables)
+}
+
+func (t *Tuple) At(index int) *Variable {
+	if index >= 0 && index < len(t.variables) {
+		return t.variables[index]
+	}
+
+	return nil
+}
+
 type Function struct {
 	name       string
 	isExported bool
 	markers    marker.MarkerValues
 	position   Position
 	receiver   *Variable
-	typeParams *Tuple[*TypeParam]
-	params     *Tuple[*Variable]
-	results    *Tuple[*Variable]
+	typeParams *TypeParams
+	params     *Tuple
+	results    *Tuple
 	variadic   bool
 
 	file *File
@@ -52,9 +68,9 @@ type Function struct {
 func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Function {
 	function := &Function{
 		file:       file,
-		typeParams: &Tuple[*TypeParam]{},
-		params:     &Tuple[*Variable]{},
-		results:    &Tuple[*Variable]{},
+		typeParams: &TypeParams{},
+		params:     &Tuple{},
+		results:    &Tuple{},
 		markers:    markers,
 		funcDecl:   funcDecl,
 		funcField:  funcField,
@@ -155,9 +171,9 @@ func (f *Function) receiverType(receiverExpr ast.Expr) Type {
 	return candidateType
 }
 
-func (f *Function) getTypeParams(fieldList []*ast.Field) *Tuple[*TypeParam] {
-	tuple := &Tuple[*TypeParam]{
-		items: make([]*TypeParam, 0),
+func (f *Function) getTypeParams(fieldList []*ast.Field) *TypeParams {
+	typeParams := &TypeParams{
+		params: make([]*TypeParam, 0),
 	}
 
 	for _, field := range fieldList {
@@ -165,13 +181,13 @@ func (f *Function) getTypeParams(fieldList []*ast.Field) *Tuple[*TypeParam] {
 		typ := getTypeFromExpression(field.Type, f.visitor)
 
 		if field.Names == nil {
-			tuple.items = append(tuple.items, &TypeParam{
+			typeParams.params = append(typeParams.params, &TypeParam{
 				typ: typ,
 			})
 		}
 
 		for _, fieldName := range field.Names {
-			tuple.items = append(tuple.items, &TypeParam{
+			typeParams.params = append(typeParams.params, &TypeParam{
 				name: fieldName.Name,
 				typ:  typ,
 			})
@@ -179,16 +195,16 @@ func (f *Function) getTypeParams(fieldList []*ast.Field) *Tuple[*TypeParam] {
 
 	}
 
-	return tuple
+	return typeParams
 }
 
 func (f *Function) getTypeParameterByName(name string) *TypeParam {
 	f.loadTypeParams()
-	for _, typeParam := range f.typeParams.items {
+	/*for _, typeParam := range f.typeParams.variables {
 		if typeParam.name == name {
 			return typeParam
 		}
-	}
+	}*/
 
 	return nil
 }
@@ -211,9 +227,9 @@ func (f *Function) getGenericTypeFromExpression(exp ast.Expr) Type {
 	}
 }
 
-func (f *Function) getVariables(fieldList []*ast.Field) *Tuple[*Variable] {
-	tuple := &Tuple[*Variable]{
-		items: make([]*Variable, 0),
+func (f *Function) getVariables(fieldList []*ast.Field) *Tuple {
+	tuple := &Tuple{
+		variables: make([]*Variable, 0),
 	}
 
 	for _, field := range fieldList {
@@ -224,13 +240,13 @@ func (f *Function) getVariables(fieldList []*ast.Field) *Tuple[*Variable] {
 		}
 
 		if field.Names == nil {
-			tuple.items = append(tuple.items, &Variable{
+			tuple.variables = append(tuple.variables, &Variable{
 				typ: typ,
 			})
 		}
 
 		for _, fieldName := range field.Names {
-			tuple.items = append(tuple.items, &Variable{
+			tuple.variables = append(tuple.variables, &Variable{
 				name: fieldName.Name,
 				typ:  typ,
 			})
@@ -248,7 +264,7 @@ func (f *Function) loadTypeParams() {
 	}
 
 	if f.funcType.TypeParams != nil {
-		f.typeParams.items = append(f.typeParams.items, f.getTypeParams(f.funcType.TypeParams.List).items...)
+		f.typeParams.params = append(f.typeParams.params, f.getTypeParams(f.funcType.TypeParams.List).params...)
 	}
 
 	f.loadedTypeParams = true
@@ -260,7 +276,7 @@ func (f *Function) loadParams() {
 	}
 
 	if f.funcType.Params != nil {
-		f.params.items = append(f.params.items, f.getVariables(f.funcType.Params.List).items...)
+		f.params.variables = append(f.params.variables, f.getVariables(f.funcType.Params.List).variables...)
 	}
 
 	if f.params.Len() != 0 {
@@ -276,7 +292,7 @@ func (f *Function) loadResultValues() {
 	}
 
 	if f.funcType.Results != nil {
-		f.results.items = append(f.results.items, f.getVariables(f.funcType.Results.List).items...)
+		f.results.variables = append(f.results.variables, f.getVariables(f.funcType.Results.List).variables...)
 	}
 
 	f.loadedReturnValues = true
@@ -355,17 +371,17 @@ func (f *Function) Receiver() *Variable {
 	return f.receiver
 }
 
-func (f *Function) TypeParams() *Tuple[*TypeParam] {
+func (f *Function) TypeParams() *TypeParams {
 	f.loadTypeParams()
 	return f.typeParams
 }
 
-func (f *Function) Params() *Tuple[*Variable] {
+func (f *Function) Params() *Tuple {
 	f.loadParams()
 	return f.params
 }
 
-func (f *Function) Results() *Tuple[*Variable] {
+func (f *Function) Results() *Tuple {
 	f.loadResultValues()
 	return f.results
 }
