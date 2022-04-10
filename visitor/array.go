@@ -14,7 +14,7 @@ func (a *Array) Elem() Type {
 }
 
 func (a *Array) Name() string {
-	return ""
+	return "[]"
 }
 
 func (a *Array) Underlying() Type {

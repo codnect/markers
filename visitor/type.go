@@ -54,7 +54,7 @@ type Variadic struct {
 }
 
 func (v *Variadic) Name() string {
-	return ""
+	return v.elem.Name()
 }
 
 func (v *Variadic) Elem() Type {

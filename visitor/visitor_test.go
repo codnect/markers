@@ -43,10 +43,10 @@ type testFile struct {
 }
 
 type interfaceInfo struct {
-	markers            marker.MarkerValues
-	numExplicitMethods int
-	numMethods         int
-	embeddedTypes      []string
+	markers         marker.MarkerValues
+	explicitMethods map[string]functionInfo
+	methods         map[string]functionInfo
+	embeddedTypes   []string
 }
 
 type structInfo struct {
@@ -64,6 +64,407 @@ type variableInfo struct {
 	name     string
 	typeName string
 }
+
+// functions
+var (
+	breadFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:function-level": {
+				FunctionLevel{
+					Name: "Bread",
+				},
+			},
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "i",
+				typeName: "float64",
+			},
+			{
+				name:     "k",
+				typeName: "float64",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "struct{}",
+			},
+		},
+	}
+
+	macaronFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:function-level": {
+				FunctionLevel{
+					Name: "Macaron",
+				},
+			},
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "c",
+				typeName: "complex128",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "book",
+			},
+		},
+	}
+
+	makeACakeFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:function-level": {
+				FunctionLevel{
+					Name: "MakeACake",
+				},
+			},
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "s",
+				typeName: "interface{}",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "error",
+			},
+		},
+	}
+
+	biscuitCakeFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:function-level": {
+				FunctionLevel{
+					Name: "BiscuitCake",
+				},
+			},
+		},
+		isVariadic: true,
+		params: []variableInfo{
+			{
+				name:     "s",
+				typeName: "string",
+			},
+			{
+				name:     "arr",
+				typeName: "[]int",
+			},
+			{
+				name:     "v",
+				typeName: "int16",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "i",
+				typeName: "int",
+			},
+			{
+				name:     "b",
+				typeName: "bool",
+			},
+		},
+	}
+
+	funfettiFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "Funfetti",
+				},
+			},
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "v",
+				typeName: "rune",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "byte",
+			},
+		},
+	}
+
+	iceCreamFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "IceCream",
+				},
+			},
+		},
+		isVariadic: true,
+		params: []variableInfo{
+			{
+				name:     "s",
+				typeName: "string",
+			},
+			{
+				name:     "v",
+				typeName: "bool",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "r",
+				typeName: "string",
+			},
+		},
+	}
+
+	cupCakeFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "CupCake",
+				},
+			},
+		},
+		isVariadic: true,
+		params: []variableInfo{
+			{
+				name:     "a",
+				typeName: "[]int",
+			},
+			{
+				name:     "b",
+				typeName: "bool",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "float32",
+			},
+		},
+	}
+
+	tartFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "Tart",
+				},
+			},
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "s",
+				typeName: "interface{}",
+			},
+			{
+				name:     "b",
+				typeName: "bool",
+			},
+		},
+		results: []variableInfo{},
+	}
+
+	donutFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "Tart",
+				},
+			},
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "interface{}",
+			},
+		},
+	}
+
+	puddingFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "Pudding",
+				},
+			},
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "[]string",
+			},
+		},
+	}
+
+	pieFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "Pie",
+				},
+			},
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "interface{}",
+			},
+		},
+	}
+
+	muffinFunction = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
+					Name: "muffin",
+				},
+			},
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "interface{}",
+			},
+		},
+	}
+)
+
+// structs
+var (
+	friedCookieStruct = structInfo{
+		markers: marker.MarkerValues{
+			"marker:struct-type-level": {
+				StructTypeLevel{
+					Name: "FriedCookie",
+				},
+			},
+		},
+	}
+
+	cookieStruct = structInfo{
+		markers: marker.MarkerValues{
+			"marker:struct-type-level": {
+				StructTypeLevel{
+					Name: "Cookie",
+				},
+			},
+		},
+	}
+)
+
+// interfaces
+var (
+	bakeryShopInterface = interfaceInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-type-level": {
+				InterfaceTypeLevel{
+					Name: "BakeryShop",
+				},
+			},
+		},
+		explicitMethods: map[string]functionInfo{
+			"Bread": breadFunction,
+		},
+		methods: map[string]functionInfo{
+			"IceCream": iceCreamFunction,
+			"CupCake":  cupCakeFunction,
+			"Tart":     tartFunction,
+			"Donut":    donutFunction,
+			"Pudding":  puddingFunction,
+			"Pie":      pieFunction,
+			"muffin":   muffinFunction,
+			"Bread":    breadFunction,
+		},
+		embeddedTypes: []string{"Dessert"},
+	}
+
+	dessertInterface = interfaceInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-type-level": {
+				InterfaceTypeLevel{
+					Name: "Dessert",
+				},
+			},
+		},
+		explicitMethods: map[string]functionInfo{
+			"IceCream": iceCreamFunction,
+			"CupCake":  cupCakeFunction,
+			"Tart":     tartFunction,
+			"Donut":    donutFunction,
+			"Pudding":  puddingFunction,
+			"Pie":      pieFunction,
+			"muffin":   muffinFunction,
+		},
+		methods: map[string]functionInfo{
+			"IceCream": iceCreamFunction,
+			"CupCake":  cupCakeFunction,
+			"Tart":     tartFunction,
+			"Donut":    donutFunction,
+			"Pudding":  puddingFunction,
+			"Pie":      pieFunction,
+			"muffin":   muffinFunction,
+		},
+	}
+
+	newYearsEveCookieInterface = interfaceInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-type-level": {
+				InterfaceTypeLevel{
+					Name: "NewYearsEveCookie",
+				},
+			},
+		},
+		methods: map[string]functionInfo{
+			"Funfetti": funfettiFunction,
+		},
+		explicitMethods: map[string]functionInfo{
+			"Funfetti": funfettiFunction,
+		},
+	}
+
+	sweetShopInterface = interfaceInfo{
+		markers: marker.MarkerValues{
+			"marker:interface-type-level": {
+				InterfaceTypeLevel{
+					Name: "SweetShop",
+				},
+			},
+		},
+		explicitMethods: map[string]functionInfo{
+			"Macaron": macaronFunction,
+		},
+		methods: map[string]functionInfo{
+			"Funfetti": funfettiFunction,
+			"Macaron":  macaronFunction,
+			"IceCream": iceCreamFunction,
+			"CupCake":  cupCakeFunction,
+			"Tart":     tartFunction,
+			"Donut":    donutFunction,
+			"Pudding":  puddingFunction,
+			"Pie":      pieFunction,
+			"muffin":   muffinFunction,
+		},
+		embeddedTypes: []string{"NewYearsEveCookie", "Dessert"},
+	}
+)
 
 func TestVisitor_VisitPackage1(t *testing.T) {
 	markers := []struct {
@@ -83,130 +484,18 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 	testCases := map[string]testFile{
 		"dessert.go": {
 			functions: map[string]functionInfo{
-				"MakeACake": {
-					markers: marker.MarkerValues{
-						"marker:function-level": {
-							FunctionLevel{
-								Name: "MakeACake",
-							},
-						},
-					},
-					isVariadic: false,
-					params: []variableInfo{
-						{
-							name:     "s",
-							typeName: "interface{}",
-						},
-					},
-					results: []variableInfo{
-						{
-							name:     "",
-							typeName: "error",
-						},
-					},
-				},
-				"BiscuitCake": {
-					markers: marker.MarkerValues{
-						"marker:function-level": {
-							FunctionLevel{
-								Name: "BiscuitCake",
-							},
-						},
-					},
-					isVariadic: true,
-					params: []variableInfo{
-						{
-							name:     "s",
-							typeName: "string",
-						},
-						{
-							name:     "arr",
-							typeName: "[]int",
-						},
-						{
-							name:     "v",
-							typeName: "int16",
-						},
-					},
-					results: []variableInfo{
-						{
-							name:     "i",
-							typeName: "int",
-						},
-						{
-							name:     "b",
-							typeName: "bool",
-						},
-					},
-				},
+				"MakeACake":   makeACakeFunction,
+				"BiscuitCake": biscuitCakeFunction,
 			},
 			interfaces: map[string]interfaceInfo{
-				"BakeryShop": {
-					markers: marker.MarkerValues{
-						"marker:interface-type-level": {
-							InterfaceTypeLevel{
-								Name: "BakeryShop",
-							},
-						},
-					},
-					numExplicitMethods: 1,
-					numMethods:         8,
-					embeddedTypes:      []string{"Dessert"},
-				},
-				"Dessert": {
-					markers: marker.MarkerValues{
-						"marker:interface-type-level": {
-							InterfaceTypeLevel{
-								Name: "Dessert",
-							},
-						},
-					},
-					numExplicitMethods: 7,
-					numMethods:         7,
-				},
-				"NewYearsEveCookie": {
-					markers: marker.MarkerValues{
-						"marker:interface-type-level": {
-							InterfaceTypeLevel{
-								Name: "NewYearsEveCookie",
-							},
-						},
-					},
-					numExplicitMethods: 1,
-					numMethods:         1,
-				},
-				"SweetShop": {
-					markers: marker.MarkerValues{
-						"marker:interface-type-level": {
-							InterfaceTypeLevel{
-								Name: "SweetShop",
-							},
-						},
-					},
-					numExplicitMethods: 1,
-					numMethods:         9,
-					embeddedTypes:      []string{"NewYearsEveCookie", "Dessert"},
-				},
+				"BakeryShop":        bakeryShopInterface,
+				"Dessert":           dessertInterface,
+				"NewYearsEveCookie": newYearsEveCookieInterface,
+				"SweetShop":         sweetShopInterface,
 			},
 			structs: map[string]structInfo{
-				"FriedCookie": {
-					markers: marker.MarkerValues{
-						"marker:struct-type-level": {
-							StructTypeLevel{
-								Name: "FriedCookie",
-							},
-						},
-					},
-				},
-				"Cookie": {
-					markers: marker.MarkerValues{
-						"marker:struct-type-level": {
-							StructTypeLevel{
-								Name: "Cookie",
-							},
-						},
-					},
-				},
+				"FriedCookie": friedCookieStruct,
+				"Cookie":      cookieStruct,
 			},
 		},
 	}
@@ -266,13 +555,13 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			continue
 		}
 
-		if actualInterface.NumMethods() != expectedInterface.numMethods {
-			t.Errorf("the number of the methods of the interface %s should be %d, but got %d", expectedInterfaceName, expectedInterface.numMethods, actualInterface.NumMethods())
+		if actualInterface.NumMethods() != len(expectedInterface.methods) {
+			t.Errorf("the number of the methods of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.methods), actualInterface.NumMethods())
 			continue
 		}
 
-		if actualInterface.NumExplicitMethods() != expectedInterface.numExplicitMethods {
-			t.Errorf("the number of the explicit methods of the interface %s should be %d, but got %d", expectedInterfaceName, expectedInterface.numExplicitMethods, actualInterface.NumExplicitMethods())
+		if actualInterface.NumExplicitMethods() != len(expectedInterface.explicitMethods) {
+			t.Errorf("the number of the explicit methods of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.explicitMethods), actualInterface.NumExplicitMethods())
 			continue
 		}
 
@@ -366,6 +655,10 @@ func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actua
 
 		if expectedFunctionParam.name != actualFunctionParam.Name() {
 			t.Errorf("at index %d, the parameter name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.name, actualFunctionParam.name)
+		}
+
+		if expectedFunctionParam.typeName != actualFunctionParam.Type().Name() {
+			t.Errorf("at index %d, the parameter type name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.typeName, actualFunctionParam.Type().Name())
 		}
 	}
 }

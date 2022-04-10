@@ -164,7 +164,7 @@ func (i *Interface) loadAllMethods() {
 }
 
 func (i *Interface) IsEmptyInterface() bool {
-	return len(i.embeddeds) == 0 && len(i.methods) == 0
+	return len(i.fieldList) == 0
 }
 
 func (i *Interface) IsAnonymous() bool {
@@ -197,6 +197,10 @@ func (i *Interface) Constraints() []*Constraint {
 }
 
 func (i *Interface) Name() string {
+	if len(i.fieldList) == 0 {
+		return "interface{}"
+	}
+
 	return i.name
 }
 

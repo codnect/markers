@@ -6,13 +6,12 @@ package package1
 // BakeryShop is an interface
 // +marker:interface-type-level:Name=BakeryShop
 type BakeryShop interface {
-	// Dessert is an embedded interface
-	// +marker:interface-method-level:Name=Dessert
-	Dessert
-
 	// Bread is a method
 	// +marker:interface-method-level:Name=Bread
 	Bread(i, k float64) struct{}
+	// Dessert is an embedded interface
+	// +marker:interface-method-level:Name=Dessert
+	Dessert
 }
 
 // Eat is a method
@@ -69,7 +68,7 @@ type Dessert interface {
 	// IceCream is a method
 	// +marker:interface-method-level:Name=IceCream
 	// +marker:interface-type-level:Name=IceCream
-	IceCream(s string, v ...string) string
+	IceCream(s string, v ...bool) (r string)
 
 	// Cupcake is a method
 	// +marker:interface-method-level:Name=Cupcake
@@ -81,7 +80,7 @@ type Dessert interface {
 
 	// Donut is a method
 	// +marker:interface-method-level:Name=Donut
-	Donut() interface{}
+	Donut() error
 
 	// Pudding is a method
 	// +marker:interface-method-level:Name=Pudding
@@ -116,11 +115,11 @@ type SweetShop interface {
 	// +marker:interface-method-level:Name=NewYearsEveCookie
 	NewYearsEveCookie
 
+	// Macaron is a method
+	// +marker:interface-method-level:Name=Macaron
+	Macaron(c complex128) bool
+
 	// Dessert is an embedded interface
 	// +marker:interface-method-level:Name=Dessert
 	Dessert
-
-	// Macaron is a method
-	// +marker:interface-method-level:Name=Macaron
-	Macaron(i complex128) bool
 }

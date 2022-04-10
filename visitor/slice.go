@@ -7,7 +7,10 @@ type Slice struct {
 }
 
 func (s *Slice) Name() string {
-	return ""
+	var builder strings.Builder
+	builder.WriteString("[]")
+	builder.WriteString(s.elem.Name())
+	return builder.String()
 }
 
 func (s *Slice) Elem() Type {
