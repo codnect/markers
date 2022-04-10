@@ -24,6 +24,10 @@ func (c *Chan) Underlying() Type {
 	return c
 }
 
+func (a *Chan) Name() string {
+	return ""
+}
+
 func (c *Chan) String() string {
 	return ""
 }

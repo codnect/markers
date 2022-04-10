@@ -10,6 +10,7 @@ import (
 )
 
 type Type interface {
+	Name() string
 	Underlying() Type
 	String() string
 }
@@ -52,6 +53,10 @@ type Variadic struct {
 	elem Type
 }
 
+func (v *Variadic) Name() string {
+	return ""
+}
+
 func (v *Variadic) Elem() Type {
 	return v.elem
 }
@@ -66,6 +71,10 @@ func (v *Variadic) String() string {
 
 type Pointer struct {
 	base Type
+}
+
+func (p *Pointer) Name() string {
+	return ""
 }
 
 func (p *Pointer) Elem() Type {
@@ -117,6 +126,10 @@ type Generic struct {
 }
 
 func (g *Generic) Name() string {
+	return g.typeParam.name
+}
+
+func (g *Generic) ParamName() string {
 	return g.typeParam.name
 }
 

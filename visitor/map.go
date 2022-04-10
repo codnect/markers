@@ -7,6 +7,10 @@ type Map struct {
 	elem Type
 }
 
+func (m *Map) Name() string {
+	return ""
+}
+
 func (m *Map) Key() Type {
 	return m.key
 }

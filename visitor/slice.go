@@ -6,6 +6,10 @@ type Slice struct {
 	elem Type
 }
 
+func (s *Slice) Name() string {
+	return ""
+}
+
 func (s *Slice) Elem() Type {
 	return s.elem
 }

@@ -11,6 +11,10 @@ import (
 type Constraint struct {
 }
 
+func (c *Constraint) Name() string {
+	return ""
+}
+
 func (c *Constraint) Underlying() Type {
 	return c
 }

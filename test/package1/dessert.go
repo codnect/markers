@@ -3,6 +3,18 @@
 
 package package1
 
+// BakeryShop is an interface
+// +marker:interface-type-level:Name=BakeryShop
+type BakeryShop interface {
+	// Dessert is an embedded interface
+	// +marker:interface-method-level:Name=Dessert
+	Dessert
+
+	// Bread is a method
+	// +marker:interface-method-level:Name=Bread
+	Bread(i, k float64) struct{}
+}
+
 // Eat is a method
 // +marker:struct-method-level:Name=Eat
 func (c *FriedCookie) Eat() bool {
@@ -12,6 +24,9 @@ func (c *FriedCookie) Eat() bool {
 // FriedCookie is a struct
 // +marker:struct-type-level:Name=FriedCookie
 type FriedCookie struct {
+
+	// Cookie is an embedded struct
+	// +marker:interface-method-level:Name=Cookie
 	Cookie
 }
 
@@ -19,6 +34,12 @@ type FriedCookie struct {
 // +marker:struct-method-level:Name=Buy
 func (c *FriedCookie) Buy(i int) {
 
+}
+
+// NewYearsEveCookie is an interface
+// +marker:interface-type-level:Name=NewYearsEveCookie
+type NewYearsEveCookie interface {
+	Funfetti(v rune) byte
 }
 
 // Cookie is a struct
@@ -79,4 +100,21 @@ type Dessert interface {
 // +marker:function-level:Name=MakeACake
 func MakeACake(s any) error {
 	return nil
+}
+
+// SweetShop is an interface
+// +marker:interface-type-level:Name=SweetShop
+type SweetShop interface {
+
+	// NewYearsEveCookie is an embedded interface
+	// +marker:interface-method-level:Name=NewYearsEveCookie
+	NewYearsEveCookie
+
+	// Dessert is an embedded interface
+	// +marker:interface-method-level:Name=Dessert
+	Dessert
+
+	// Macaron is a method
+	// +marker:interface-method-level:Name=Macaron
+	Macaron(i complex128) bool
 }

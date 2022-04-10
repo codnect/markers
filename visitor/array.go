@@ -13,6 +13,10 @@ func (a *Array) Elem() Type {
 	return a.elem
 }
 
+func (a *Array) Name() string {
+	return ""
+}
+
 func (a *Array) Underlying() Type {
 	return a
 }
