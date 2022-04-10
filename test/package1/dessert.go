@@ -77,7 +77,7 @@ type Dessert interface {
 
 	// Tart is a method
 	// +marker:interface-method-level:Name=Tart
-	Tart(s any)
+	Tart(s interface{})
 
 	// Donut is a method
 	// +marker:interface-method-level:Name=Donut
@@ -89,7 +89,7 @@ type Dessert interface {
 
 	// Pie is a method
 	// +marker:interface-method-level:Name=Pie
-	Pie() any
+	Pie() interface{}
 
 	// muffin is a method
 	// +marker:interface-method-level:Name=muffin
@@ -98,8 +98,14 @@ type Dessert interface {
 
 // MakeACake is a function
 // +marker:function-level:Name=MakeACake
-func MakeACake(s any) error {
+func MakeACake(s interface{}) error {
 	return nil
+}
+
+// BiscuitCake is a function
+// +marker:function-level:Name=BiscuitCake
+func BiscuitCake(s string, arr []int, v ...int16) (i int, b bool) {
+	return
 }
 
 // SweetShop is an interface

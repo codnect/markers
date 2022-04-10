@@ -410,3 +410,13 @@ func (f *Functions) At(index int) *Function {
 
 	return nil
 }
+
+func (f *Functions) FindByName(name string) (*Function, bool) {
+	for _, function := range f.elements {
+		if function.name == name {
+			return function, true
+		}
+	}
+
+	return nil, false
+}

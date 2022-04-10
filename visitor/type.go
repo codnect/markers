@@ -197,16 +197,19 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 			if !t.isProcessed {
 				file.interfaces.elements = append(file.interfaces.elements, t)
 			}
+			t.markers = visitor.packageMarkers[typeSpec]
 			return t
 		case *Struct:
 			if !t.isProcessed {
 				file.structs.elements = append(file.structs.elements, t)
 			}
+			t.markers = visitor.packageMarkers[typeSpec]
 			return t
 		case *CustomType:
 			if !t.isProcessed {
 				file.customTypes.elements = append(file.customTypes.elements, t)
 			}
+			t.markers = visitor.packageMarkers[typeSpec]
 			return t
 		}
 	}

@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,35 @@ type FunctionLevel struct {
 	Name string `marker:"Name"`
 }
 
+type testFile struct {
+	interfaces map[string]interfaceInfo
+	structs    map[string]structInfo
+	functions  map[string]functionInfo
+}
+
+type interfaceInfo struct {
+	markers            marker.MarkerValues
+	numExplicitMethods int
+	numMethods         int
+	embeddedTypes      []string
+}
+
+type structInfo struct {
+	markers marker.MarkerValues
+}
+
+type functionInfo struct {
+	markers    marker.MarkerValues
+	isVariadic bool
+	params     []variableInfo
+	results    []variableInfo
+}
+
+type variableInfo struct {
+	name     string
+	typeName string
+}
+
 func TestVisitor_VisitPackage1(t *testing.T) {
 	markers := []struct {
 		Name   string
@@ -50,24 +80,67 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 		{Name: "marker:struct-field-level", Level: marker.FieldLevel, Output: &StructFieldLevel{}},
 	}
 
-	testCases := map[string]struct {
-		interfaces map[string]struct {
-			markers            marker.MarkerValues
-			numExplicitMethods int
-			numMethods         int
-			embeddedTypes      []string
-		}
-		structs map[string]struct {
-			markers marker.MarkerValues
-		}
-	}{
+	testCases := map[string]testFile{
 		"dessert.go": {
-			interfaces: map[string]struct {
-				markers            marker.MarkerValues
-				numExplicitMethods int
-				numMethods         int
-				embeddedTypes      []string
-			}{
+			functions: map[string]functionInfo{
+				"MakeACake": {
+					markers: marker.MarkerValues{
+						"marker:function-level": {
+							FunctionLevel{
+								Name: "MakeACake",
+							},
+						},
+					},
+					isVariadic: false,
+					params: []variableInfo{
+						{
+							name:     "s",
+							typeName: "interface{}",
+						},
+					},
+					results: []variableInfo{
+						{
+							name:     "",
+							typeName: "error",
+						},
+					},
+				},
+				"BiscuitCake": {
+					markers: marker.MarkerValues{
+						"marker:function-level": {
+							FunctionLevel{
+								Name: "BiscuitCake",
+							},
+						},
+					},
+					isVariadic: true,
+					params: []variableInfo{
+						{
+							name:     "s",
+							typeName: "string",
+						},
+						{
+							name:     "arr",
+							typeName: "[]int",
+						},
+						{
+							name:     "v",
+							typeName: "int16",
+						},
+					},
+					results: []variableInfo{
+						{
+							name:     "i",
+							typeName: "int",
+						},
+						{
+							name:     "b",
+							typeName: "bool",
+						},
+					},
+				},
+			},
+			interfaces: map[string]interfaceInfo{
 				"BakeryShop": {
 					markers: marker.MarkerValues{
 						"marker:interface-type-level": {
@@ -115,9 +188,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 					embeddedTypes:      []string{"NewYearsEveCookie", "Dessert"},
 				},
 			},
-			structs: map[string]struct {
-				markers marker.MarkerValues
-			}{
+			structs: map[string]structInfo{
 				"FriedCookie": {
 					markers: marker.MarkerValues{
 						"marker:struct-type-level": {
@@ -168,6 +239,10 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 			return nil
 		}
 
+		if !assertFunctions(t, file, testCase.functions) {
+			return nil
+		}
+
 		return nil
 	})
 
@@ -176,12 +251,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 	}
 }
 
-func assertInterfaces(t *testing.T, file *File, interfaces map[string]struct {
-	markers            marker.MarkerValues
-	numExplicitMethods int
-	numMethods         int
-	embeddedTypes      []string
-}) bool {
+func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceInfo) bool {
 
 	if len(interfaces) != file.Interfaces().Len() {
 		t.Errorf("the number of the interface should be %d, but got %d", len(interfaces), file.Interfaces().Len())
@@ -219,64 +289,121 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]struct {
 			}
 		}
 
-		if actualInterface.Markers().Count() != expectedInterface.markers.Count() {
-			t.Errorf("the number of the interface %s markers should be %d, but got %d", expectedInterfaceName, expectedInterface.markers.Count(), actualInterface.Markers().Count())
-			continue
-		}
+		assertMarkers(t, expectedInterface.markers, actualInterface.Markers(), fmt.Sprintf("interface %s", expectedInterfaceName))
 
-		for markerName, markerValues := range expectedInterface.markers {
-			if actualInterface.Markers().CountByName(markerName) != len(markerValues) {
-				t.Errorf("the number of the marker %s should be %d, but got %d", markerName, len(markerValues), actualInterface.Markers().CountByName(markerName))
-				continue
-			}
-
-			actualMarkerValues := actualInterface.Markers().AllMarkers(markerName)
-
-			for index, expectedMarkerValue := range markerValues {
-				actualMarker := actualMarkerValues[index]
-				assert.Equal(t, expectedMarkerValue, actualMarker)
-			}
-		}
 	}
 
 	return true
 }
 
-func assertStructs(t *testing.T, file *File, structs map[string]struct {
-	markers marker.MarkerValues
-}) bool {
+func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool {
 
 	if len(structs) != file.Structs().Len() {
-		t.Errorf("structs count is wrong!")
+		t.Errorf("the number of the functions should be %d, but got %d", len(structs), file.Structs().Len())
 		return false
 	}
 
 	for expectedStructName, expectedStruct := range structs {
 		actualStruct, ok := file.Structs().FindByName(expectedStructName)
 		if !ok {
-			t.Errorf("struct with name %s is not found", expectedStruct)
+			t.Errorf("struct with name %s is not found", expectedStructName)
 			continue
 		}
 
-		if actualStruct.Markers().Count() != expectedStruct.markers.Count() {
-			t.Errorf("the number of the struct %s markers should be %d, but got %d", expectedStructName, expectedStruct.markers.Count(), actualStruct.Markers().Count())
-			continue
-		}
-
-		for markerName, markerValues := range expectedStruct.markers {
-			if actualStruct.Markers().CountByName(markerName) != len(markerValues) {
-				t.Errorf("the number of the marker %s should be %d, but got %d", markerName, len(markerValues), actualStruct.Markers().CountByName(markerName))
-				continue
-			}
-
-			actualMarkerValues := actualStruct.Markers().AllMarkers(markerName)
-
-			for index, expectedMarkerValue := range markerValues {
-				actualMarker := actualMarkerValues[index]
-				assert.Equal(t, expectedMarkerValue, actualMarker)
-			}
-		}
+		assertMarkers(t, expectedStruct.markers, actualStruct.Markers(), fmt.Sprintf("struct %s", expectedStructName))
 	}
 
 	return true
+}
+
+func assertFunctions(t *testing.T, file *File, functions map[string]functionInfo) bool {
+
+	if len(functions) != file.Functions().Len() {
+		t.Errorf("the number of the functions should be %d, but got %d", len(functions), file.Functions().Len())
+		return false
+	}
+
+	for expectedFunctionName, expectedFunction := range functions {
+		actualFunction, ok := file.Functions().FindByName(expectedFunctionName)
+
+		if !ok {
+			t.Errorf("function with name %s is not found", expectedFunctionName)
+			continue
+		}
+
+		if actualFunction.Receiver() != nil {
+			t.Errorf("the receiver of the function %s should be nil", expectedFunctionName)
+			continue
+		}
+
+		if expectedFunction.isVariadic && !actualFunction.IsVariadic() {
+			t.Errorf("the function %s should be a variadic function", expectedFunctionName)
+			continue
+		} else if !expectedFunction.isVariadic && actualFunction.IsVariadic() {
+			t.Errorf("the function %s should not be a variadic function", expectedFunctionName)
+			continue
+		}
+
+		assertFunctionParameters(t, expectedFunction.params, actualFunction.Params(), fmt.Sprintf("function %s", expectedFunctionName))
+
+		assertFunctionResult(t, expectedFunction.results, actualFunction.Results(), fmt.Sprintf("function %s", expectedFunctionName))
+
+		assertMarkers(t, expectedFunction.markers, actualFunction.markers, fmt.Sprintf("function %s", expectedFunctionName))
+	}
+
+	return true
+}
+
+func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actualParams *Tuple, msg string) {
+	if actualParams.Len() != len(expectedParams) {
+		t.Errorf("the number of the %s parameters should be %d, but got %d", msg, len(expectedParams), actualParams.Len())
+		return
+	}
+
+	for index := 0; index < actualParams.Len(); index++ {
+		actualFunctionParam := actualParams.At(index)
+		expectedFunctionParam := expectedParams[index]
+
+		if expectedFunctionParam.name != actualFunctionParam.Name() {
+			t.Errorf("at index %d, the parameter name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.name, actualFunctionParam.name)
+		}
+	}
+}
+
+func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualResults *Tuple, msg string) {
+	if actualResults.Len() != len(expectedResults) {
+		t.Errorf("the number of the %s results should be %d, but got %d", msg, len(expectedResults), actualResults.Len())
+		return
+	}
+
+	for index := 0; index < actualResults.Len(); index++ {
+		actualFunctionParam := actualResults.At(index)
+		expectedFunctionParam := expectedResults[index]
+
+		if expectedFunctionParam.name != actualFunctionParam.Name() {
+			t.Errorf("at index %d, the parameter result of the %s should be %s, but got %s", index, msg, expectedFunctionParam.name, actualFunctionParam.name)
+		}
+	}
+
+}
+
+func assertMarkers(t *testing.T, expectedMarkers marker.MarkerValues, actualMarkers marker.MarkerValues, msg string) {
+	if actualMarkers.Count() != expectedMarkers.Count() {
+		t.Errorf("the number of the markers of the %s should be %d, but got %d", msg, expectedMarkers.Count(), actualMarkers.Count())
+		return
+	}
+
+	for markerName, markerValues := range expectedMarkers {
+		if actualMarkers.CountByName(markerName) != len(markerValues) {
+			t.Errorf("%s: the number of the marker %s should be %d, but got %d", msg, markerName, len(markerValues), actualMarkers.CountByName(markerName))
+			continue
+		}
+
+		actualMarkerValues := actualMarkers.AllMarkers(markerName)
+
+		for index, expectedMarkerValue := range markerValues {
+			actualMarker := actualMarkerValues[index]
+			assert.Equal(t, expectedMarkerValue, actualMarker, "%s", msg)
+		}
+	}
 }

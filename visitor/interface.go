@@ -4,6 +4,7 @@ import (
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
+	"go/token"
 	"go/types"
 	"strings"
 )
@@ -84,7 +85,9 @@ func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.Interf
 
 		i.file.interfaces.elements = append(i.file.interfaces.elements, i)
 	} else if interfaceType != nil {
-		i.position = getPosition(pkg, interfaceType.Pos())
+		if interfaceType.Pos() != token.NoPos {
+			//i.position = getPosition(pkg, interfaceType.Pos())
+		}
 		i.fieldList = interfaceType.Methods.List
 		i.isAnonymous = true
 	}
