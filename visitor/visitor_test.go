@@ -643,7 +643,7 @@ func assertFunctions(t *testing.T, file *File, functions map[string]functionInfo
 	return true
 }
 
-func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actualParams *Tuple, msg string) {
+func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actualParams Variables, msg string) {
 	if actualParams.Len() != len(expectedParams) {
 		t.Errorf("the number of the %s parameters should be %d, but got %d", msg, len(expectedParams), actualParams.Len())
 		return
@@ -663,7 +663,7 @@ func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actua
 	}
 }
 
-func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualResults *Tuple, msg string) {
+func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualResults Variables, msg string) {
 	if actualResults.Len() != len(expectedResults) {
 		t.Errorf("the number of the %s results should be %d, but got %d", msg, len(expectedResults), actualResults.Len())
 		return

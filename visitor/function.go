@@ -24,17 +24,15 @@ func (v *Variable) String() string {
 	return ""
 }
 
-type Tuple struct {
-	variables []*Variable
+type Variables []*Variable
+
+func (v Variables) Len() int {
+	return len(v)
 }
 
-func (t *Tuple) Len() int {
-	return len(t.variables)
-}
-
-func (t *Tuple) At(index int) *Variable {
-	if index >= 0 && index < len(t.variables) {
-		return t.variables[index]
+func (v Variables) At(index int) *Variable {
+	if index >= 0 && index < len(v) {
+		return v[index]
 	}
 
 	return nil
@@ -47,8 +45,8 @@ type Function struct {
 	position   Position
 	receiver   *Variable
 	typeParams *TypeParams
-	params     *Tuple
-	results    *Tuple
+	params     Variables
+	results    Variables
 	variadic   bool
 
 	file *File
@@ -69,8 +67,8 @@ func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *
 	function := &Function{
 		file:       file,
 		typeParams: &TypeParams{},
-		params:     &Tuple{},
-		results:    &Tuple{},
+		params:     Variables{},
+		results:    Variables{},
 		markers:    markers,
 		funcDecl:   funcDecl,
 		funcField:  funcField,
@@ -227,10 +225,8 @@ func (f *Function) getGenericTypeFromExpression(exp ast.Expr) Type {
 	}
 }
 
-func (f *Function) getVariables(fieldList []*ast.Field) *Tuple {
-	tuple := &Tuple{
-		variables: make([]*Variable, 0),
-	}
+func (f *Function) getVariables(fieldList []*ast.Field) Variables {
+	variables := Variables{}
 
 	for _, field := range fieldList {
 		typ := f.getGenericTypeFromExpression(field.Type)
@@ -240,13 +236,13 @@ func (f *Function) getVariables(fieldList []*ast.Field) *Tuple {
 		}
 
 		if field.Names == nil {
-			tuple.variables = append(tuple.variables, &Variable{
+			variables = append(variables, &Variable{
 				typ: typ,
 			})
 		}
 
 		for _, fieldName := range field.Names {
-			tuple.variables = append(tuple.variables, &Variable{
+			variables = append(variables, &Variable{
 				name: fieldName.Name,
 				typ:  typ,
 			})
@@ -254,7 +250,7 @@ func (f *Function) getVariables(fieldList []*ast.Field) *Tuple {
 
 	}
 
-	return tuple
+	return variables
 }
 
 func (f *Function) loadTypeParams() {
@@ -276,7 +272,7 @@ func (f *Function) loadParams() {
 	}
 
 	if f.funcType.Params != nil {
-		f.params.variables = append(f.params.variables, f.getVariables(f.funcType.Params.List).variables...)
+		f.params = append(f.params, f.getVariables(f.funcType.Params.List)...)
 	}
 
 	if f.params.Len() != 0 {
@@ -292,7 +288,7 @@ func (f *Function) loadResultValues() {
 	}
 
 	if f.funcType.Results != nil {
-		f.results.variables = append(f.results.variables, f.getVariables(f.funcType.Results.List).variables...)
+		f.results = append(f.results, f.getVariables(f.funcType.Results.List)...)
 	}
 
 	f.loadedReturnValues = true
@@ -376,12 +372,12 @@ func (f *Function) TypeParams() *TypeParams {
 	return f.typeParams
 }
 
-func (f *Function) Params() *Tuple {
+func (f *Function) Params() Variables {
 	f.loadParams()
 	return f.params
 }
 
-func (f *Function) Results() *Tuple {
+func (f *Function) Results() Variables {
 	f.loadResultValues()
 	return f.results
 }
