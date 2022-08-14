@@ -13,28 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package processor
 
-import (
-	"github.com/procyon-projects/marker"
-	"github.com/procyon-projects/marker/packages"
-	"github.com/procyon-projects/marker/processor"
-	"log"
-)
+import "github.com/spf13/cobra"
 
-func init() {
-	processor.Initialize(&processor.Processor{
-		Name:    AppName,
-		Version: AppVersion,
-	}, func(collector *marker.Collector, loadResult *packages.LoadResult, dirs []string) error {
-		return nil
-	}, func(marker *marker.Registry) error {
-		return nil
-	})
-}
-
-func main() {
-	//getPackageInfo("github.com/procyon-projects/marker")
-	log.SetFlags(0)
-	processor.Execute()
+func AddCommand(cmd *cobra.Command) {
+	rootCmd.AddCommand(cmd)
 }

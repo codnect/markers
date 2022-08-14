@@ -19,6 +19,7 @@ import (
 	"archive/zip"
 	"errors"
 	"fmt"
+	"github.com/procyon-projects/marker/processor"
 	"github.com/spf13/cobra"
 	"io"
 	"io/ioutil"
@@ -104,7 +105,7 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	processor.AddCommand(initCmd)
 
 	initCmd.Flags().StringVarP(&module, "module", "m", "", "Module Name (required)")
 

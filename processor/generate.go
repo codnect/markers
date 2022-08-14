@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package processor
 
 import (
 	"github.com/procyon-projects/marker"
@@ -50,7 +50,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		registry := marker.NewRegistry()
-		err = RegisterDefinitions(registry)
+		err = invokeRegistryFunctions(registry)
 
 		if err != nil {
 			log.Println(err)
@@ -58,7 +58,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		collector := marker.NewCollector(registry)
-		err = ProcessMarkers(collector, loadResult, dirs)
+		err = invokeGenerateCallback(collector, loadResult, dirs)
 
 		if err != nil {
 			log.Println(err)

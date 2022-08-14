@@ -15,25 +15,11 @@ limitations under the License.
 */
 package main
 
-import (
-	"fmt"
-	"github.com/procyon-projects/marker"
-	"github.com/procyon-projects/marker/packages"
-	"github.com/procyon-projects/marker/visitor"
-	"log"
-	"os/exec"
-	"strings"
-)
-
+/*
 type MarkerProcessor struct {
 	Module  string
 	Version string
 	Command string
-}
-
-// Register your marker definitions.
-func RegisterDefinitions(registry *marker.Registry) error {
-	return nil
 }
 
 var (
@@ -98,7 +84,6 @@ func collectMarkers(collector *marker.Collector, pkgs []*packages.Package) error
 			}
 		}
 	})
-
 	return marker.NewErrorList(validationErrors)
 }
 
@@ -204,3 +189,4 @@ func runProcessors(args []string) {
 
 	}
 }
+*/

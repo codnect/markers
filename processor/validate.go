@@ -13,12 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package processor
 
 import (
-	"github.com/procyon-projects/marker"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 var validateArgs []string
@@ -28,7 +26,7 @@ var validateCmd = &cobra.Command{
 	Short: "Validate markers' syntax and arguments",
 	Long:  `The validate command helps you validate markers' syntax and arguments'`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var err error
+		/*var err error
 		var dirs []string
 
 		dirs, err = getPackageDirectories()
@@ -63,7 +61,7 @@ var validateCmd = &cobra.Command{
 		if err != nil {
 			log.Println(err)
 			return
-		}
+		}*/
 	},
 }
 
