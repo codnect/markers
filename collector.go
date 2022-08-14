@@ -3,6 +3,7 @@ package marker
 import (
 	"errors"
 	"fmt"
+	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -18,7 +19,7 @@ func NewCollector(registry *Registry) *Collector {
 	}
 }
 
-func (collector *Collector) Collect(pkg *Package) (map[ast.Node]MarkerValues, error) {
+func (collector *Collector) Collect(pkg *packages.Package) (map[ast.Node]MarkerValues, error) {
 
 	if pkg == nil {
 		return nil, errors.New("pkg(package) cannot be nil")
@@ -34,7 +35,7 @@ func (collector *Collector) Collect(pkg *Package) (map[ast.Node]MarkerValues, er
 	return markers, nil
 }
 
-func (collector *Collector) collectPackageMarkerComments(pkg *Package) map[ast.Node][]markerComment {
+func (collector *Collector) collectPackageMarkerComments(pkg *packages.Package) map[ast.Node][]markerComment {
 	packageNodeMarkers := make(map[ast.Node][]markerComment)
 
 	for _, file := range pkg.Syntax {
@@ -56,7 +57,7 @@ func (collector *Collector) collectFileMarkerComments(file *ast.File) map[ast.No
 	return visitor.nodeMarkers
 }
 
-func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
+func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
 	importNodeMarkers, err := collector.parseImportMarkerComments(pkg, nodeMarkerComments)
 
 	if err != nil {
@@ -72,8 +73,7 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 	}
 
 	var fileImportAliases map[*token.File]AliasMap
-	var importMarkers map[string]ImportMarker
-	fileImportAliases, importMarkers, err = collector.extractFileImportAliases(pkg, importNodeMarkers)
+	fileImportAliases, err = collector.extractFileImportAliases(pkg, importNodeMarkers)
 
 	if err != nil {
 		return nil, err
@@ -96,9 +96,8 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 			aliasName = strings.Split(aliasName, " ")[0]
 
 			var definition *Definition
-			if name, ok := importAliases[aliasName]; ok {
-				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", name), 1)
-				importMarker := importMarkers[aliasName]
+			if importMarker, ok := importAliases[aliasName]; ok {
+				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", importMarker.Value), 1)
 				definition = collector.Lookup(markerText, importMarker.GetPkgId())
 			} else {
 				definition = collector.Lookup(markerText, "")
@@ -112,11 +111,6 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 			case *ast.File:
 
 				if definition.Level&PackageLevel != PackageLevel {
-					continue
-				}
-			case *ast.GenDecl:
-
-				if definition.Level&ImportLevel != ImportLevel {
 					continue
 				}
 			case *ast.TypeSpec:
@@ -139,13 +133,13 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 
 				if !isFuncType && definition.Level&FieldLevel != FieldLevel {
 					continue
-				} else if isFuncType && !(definition.Level&MethodLevel != MethodLevel || definition.Level&InterfaceMethodLevel != InterfaceMethodLevel) {
+				} else if isFuncType && (definition.Level&MethodLevel != MethodLevel && definition.Level&InterfaceMethodLevel != InterfaceMethodLevel) {
 					continue
 				}
 
 			case *ast.FuncDecl:
 
-				if typedNode.Recv != nil && !(definition.Level&MethodLevel != MethodLevel || definition.Level&StructMethodLevel != StructMethodLevel) {
+				if typedNode.Recv != nil && (definition.Level&MethodLevel != MethodLevel && definition.Level&StructMethodLevel != StructMethodLevel) {
 					continue
 				} else if typedNode.Recv == nil && definition.Level&FunctionLevel != FunctionLevel {
 					continue
@@ -183,7 +177,7 @@ func (collector *Collector) parseMarkerComments(pkg *Package, nodeMarkerComments
 	return nodeMarkerValues, NewErrorList(errs)
 }
 
-func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
+func (collector *Collector) parseImportMarkerComments(pkg *packages.Package, nodeMarkerComments map[ast.Node][]markerComment) (map[ast.Node]MarkerValues, error) {
 	var errs []error
 	importNodeMarkers := make(map[ast.Node]MarkerValues)
 
@@ -233,15 +227,14 @@ func (collector *Collector) parseImportMarkerComments(pkg *Package, nodeMarkerCo
 	return importNodeMarkers, NewErrorList(errs)
 }
 
-type AliasMap map[string]string
+type AliasMap map[string]ImportMarker
 
-func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, map[string]ImportMarker, error) {
+func (collector *Collector) extractFileImportAliases(pkg *packages.Package, importNodeMarkers map[ast.Node]MarkerValues) (map[*token.File]AliasMap, error) {
 	var errs []error
 	var fileImportAliases = make(map[*token.File]AliasMap, 0)
-	var importMarkers = make(map[string]ImportMarker, 0)
 
 	if importNodeMarkers == nil {
-		return fileImportAliases, importMarkers, nil
+		return fileImportAliases, nil
 	}
 
 	for node, markerValues := range importNodeMarkers {
@@ -273,15 +266,14 @@ func (collector *Collector) extractFileImportAliases(pkg *Package, importNodeMar
 			pkgIdMap[importMarker.GetPkgId()] = true
 
 			if importMarker.Alias == "" {
-				aliasMap[importMarker.Value] = importMarker.Value
+				aliasMap[importMarker.Value] = importMarker
 			} else {
-				aliasMap[importMarker.Alias] = importMarker.Value
+				aliasMap[importMarker.Alias] = importMarker
 			}
-			importMarkers[importMarker.Value] = importMarker
 		}
 
 		fileImportAliases[file] = aliasMap
 	}
 
-	return fileImportAliases, importMarkers, NewErrorList(errs)
+	return fileImportAliases, NewErrorList(errs)
 }

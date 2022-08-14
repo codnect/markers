@@ -13,8 +13,6 @@ type TargetLevel int
 const (
 	// PackageLevel indicates that a marker is associated with a package.
 	PackageLevel TargetLevel = 1 << iota
-	// ImportLevel indicates that a marker is associated with an import block.
-	ImportLevel
 	// StructTypeLevel indicates that a marker is associated with a struct type.
 	StructTypeLevel
 	// InterfaceTypeLevel indicates that a marker is associated with an interface type.
@@ -43,13 +41,18 @@ type Marker interface {
 
 // Reserved markers
 const (
-	ImportMarkerName = "import"
+	ImportMarkerName     = "import"
+	DeprecatedMarkerName = "deprecated"
 )
 
 type ImportMarker struct {
 	Value string `marker:"Value,useValueSyntax"`
 	Alias string `marker:"Alias,optional"`
 	Pkg   string `marker:"Pkg"`
+}
+
+type DeprecatedMarker struct {
+	Value string `marker:"Value,syntaxFree"`
 }
 
 func (m ImportMarker) Validate() error {
@@ -94,7 +97,21 @@ func (m ImportMarker) GetCommand() string {
 
 type MarkerValues map[string][]interface{}
 
-func (markerValues MarkerValues) Get(name string) interface{} {
+func (markerValues MarkerValues) Count() int {
+	return len(markerValues)
+}
+
+func (markerValues MarkerValues) AllMarkers(name string) []interface{} {
+	result := markerValues[name]
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}
+
+func (markerValues MarkerValues) First(name string) interface{} {
 	result := markerValues[name]
 
 	if len(result) == 0 {
@@ -102,6 +119,11 @@ func (markerValues MarkerValues) Get(name string) interface{} {
 	}
 
 	return result[0]
+}
+
+func (markerValues MarkerValues) CountByName(name string) int {
+	result := markerValues[name]
+	return len(result)
 }
 
 type markerComment struct {

@@ -13,18 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package processor
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "marker",
-	Short: "CLI Tool for marker processor and code generation",
-	Long:  `CLI Tool for marker processor and code generation`,
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: fmt.Sprintf("Print version"),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("%s version %s\n", processorInfo.Name, processorInfo.Version)
+	},
 }
 
-func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+func init() {
+	rootCmd.AddCommand(versionCmd)
 }

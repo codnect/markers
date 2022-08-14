@@ -13,21 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package processor
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
+	"log"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: fmt.Sprintf("Print %s version", AppName),
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s version %s\n", AppName, AppVersion)
-	},
+var rootCmd = &cobra.Command{
+	Use:   "marker",
+	Short: "CLI Tool for marker processor and code generation",
+	Long:  `CLI Tool for marker processor and code generation`,
 }
 
-func init() {
-	rootCmd.AddCommand(versionCmd)
+func Execute() {
+	if processorInfo == nil || generateCallback == nil || len(registryFunctions) == 0 {
+		log.Fatal("processor could not be initialized properly")
+	}
+
+	cobra.CheckErr(rootCmd.Execute())
 }

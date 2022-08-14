@@ -6,6 +6,11 @@ import (
 	"go/token"
 )
 
+type Position struct {
+	Line   int
+	Column int
+}
+
 type Error struct {
 	FileName string
 	Position Position

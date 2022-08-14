@@ -13,44 +13,44 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package processor
 
 import (
 	"github.com/procyon-projects/marker"
+	"github.com/procyon-projects/marker/packages"
 	"github.com/spf13/cobra"
 	"log"
 )
 
-var validateArgs []string
+var outputPath string
+var options []string
+var packageName string
 
-var validateCmd = &cobra.Command{
-	Use:   "validate",
-	Short: "Validate markers' syntax and arguments",
-	Long:  `The validate command helps you validate markers' syntax and arguments'`,
+var generateCmd = &cobra.Command{
+	Use:   "generate",
+	Short: "Generate Go files by processing markers",
+	Long:  `The generate command helps your code generation process by running marker processors`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var err error
-		var dirs []string
-
-		dirs, err = getPackageDirectories()
+		dirs, err := getPackageDirectories()
 
 		if err != nil {
 			log.Println(err)
+			return
 		}
 
 		if dirs == nil || len(dirs) == 0 {
 			return
 		}
 
-		var packages []*marker.Package
-		packages, err = marker.LoadPackages(dirs...)
+		var loadResult *packages.LoadResult
+		loadResult, err = packages.LoadPackages(dirs...)
 
 		if err != nil {
 			log.Println(err)
-			return
 		}
 
 		registry := marker.NewRegistry()
-		err = RegisterDefinitions(registry)
+		err = invokeRegistryFunctions(registry)
 
 		if err != nil {
 			log.Println(err)
@@ -58,7 +58,7 @@ var validateCmd = &cobra.Command{
 		}
 
 		collector := marker.NewCollector(registry)
-		err = validateMarkers(collector, packages, dirs)
+		err = invokeGenerateCallback(collector, loadResult, dirs)
 
 		if err != nil {
 			log.Println(err)
@@ -68,6 +68,15 @@ var validateCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(validateCmd)
-	validateCmd.Flags().StringSliceVarP(&validateArgs, "args", "a", validateArgs, "extra arguments for marker processors (key-value separated by comma)")
+	rootCmd.AddCommand(generateCmd)
+
+	generateCmd.Flags().StringVarP(&outputPath, "output", "o", "", "output path")
+	err := generateCmd.MarkFlagRequired("output")
+
+	if err != nil {
+		panic(err)
+	}
+
+	generateCmd.Flags().StringVarP(&packageName, "package", "p", "auto_generated", "package name")
+	generateCmd.Flags().StringSliceVarP(&options, "args", "a", options, "extra arguments for marker processors (key-value separated by comma)")
 }

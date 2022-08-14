@@ -7,8 +7,8 @@ const Whitespace = 1<<'\t' | 1<<'\r' | 1<<' '
 const (
 	EOF = -(iota + 1)
 	Identifier
-	Integer
-	String
+	IntegerValue
+	StringValue
 )
 
 type Scanner struct {
@@ -81,7 +81,7 @@ func (scanner *Scanner) Reset() {
 
 func (scanner *Scanner) SetSearchIndex(searchIndex int) {
 	if searchIndex >= scanner.SourceLength() {
-		searchIndex = scanner.SourceLength()
+		scanner.searchIndex = scanner.SourceLength()
 		return
 	}
 
@@ -118,16 +118,16 @@ func (scanner *Scanner) Scan() rune {
 		token = Identifier
 		character = scanner.ScanIdentifier()
 	} else if IsDecimal(character) {
-		token = Integer
+		token = IntegerValue
 		character = scanner.ScanNumber()
 	} else if character == EOF {
 		return EOF
 	} else if character == '"' {
-		token = String
+		token = StringValue
 		scanner.ScanString('"')
 		character = scanner.Peek()
 	} else if character == '`' {
-		token = String
+		token = StringValue
 		scanner.ScanString('`')
 		character = scanner.Peek()
 	} else {
