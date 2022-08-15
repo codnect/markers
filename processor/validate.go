@@ -49,6 +49,9 @@ var validateCmd = &cobra.Command{
 
 		registry := marker.NewRegistry()
 		err = RegisterDefinitions(registry)
+		params := map[string]any{
+			"args": validateArgs,
+		}
 
 		if err != nil {
 			log.Println(err)

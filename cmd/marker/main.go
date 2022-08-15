@@ -26,15 +26,14 @@ func init() {
 	processor.Initialize(&processor.Processor{
 		Name:    AppName,
 		Version: AppVersion,
-	}, func(collector *marker.Collector, loadResult *packages.LoadResult, dirs []string) error {
-		return nil
-	}, func(marker *marker.Registry) error {
-		return nil
+		GenerateCallback: func(collector *marker.Collector, loadResult *packages.LoadResult, params map[string]any) error {
+			return nil
+		},
+		RegistryFunctions: []processor.RegistryFunction{},
 	})
 }
 
 func main() {
-	//getPackageInfo("github.com/procyon-projects/marker")
 	log.SetFlags(0)
 	processor.Execute()
 }

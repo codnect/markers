@@ -58,7 +58,14 @@ var generateCmd = &cobra.Command{
 		}
 
 		collector := marker.NewCollector(registry)
-		err = invokeGenerateCallback(collector, loadResult, dirs)
+		params := map[string]any{
+			"directories": dirs,
+			"output":      outputPath,
+			"package":     packageName,
+			"args":        options,
+		}
+
+		err = processorInfo.GenerateCallback(collector, loadResult, params)
 
 		if err != nil {
 			log.Println(err)
@@ -77,6 +84,6 @@ func init() {
 		panic(err)
 	}
 
-	generateCmd.Flags().StringVarP(&packageName, "package", "p", "auto_generated", "package name")
+	generateCmd.Flags().StringVarP(&packageName, "package", "p", "generated", "package name")
 	generateCmd.Flags().StringSliceVarP(&options, "args", "a", options, "extra arguments for marker processors (key-value separated by comma)")
 }
