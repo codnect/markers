@@ -16,34 +16,69 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/procyon-projects/marker/processor"
 	"github.com/spf13/cobra"
+	"log"
+	"os"
+	"path"
+	"path/filepath"
 )
 
-var module string
-
 var initCmd = &cobra.Command{
-	Use:   "init [name]",
-	Short: "Initialize a marker processor project",
-	Long:  `The init command lets you create a marker processor project.`,
+	Use:   "init",
+	Short: "Initialize new marker project",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return errors.New("marker name is required")
-		}
-
-		return nil
+		return initializeMarkerProject()
 	},
 }
 
 func init() {
 	processor.AddCommand(initCmd)
+}
 
-	initCmd.Flags().StringVarP(&module, "module", "m", "", "Module Name (required)")
+func initializeMarkerProject() error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 
-	err := initCmd.MarkFlagRequired("module")
+	markerJsonPath := filepath.FromSlash(path.Join(wd, "marker.json"))
+
+	_, err = os.Stat(markerJsonPath)
+	if err == nil {
+		log.Println("marker project is already initialized")
+		return nil
+	}
+
+	var markerJsonFile *os.File
+	markerJsonFile, err = os.Create(markerJsonPath)
 
 	if err != nil {
-		panic(err)
+		return errors.New("marker project is not initialized")
 	}
+
+	defer markerJsonFile.Close()
+
+	config := &processor.Config{
+		Version: AppVersion,
+		Parameters: []processor.Parameter{
+			{
+				Name:  "$OUTPUT_PATH",
+				Value: "$MODULE_ROOT/generated",
+			},
+		},
+		Overrides: make([]processor.Override, 0),
+	}
+
+	jsonText, _ := json.MarshalIndent(config, "", "\t")
+	_, err = markerJsonFile.Write(jsonText)
+
+	if err != nil {
+		return errors.New("marker project is not initialized")
+	}
+
+	log.Println("marker project is initialized")
+	return nil
 }
