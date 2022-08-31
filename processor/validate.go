@@ -1,59 +1,63 @@
 package processor
 
 import (
+	"errors"
+	"github.com/procyon-projects/marker"
+	"github.com/procyon-projects/marker/packages"
 	"github.com/spf13/cobra"
 )
 
-var validateArgs []string
-
 var validateCmd = &cobra.Command{
 	Use:   "validate",
-	Short: "Validate markers' syntax and arguments",
-	Long:  `The validate command helps you validate markers' syntax and arguments'`,
-	Run: func(cmd *cobra.Command, args []string) {
-		/*var err error
+	Short: "validate marker syntax and arguments",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var err error
 		var dirs []string
 
 		dirs, err = getPackageDirectories()
 
 		if err != nil {
-			log.Println(err)
+			return errors.New("go.module not found")
 		}
 
 		if dirs == nil || len(dirs) == 0 {
-			return
+			return nil
 		}
 
-		var packages []*marker.Package
-		packages, err = marker.LoadPackages(dirs...)
+		var loadResult *packages.LoadResult
+		loadResult, err = packages.LoadPackages(dirs...)
 
 		if err != nil {
-			log.Println(err)
-			return
+			return errors.New("packages could not be loaded")
 		}
 
 		registry := marker.NewRegistry()
-		err = RegisterDefinitions(registry)
-		params := map[string]any{
-			"args": validateArgs,
+		ctx := &Context{
+			dirs:       dirs,
+			loadResult: loadResult,
+			registry:   registry,
 		}
 
+		err = invokeRegistryFunctions(ctx)
 		if err != nil {
-			log.Println(err)
-			return
+			return err
 		}
 
 		collector := marker.NewCollector(registry)
-		err = validateMarkers(collector, packages, dirs)
+		ctx.collector = collector
 
-		if err != nil {
-			log.Println(err)
-			return
-		}*/
+		validateCallback := getValidateCommandCallback()
+		if validateCallback != nil {
+			err = validateCallback(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(validateCmd)
-	validateCmd.Flags().StringSliceVarP(&validateArgs, "args", "a", validateArgs, "extra arguments for marker processors (key-value separated by comma)")
 }

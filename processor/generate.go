@@ -1,23 +1,25 @@
 package processor
 
-/*
-var outputPath string
-var options []string
-var packageName string
+import (
+	"errors"
+	"github.com/procyon-projects/marker"
+	"github.com/procyon-projects/marker/packages"
+	"github.com/spf13/cobra"
+	"log"
+)
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "generate Go files by processing sources",
-	Run: func(cmd *cobra.Command, args []string) {
+	Short: "generate Go files by processing markers",
+	RunE: func(cmd *cobra.Command, args []string) error {
 		dirs, err := getPackageDirectories()
 
 		if err != nil {
-			log.Println(err)
-			return
+			return errors.New("go.module not found")
 		}
 
 		if dirs == nil || len(dirs) == 0 {
-			return
+			return nil
 		}
 
 		var loadResult *packages.LoadResult
@@ -28,41 +30,32 @@ var generateCmd = &cobra.Command{
 		}
 
 		registry := marker.NewRegistry()
-		err = invokeRegistryFunctions(registry)
+		ctx := &Context{
+			dirs:       dirs,
+			loadResult: loadResult,
+			registry:   registry,
+		}
 
+		err = invokeRegistryFunctions(ctx)
 		if err != nil {
-			log.Println(err)
-			return
+			return err
 		}
 
 		collector := marker.NewCollector(registry)
-		params := map[string]any{
-			"directories": dirs,
-			"output":      outputPath,
-			"package":     packageName,
-			"args":        options,
+		ctx.collector = collector
+
+		generateCallback := getGenerateCommandCallback()
+		if generateCallback != nil {
+			err = generateCallback(ctx)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = processorInfo.GenerateCallback(collector, loadResult, params)
-
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(generateCmd)
-
-	generateCmd.Flags().StringVarP(&outputPath, "output", "o", "", "output path")
-	err := generateCmd.MarkFlagRequired("output")
-
-	if err != nil {
-		panic(err)
-	}
-
-	generateCmd.Flags().StringVarP(&packageName, "package", "p", "generated", "package name")
-	generateCmd.Flags().StringSliceVarP(&options, "args", "a", options, "extra arguments for marker processors (key-value separated by comma)")
 }
-*/
