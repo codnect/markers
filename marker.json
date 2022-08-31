@@ -1,0 +1,10 @@
+{
+	"version": "1.0.0",
+	"parameters": [
+		{
+			"name": "$OUTPUT_PATH",
+			"value": "$PROJECT_ROOT/generated"
+		}
+	],
+	"overrides": []
+}
