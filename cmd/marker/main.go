@@ -7,6 +7,8 @@ import (
 
 func init() {
 	processor.Initialize(AppName, AppVersion)
+	processor.SetGenerateCommandCallback(Generate)
+	processor.SetValidateCommandCallback(Validate)
 }
 
 func main() {
