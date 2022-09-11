@@ -1,107 +1,22 @@
 package marker
 
 import (
-	"errors"
 	"go/ast"
 	"go/token"
 	"strings"
 )
 
-// TargetLevel describes which kind of nodes a given marker are associated with.
-type TargetLevel int
-
-const (
-	// PackageLevel indicates that a marker is associated with a package.
-	PackageLevel TargetLevel = 1 << iota
-	// StructTypeLevel indicates that a marker is associated with a struct type.
-	StructTypeLevel
-	// InterfaceTypeLevel indicates that a marker is associated with an interface type.
-	InterfaceTypeLevel
-	// FieldLevel indicates that a marker is associated with a struct field.
-	FieldLevel
-	// FunctionLevel indicates that a marker is associated with a function.
-	FunctionLevel
-	// StructMethodLevel indicates that a marker is associated with a struct method.
-	StructMethodLevel
-	// InterfaceMethodLevel indicates that a marker is associated with an interface method.
-	InterfaceMethodLevel
-)
-
-// Combined levels
-const (
-	// TypeLevel indicates that a marker is associated with any type.
-	TypeLevel = StructTypeLevel | InterfaceTypeLevel
-	// MethodLevel indicates that a marker is associated with a struct method or an interface method.
-	MethodLevel = StructMethodLevel | InterfaceMethodLevel
-)
-
-type Marker interface {
+type Validate interface {
 	Validate() error
 }
 
-// Reserved markers
-const (
-	ImportMarkerName     = "import"
-	DeprecatedMarkerName = "deprecated"
-)
-
-type ImportMarker struct {
-	Value string `marker:"Value,useValueSyntax"`
-	Alias string `marker:"Alias,optional"`
-	Pkg   string `marker:"Pkg"`
-}
-
-type DeprecatedMarker struct {
-	Value string `marker:"Value,syntaxFree"`
-}
-
-func (m ImportMarker) Validate() error {
-	if m.Value == "" {
-		return errors.New("'Value' argument cannot be nil or empty")
-	}
-
-	if m.Pkg == "" {
-		return errors.New("'Pkg' argument cannot be nil or empty")
-	}
-
-	return nil
-}
-
-func (m ImportMarker) GetPkgId() string {
-	pkgParts := strings.Split(m.Pkg, ":")
-	pkgParts = strings.Split(pkgParts[0], "@")
-	return pkgParts[0]
-}
-
-func (m ImportMarker) GetPkgVersion() string {
-	pkgParts := strings.Split(m.Pkg, ":")
-	pkgParts = strings.Split(pkgParts[0], "@")
-
-	if len(pkgParts) > 1 {
-		return pkgParts[1]
-
-	}
-
-	return ""
-}
-
-func (m ImportMarker) GetCommand() string {
-	pkgParts := strings.Split(m.Pkg, ":")
-
-	if len(pkgParts) > 1 {
-		return pkgParts[1]
-	}
-
-	return ""
-}
-
-type MarkerValues map[string][]interface{}
+type MarkerValues map[string][]any
 
 func (markerValues MarkerValues) Count() int {
 	return len(markerValues)
 }
 
-func (markerValues MarkerValues) AllMarkers(name string) []interface{} {
+func (markerValues MarkerValues) AllMarkers(name string) []any {
 	result := markerValues[name]
 
 	if len(result) == 0 {
@@ -111,7 +26,7 @@ func (markerValues MarkerValues) AllMarkers(name string) []interface{} {
 	return result
 }
 
-func (markerValues MarkerValues) First(name string) interface{} {
+func (markerValues MarkerValues) First(name string) any {
 	result := markerValues[name]
 
 	if len(result) == 0 {
@@ -205,7 +120,7 @@ func isMarkerComment(comment string) bool {
 	return true
 }
 
-func hasContinuationCharacter(comment string) bool {
+func isMultiLineComment(comment string) bool {
 	stripped := strings.TrimSpace(comment[2:])
 	return strings.HasSuffix(stripped, "\\")
 }

@@ -1,15 +1,16 @@
 package marker
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 	"sync"
 )
 
+type DefinitionMap map[string]*Definition
+
 // Registry keeps the registered marker definitions.
 type Registry struct {
-	reservedDefinitionMap map[string]*Definition
-	definitionMap         map[string]*Definition
+	packageMap map[string]DefinitionMap
 
 	initOnce sync.Once
 	mu       sync.RWMutex
@@ -24,24 +25,22 @@ func NewRegistry() *Registry {
 func (registry *Registry) initialize() {
 	registry.initOnce.Do(func() {
 
-		if registry.definitionMap == nil {
-			registry.definitionMap = make(map[string]*Definition)
+		if registry.packageMap == nil {
+			registry.packageMap = make(map[string]DefinitionMap)
+			registry.packageMap[""] = make(DefinitionMap)
 		}
-
-		if registry.reservedDefinitionMap == nil {
-			registry.reservedDefinitionMap = make(map[string]*Definition)
-		}
-
-		registry.reservedDefinitionMap[ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", PackageLevel, &ImportMarker{})
+		registry.packageMap[""][ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", PackageLevel, &ImportMarker{})
+		registry.packageMap[""][OverrideMarkerName], _ = MakeDefinition(OverrideMarkerName, "", StructMethodLevel, &OverrideMarker{})
+		registry.packageMap[""][DeprecatedMarkerName], _ = MakeDefinition(DeprecatedMarkerName, "", TypeLevel|MethodLevel|FieldLevel|FunctionLevel, &DeprecatedMarker{})
 	})
 
 }
 
 // Register registers a new marker with the given name, target level, and output type.
-func (registry *Registry) Register(name string, pkgId string, level TargetLevel, output interface{}, useValueSyntax ...bool) error {
+func (registry *Registry) Register(name, pkg string, level TargetLevel, output any) error {
 	registry.initialize()
 
-	def, err := MakeDefinition(name, pkgId, level, output)
+	def, err := MakeDefinition(name, pkg, level, output)
 
 	if err != nil {
 		return err
@@ -57,48 +56,45 @@ func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
 
-	if definition.Level == 0 {
-		return fmt.Errorf("specify target levels for the definition : %v", definition.Name)
+	if definition == nil {
+		return errors.New("definition cannot be nil")
 	}
 
-	nameParts := strings.Split(definition.Name, ":")
-	name := nameParts[0]
+	err := definition.validate()
 
-	if _, ok := registry.reservedDefinitionMap[name]; ok {
-		return fmt.Errorf("reserved marker names cannot be used: %v", definition.Name)
+	if err != nil {
+		return err
 	}
 
-	if _, ok := registry.definitionMap[definition.Name+"#"+definition.PkgId]; ok {
+	definitionMap, exists := registry.packageMap[definition.Package]
+	if !exists {
+		definitionMap = make(DefinitionMap)
+		registry.packageMap[definition.Package] = definitionMap
+	}
+
+	if _, ok := definitionMap[definition.Name]; ok {
 		return fmt.Errorf("there is already registered definition : %v", definition.Name)
 	}
 
-	registry.definitionMap[definition.Name+"#"+definition.PkgId] = definition
-
+	registry.packageMap[definition.Package][definition.Name] = definition
 	return nil
 }
 
 // Lookup fetches the definition corresponding to the given name and pkgId.
-func (registry *Registry) Lookup(name string, pkgId string) *Definition {
+func (registry *Registry) Lookup(name, pkg string, targetLevel TargetLevel) (*Definition, bool) {
 	registry.initialize()
 
 	registry.mu.RLock()
 	defer registry.mu.RUnlock()
 
-	name, anonymousName, _ := splitMarker(name)
-	// for syntax-free markers
-	name = strings.Split(name, " ")[0]
-
-	if def, exists := registry.reservedDefinitionMap[anonymousName]; exists {
-		return def
+	definitionMap, exists := registry.packageMap[pkg]
+	if !exists {
+		return nil, false
 	}
 
-	if def, exists := registry.reservedDefinitionMap[name]; exists {
-		return def
+	if definition, ok := definitionMap[name]; ok && definition.TargetLevel&targetLevel == targetLevel {
+		return definition, true
 	}
 
-	if def, exists := registry.definitionMap[anonymousName+"#"+pkgId]; exists {
-		return def
-	}
-
-	return registry.definitionMap[name+"#"+pkgId]
+	return nil, false
 }

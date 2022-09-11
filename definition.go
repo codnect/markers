@@ -23,13 +23,15 @@ type Output struct {
 }
 
 type Definition struct {
-	Name   string
-	Level  TargetLevel
-	Output Output
-	PkgId  string
+	Name        string
+	Package     string
+	TargetLevel TargetLevel
+	Repeatable  bool
+	Deprecated  bool
+	Output      Output
 }
 
-func MakeDefinition(name string, pkgId string, level TargetLevel, output interface{}) (*Definition, error) {
+func MakeDefinition(name, pkg string, level TargetLevel, output any) (*Definition, error) {
 	if len(strings.TrimSpace(name)) == 0 {
 		return nil, errors.New("marker name cannot be empty")
 	}
@@ -41,15 +43,15 @@ func MakeDefinition(name string, pkgId string, level TargetLevel, output interfa
 	}
 
 	definition := &Definition{
-		Name:  strings.TrimSpace(name),
-		Level: level,
+		Name:        strings.TrimSpace(name),
+		Package:     strings.TrimSpace(pkg),
+		TargetLevel: level,
 		Output: Output{
 			Type:        outputType,
 			IsAnonymous: false,
 			Fields:      make(map[string]Argument),
 			FieldNames:  make(map[string]string),
 		},
-		PkgId: strings.TrimSpace(pkgId),
 	}
 
 	err := definition.extract()
@@ -58,7 +60,29 @@ func MakeDefinition(name string, pkgId string, level TargetLevel, output interfa
 		return nil, err
 	}
 
+	err = definition.validate()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return definition, nil
+}
+
+func (definition *Definition) validate() error {
+	if definition.TargetLevel == 0 {
+		return fmt.Errorf("specify target levels for the definition: %v", definition.Name)
+	}
+
+	if !IsLower(definition.Name) {
+		return fmt.Errorf("marker '%s' should only contain lower case characters", definition.Name)
+	}
+
+	if strings.ContainsAny(definition.Name, " \t") {
+		return fmt.Errorf("marker '%s' cannot contain any whitespace", definition.Name)
+	}
+
+	return nil
 }
 
 func (definition *Definition) extract() error {
@@ -92,13 +116,14 @@ func (definition *Definition) extract() error {
 			return errors.New("RawArgument cannot be a field")
 		}
 
-		if argumentInfo.SyntaxFree {
-			definition.Output.SyntaxFree = argumentInfo.SyntaxFree
-		}
+		/*
+			if argumentInfo.SyntaxFree {
+				definition.Output.SyntaxFree = argumentInfo.SyntaxFree
+			}
 
-		if argumentInfo.UseValueSyntax {
-			definition.Output.UseValueSyntax = argumentInfo.UseValueSyntax
-		}
+			if argumentInfo.UseValueSyntax {
+				definition.Output.UseValueSyntax = argumentInfo.UseValueSyntax
+			}*/
 
 		definition.Output.Fields[argumentInfo.Name] = argumentInfo
 		definition.Output.FieldNames[argumentInfo.Name] = field.Name
@@ -111,105 +136,100 @@ func (definition *Definition) extract() error {
 	return nil
 }
 
-func (definition *Definition) Parse(marker string) (interface{}, error) {
+// TODO fix parse method implementation
+func (definition *Definition) Parse(comment string) (interface{}, error) {
 	if definition.Output.SyntaxFree {
-		return definition.parseSyntaxFree(marker), nil
+		return definition.parseSyntaxFree(comment), nil
 	}
 
 	output := reflect.Indirect(reflect.New(definition.Output.Type))
+	comment = strings.TrimLeft(comment, " \t")
+	//name, anonymousName, fields := splitMarker(marker)
 
-	name, anonymousName, fields := splitMarker(marker)
-
-	if !definition.Output.UseValueSyntax && len(anonymousName) >= len(name)+1 {
+	/*if !definition.Output.UseValueSyntax && len(anonymousName) >= len(name)+1 {
 		fields = anonymousName[len(name)+1:] + "=" + fields
-	}
+	}*/
 
 	var errs []error
 
-	if strings.ContainsAny(anonymousName, ".,;=") {
-		errs = append(errs, ScannerError{
-			Message: fmt.Sprintf("Marker format is not valid : %s", marker),
-		})
-		return nil, NewErrorList(errs)
-	}
-
-	scanner := NewScanner(fields)
+	scanner := NewScanner("")
 	scanner.ErrorCallback = func(scanner *Scanner, message string) {
 		errs = append(errs, ScannerError{
 			Message: message,
 		})
 	}
 
-	valueArgumentProcessed := false
-	canBeValueArgument := false
+	isValueSyntax := true
+	if strings.HasPrefix(comment, "+"+definition.Name+":") {
+		isValueSyntax = false
+	}
 
 	seen := make(map[string]struct{}, len(definition.Output.Fields))
 
-	if scanner.Peek() != EOF {
+	if len(definition.Output.Fields) != 0 && scanner.Peek() != EOF {
 		for {
-			var argumentName string
-			currentCharacter := scanner.SkipWhitespaces()
-
-			if definition.Output.UseValueSyntax && !valueArgumentProcessed && currentCharacter == '{' || currentCharacter == '"' {
-				canBeValueArgument = true
-			} else if definition.Output.UseValueSyntax && !scanner.Expect(Identifier, "Value") {
-				continue
-			} else if !definition.Output.UseValueSyntax && !scanner.Expect(Identifier, "Argument Name") {
-				continue
-			}
-
-			argumentName = scanner.Token()
-			currentCharacter = scanner.SkipWhitespaces()
-
-			if definition.Output.UseValueSyntax && !valueArgumentProcessed && (currentCharacter == EOF || currentCharacter == ',' || currentCharacter == ';') {
-				canBeValueArgument = true
-			} else if (valueArgumentProcessed || !canBeValueArgument) && !scanner.Expect('=', "Equals Sign '='") {
-				break
-			}
-
-			if canBeValueArgument && !valueArgumentProcessed {
-				valueArgumentProcessed = true
-				argumentName = ValueArgument
-				scanner.Reset()
-			}
-
-			fieldName, exists := definition.Output.FieldNames[argumentName]
-
-			var err error
-			var fieldValue reflect.Value
 			var argument Argument
+			argumentName := ""
+			argumentExists := false
+			fieldName := ""
+			fieldExists := false
+			scanner.SkipWhitespaces()
 
-			// if the argument name does not exist in field names, parse its value to skip
-			if !exists {
-				var anyValue interface{}
-				(&ArgumentTypeInfo{ActualType: AnyType}).Parse(scanner, reflect.ValueOf(&anyValue))
-				goto nextAttribute
-			}
+			if !scanner.Expect(Identifier, "Value or Argument value") {
+				if isValueSyntax {
+					if "=" != scanner.Token() && len(seen) == 0 {
+						break
+					} else if "," == scanner.Token() {
+						continue
+					} else {
+						argumentName = "Value"
+						fieldName, fieldExists = definition.Output.FieldNames[argumentName]
+						argument, argumentExists = definition.Output.Fields[argumentName]
+						if !fieldExists || !argumentExists {
+							var anyValue interface{}
+							(&ArgumentTypeInfo{ActualType: AnyType}).Parse(scanner, reflect.ValueOf(&anyValue))
+							//goto nextAttribute
+						}
+					}
+				} else {
+					if "," == scanner.Token() {
+						continue
+					}
 
-			argument, exists = definition.Output.Fields[argumentName]
+					break
+				}
+			} else {
+				argumentName = scanner.Token()
+				fieldName, fieldExists = definition.Output.FieldNames[argumentName]
+				argument, argumentExists = definition.Output.Fields[argumentName]
+				if !fieldExists || !argumentExists {
+					var anyValue interface{}
+					(&ArgumentTypeInfo{ActualType: AnyType}).Parse(scanner, reflect.ValueOf(&anyValue))
+					//goto nextAttribute
+				}
 
-			// if the argument name does not exist in fields, parse its value to skip
-			if !exists {
-				var anyValue interface{}
-				(&ArgumentTypeInfo{ActualType: AnyType}).Parse(scanner, reflect.ValueOf(&anyValue))
-				goto nextAttribute
+				scanner.SkipWhitespaces()
+
+				if !scanner.Expect('=', "Equal sign") {
+					break
+				}
 			}
 
 			seen[argumentName] = struct{}{}
 
-			fieldValue = output.FieldByName(fieldName)
+			fieldValue := output.FieldByName(fieldName)
 
 			if !fieldValue.CanSet() {
 				break
 			}
 
-			err = argument.TypeInfo.Parse(scanner, fieldValue)
+			err := argument.TypeInfo.Parse(scanner, fieldValue)
 
 			if err != nil {
 				break
 			}
 
-		nextAttribute:
+			//nextAttribute:
 			if scanner.Peek() == EOF {
 				break
 			}
@@ -228,7 +248,7 @@ func (definition *Definition) Parse(marker string) (interface{}, error) {
 	return output.Interface(), NewErrorList(errs)
 }
 
-func (definition *Definition) parseSyntaxFree(marker string) interface{} {
+func (definition *Definition) parseSyntaxFree(marker string) any {
 	output := reflect.Indirect(reflect.New(definition.Output.Type))
 
 	fieldName, exists := definition.Output.FieldNames[ValueArgument]
@@ -252,7 +272,7 @@ func (definition *Definition) parseSyntaxFree(marker string) interface{} {
 
 	fieldOutType := fieldValue.Type()
 
-	if argument.Pointer {
+	if argument.TypeInfo.IsPointer {
 		fieldOutType = fieldOutType.Elem()
 		fieldValue = fieldValue.Elem()
 	}

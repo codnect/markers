@@ -8,7 +8,7 @@ type Config struct {
 
 type Parameter struct {
 	Name  string `json:"name"`
-	Value any    `json:"value"`
+	Value string `json:"value"`
 }
 
 type Override struct {

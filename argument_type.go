@@ -18,21 +18,27 @@ const (
 	RawType
 	AnyType
 	BoolType
-	IntegerType
+	SignedIntegerType
+	UnsignedIntegerType
 	StringType
 	SliceType
 	MapType
+	GoFuncType
+	GoType
 )
 
 var argumentTypeText = map[ArgumentType]string{
-	InvalidType: "InvalidType",
-	RawType:     "RawType",
-	AnyType:     "AnyType",
-	BoolType:    "BoolType",
-	IntegerType: "IntegerType",
-	StringType:  "StringType",
-	SliceType:   "SliceType",
-	MapType:     "MapType",
+	InvalidType:         "InvalidType",
+	RawType:             "RawType",
+	AnyType:             "AnyType",
+	BoolType:            "BoolType",
+	SignedIntegerType:   "SignedIntegerType",
+	UnsignedIntegerType: "UnsignedIntegerType",
+	StringType:          "StringType",
+	SliceType:           "SliceType",
+	MapType:             "MapType",
+	GoFuncType:          "FuncType",
+	GoType:              "Type",
 }
 
 var (
@@ -42,7 +48,9 @@ var (
 
 type ArgumentTypeInfo struct {
 	ActualType ArgumentType
+	IsPointer  bool
 	ItemType   *ArgumentTypeInfo
+	Enum       map[string]any
 }
 
 func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
@@ -50,6 +58,7 @@ func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
 
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
+		typeInfo.IsPointer = true
 	}
 
 	if typ == rawType {
@@ -66,9 +75,9 @@ func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
 	case reflect.String:
 		typeInfo.ActualType = StringType
 	case reflect.Uint8, reflect.Uint16, reflect.Uint, reflect.Uint32, reflect.Uint64:
-		typeInfo.ActualType = IntegerType
+		typeInfo.ActualType = UnsignedIntegerType
 	case reflect.Int8, reflect.Int16, reflect.Int, reflect.Int32, reflect.Int64:
-		typeInfo.ActualType = IntegerType
+		typeInfo.ActualType = SignedIntegerType
 	case reflect.Bool:
 		typeInfo.ActualType = BoolType
 	case reflect.Slice:
@@ -104,7 +113,8 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 	switch typeInfo.ActualType {
 	case BoolType:
 		return typeInfo.parseBoolean(scanner, out)
-	case IntegerType:
+	case SignedIntegerType:
+	case UnsignedIntegerType:
 		return typeInfo.parseInteger(scanner, out)
 	case StringType:
 		return typeInfo.parseString(scanner, out)
@@ -112,6 +122,8 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 		return typeInfo.parseSlice(scanner, out)
 	case MapType:
 		return typeInfo.parseMap(scanner, out)
+	case GoFuncType:
+	case GoType:
 	case AnyType:
 		inferredType, _ := typeInfo.inferType(scanner, out, false)
 		newOut := out
@@ -469,7 +481,7 @@ func (typeInfo ArgumentTypeInfo) inferType(scanner *Scanner, out reflect.Value, 
 
 		if token == IntegerValue {
 			return ArgumentTypeInfo{
-				ActualType: IntegerType,
+				ActualType: SignedIntegerType,
 			}, nil
 		}
 
@@ -491,8 +503,10 @@ func (typeInfo ArgumentTypeInfo) makeSliceType() (reflect.Type, error) {
 
 	var itemType reflect.Type
 	switch typeInfo.ItemType.ActualType {
-	case IntegerType:
-		itemType = reflect.TypeOf(int(0))
+	case SignedIntegerType:
+		itemType = reflect.TypeOf(0)
+	case UnsignedIntegerType:
+		itemType = reflect.TypeOf(uint(0))
 	case BoolType:
 		itemType = reflect.TypeOf(false)
 	case StringType:
@@ -531,8 +545,10 @@ func (typeInfo ArgumentTypeInfo) makeMapType() (reflect.Type, error) {
 
 	var itemType reflect.Type
 	switch typeInfo.ItemType.ActualType {
-	case IntegerType:
-		itemType = reflect.TypeOf(int(0))
+	case SignedIntegerType:
+		itemType = reflect.TypeOf(0)
+	case UnsignedIntegerType:
+		itemType = reflect.TypeOf(uint(0))
 	case BoolType:
 		itemType = reflect.TypeOf(false)
 	case StringType:

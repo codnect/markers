@@ -95,56 +95,20 @@ func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarke
 			// markers can be syntax free such as +build
 			aliasName = strings.Split(aliasName, " ")[0]
 
+			targetLevel := FindTargetLevelFromNode(node)
+
 			var definition *Definition
+			var exists bool
+
 			if importMarker, ok := importAliases[aliasName]; ok {
 				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", importMarker.Value), 1)
-				definition = collector.Lookup(markerText, importMarker.GetPkgId())
+				definition, exists = collector.Lookup(markerText, "", targetLevel)
 			} else {
-				definition = collector.Lookup(markerText, "")
+				definition, exists = collector.Lookup(markerText, "", targetLevel)
 			}
 
-			if definition == nil {
+			if !exists {
 				continue
-			}
-
-			switch typedNode := node.(type) {
-			case *ast.File:
-
-				if definition.Level&PackageLevel != PackageLevel {
-					continue
-				}
-			case *ast.TypeSpec:
-
-				_, isStructType := typedNode.Type.(*ast.StructType)
-
-				if isStructType && (definition.Level&TypeLevel != TypeLevel && definition.Level&StructTypeLevel != StructTypeLevel) {
-					continue
-				}
-
-				_, isInterfaceType := typedNode.Type.(*ast.InterfaceType)
-
-				if isInterfaceType && (definition.Level&TypeLevel != TypeLevel && definition.Level&InterfaceTypeLevel != InterfaceTypeLevel) {
-					continue
-				}
-
-			case *ast.Field:
-
-				_, isFuncType := typedNode.Type.(*ast.FuncType)
-
-				if !isFuncType && definition.Level&FieldLevel != FieldLevel {
-					continue
-				} else if isFuncType && (definition.Level&MethodLevel != MethodLevel && definition.Level&InterfaceMethodLevel != InterfaceMethodLevel) {
-					continue
-				}
-
-			case *ast.FuncDecl:
-
-				if typedNode.Recv != nil && (definition.Level&MethodLevel != MethodLevel && definition.Level&StructMethodLevel != StructMethodLevel) {
-					continue
-				} else if typedNode.Recv == nil && definition.Level&FunctionLevel != FunctionLevel {
-					continue
-				}
-
 			}
 
 			value, err := definition.Parse(markerText)
@@ -155,9 +119,9 @@ func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarke
 				continue
 			}
 
-			if marker, ok := value.(Marker); ok {
+			/*if marker, ok := value.(Marker); ok {
 				err = marker.Validate()
-			}
+			}*/
 
 			if err != nil {
 				position := pkg.Fset.Position(markerComment.Pos())
@@ -187,9 +151,9 @@ func (collector *Collector) parseImportMarkerComments(pkg *packages.Package, nod
 
 		for _, markerComment := range markerComments {
 			markerText := markerComment.Text()
-			definition := collector.Lookup(markerText, "")
+			definition, exists := collector.Lookup(markerText, "", PackageLevel)
 
-			if definition == nil {
+			if !exists {
 				continue
 			}
 
@@ -205,9 +169,9 @@ func (collector *Collector) parseImportMarkerComments(pkg *packages.Package, nod
 				continue
 			}
 
-			if marker, ok := value.(Marker); ok {
+			/*if marker, ok := value.(Marker); ok {
 				err = marker.Validate()
-			}
+			}*/
 
 			if err != nil {
 				position := pkg.Fset.Position(markerComment.Pos())
@@ -256,14 +220,14 @@ func (collector *Collector) extractFileImportAliases(pkg *packages.Package, impo
 		for _, marker := range markers {
 			importMarker := marker.(ImportMarker)
 
-			if _, ok := pkgIdMap[importMarker.GetPkgId()]; ok {
+			if _, ok := pkgIdMap[importMarker.Pkg]; ok {
 				position := pkg.Fset.Position(node.Pos())
-				err := fmt.Errorf("processor with Pkg '%s' has alrealdy been imported", importMarker.GetPkgId())
+				err := fmt.Errorf("processor with Pkg '%s' has alrealdy been imported", importMarker.Pkg)
 				errs = append(errs, toParseError(err, node, position))
 				continue
 			}
 
-			pkgIdMap[importMarker.GetPkgId()] = true
+			pkgIdMap[importMarker.Pkg] = true
 
 			if importMarker.Alias == "" {
 				aliasMap[importMarker.Value] = importMarker

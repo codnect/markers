@@ -1,6 +1,7 @@
 package main
 
 const (
-	AppName    = "marker"
-	AppVersion = "1.0.0"
+	AppName = "marker"
+	Package = "github.com/procyon-projects/marker"
+	Version = "v0.2.7-dev"
 )

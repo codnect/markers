@@ -8,9 +8,9 @@ import (
 )
 
 type File struct {
-	name     string
-	fullPath string
-	pkg      *packages.Package
+	name string
+	path string
+	pkg  *packages.Package
 
 	allMarkers  marker.MarkerValues
 	fileMarkers marker.MarkerValues
@@ -31,11 +31,11 @@ type File struct {
 
 func newFile(rawFile *ast.File, pkg *packages.Package, markers marker.MarkerValues, visitor *packageVisitor) *File {
 	position := pkg.Fset.Position(rawFile.Pos())
-	fileFullPath := position.Filename
+	path := position.Filename
 
 	file := &File{
-		name:          filepath.Base(fileFullPath),
-		fullPath:      fileFullPath,
+		name:          filepath.Base(path),
+		path:          path,
 		pkg:           pkg,
 		allMarkers:    markers,
 		fileMarkers:   make(marker.MarkerValues, 0),
@@ -89,8 +89,8 @@ func (f *File) Name() string {
 	return f.name
 }
 
-func (f *File) FullPath() string {
-	return f.name
+func (f *File) Path() string {
+	return f.path
 }
 
 func (f *File) Markers() marker.MarkerValues {

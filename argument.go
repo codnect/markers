@@ -1,59 +1,25 @@
 package marker
 
 import (
-	"fmt"
+	"errors"
 	"reflect"
 	"strings"
 )
 
 type Argument struct {
-	Name           string
-	TypeInfo       ArgumentTypeInfo
-	Pointer        bool
-	Required       bool
-	SyntaxFree     bool
-	UseValueSyntax bool
+	Name       string
+	TypeInfo   ArgumentTypeInfo
+	Required   bool
+	Deprecated bool
+	Default    any
 }
 
 func ExtractArgument(structField reflect.StructField) (Argument, error) {
-	fieldName := LowerCamelCase(structField.Name)
+	parameterName := UpperCamelCase(structField.Name)
+	parameterTag, parameterTagExists := structField.Tag.Lookup("parameter")
 
-	markerTag, tagExists := structField.Tag.Lookup("marker")
-	markerTagValues := strings.Split(markerTag, ",")
-
-	if tagExists && markerTagValues[0] != "" {
-		fieldName = markerTagValues[0]
-	}
-
-	optionalOption := false
-	syntaxFree := false
-	useValueSyntax := false
-
-	for _, tagOption := range markerTagValues[1:] {
-
-		if tagOption == "optional" {
-			optionalOption = true
-		}
-
-		if tagOption == "syntaxFree" {
-			syntaxFree = true
-		}
-
-		if tagOption == "useValueSyntax" {
-			useValueSyntax = true
-		}
-	}
-
-	if ValueArgument != fieldName && syntaxFree {
-		return Argument{}, fmt.Errorf("'Value' field can only have syntaxFree option")
-	}
-
-	if ValueArgument != fieldName && useValueSyntax {
-		return Argument{}, fmt.Errorf("'Value' field can only have useValueSyntax option")
-	}
-
-	if ValueArgument == fieldName && syntaxFree && useValueSyntax {
-		return Argument{}, fmt.Errorf("'Value' cannot have both syntaxFree and useValueSyntax options at the same time")
+	if parameterTagExists && parameterTag != "" {
+		parameterName = parameterTag
 	}
 
 	fieldType := structField.Type
@@ -63,26 +29,48 @@ func ExtractArgument(structField reflect.StructField) (Argument, error) {
 		return Argument{}, err
 	}
 
-	if syntaxFree && argumentTypeInfo.ActualType != StringType {
-		return Argument{}, fmt.Errorf("'Value' field with syntaxFree option can be only string")
+	isRequired := false
+	requiredTag, requiredTagExists := structField.Tag.Lookup("required")
+	if requiredTagExists && requiredTag != "" {
+		if requiredTag == "true" {
+			isRequired = true
+		}
 	}
 
-	isPointer := false
-	isOptional := false
-
-	if fieldType.Kind() == reflect.Ptr {
-		isPointer = true
-		isOptional = true
+	isDeprecated := false
+	_, deprecatedTagExists := structField.Tag.Lookup("deprecated")
+	if deprecatedTagExists {
+		isDeprecated = true
 	}
 
-	optionalOption = optionalOption || isOptional
+	defaultValue := ""
+	defaultTag, defaultTagExists := structField.Tag.Lookup("default")
+	if defaultTagExists && defaultTag != "" {
+		defaultValue = defaultTag
+	}
+
+	enumTag, enumTagExists := structField.Tag.Lookup("enum")
+	if enumTagExists && enumTag != "" {
+		if argumentTypeInfo.ActualType != StringType && (argumentTypeInfo.ActualType != SliceType || argumentTypeInfo.ItemType.ActualType != StringType) {
+			return Argument{}, errors.New("string and string-slice can have enum tag")
+		}
+
+		enumValues := strings.Split(enumTag, ",")
+		for _, enumValue := range enumValues {
+			enumKeyValueParts := strings.SplitN(enumValue, "=", 2)
+			if len(enumKeyValueParts) == 2 {
+				argumentTypeInfo.Enum[enumKeyValueParts[0]] = enumKeyValueParts[1]
+			} else {
+				argumentTypeInfo.Enum[enumKeyValueParts[0]] = enumKeyValueParts[0]
+			}
+		}
+	}
 
 	return Argument{
-		Name:           fieldName,
-		TypeInfo:       argumentTypeInfo,
-		Pointer:        isPointer,
-		Required:       !optionalOption,
-		SyntaxFree:     syntaxFree,
-		UseValueSyntax: useValueSyntax,
+		Name:       parameterName,
+		TypeInfo:   argumentTypeInfo,
+		Required:   isRequired,
+		Deprecated: isDeprecated,
+		Default:    defaultValue,
 	}, nil
 }

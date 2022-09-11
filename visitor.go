@@ -10,7 +10,6 @@ type commentVisitor struct {
 	nextCommentIndex int
 
 	packageMarkers     []markerComment
-	importMarkers      []markerComment
 	declarationMarkers []markerComment
 	nodeMarkers        map[ast.Node][]markerComment
 }
@@ -116,7 +115,7 @@ func (visitor *commentVisitor) getMarkerComments(startIndex, endIndex int) []mar
 		commentGroup := visitor.allComments[index]
 
 		var markerComment *markerComment
-		var hasContinuation bool
+		var isMultiLine bool
 
 		for _, comment := range commentGroup.List {
 			containsMarker := isMarkerComment(comment.Text)
@@ -127,14 +126,14 @@ func (visitor *commentVisitor) getMarkerComments(startIndex, endIndex int) []mar
 				}
 
 				markerComment = newMarkerComment(comment)
-				hasContinuation = false
-			} else if hasContinuation {
+				isMultiLine = false
+			} else if isMultiLine {
 				if markerComment != nil {
 					markerComment.append(comment)
 				}
 			}
 
-			hasContinuation = hasContinuationCharacter(comment.Text)
+			isMultiLine = isMultiLineComment(comment.Text)
 		}
 
 		if markerComment != nil {

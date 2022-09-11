@@ -2,7 +2,7 @@ package processor
 
 import "sync"
 
-type CommandCallback func(ctx *Context) error
+type CommandCallback func(ctx *Context)
 
 var (
 	callbackMu       sync.Mutex
