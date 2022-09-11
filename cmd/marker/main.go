@@ -9,7 +9,6 @@ func init() {
 	processor.Initialize(Package, AppName, Version)
 	processor.SetGenerateCommandCallback(Generate)
 	processor.SetValidateCommandCallback(Validate)
-	processor.AddRegistryFunction(nil)
 }
 
 func main() {
