@@ -10,7 +10,7 @@ import (
 type Constant struct {
 	name       string
 	isExported bool
-	value      interface{}
+	value      any
 	typ        Type
 	expression ast.Expr
 	initType   ast.Expr
@@ -27,7 +27,7 @@ func (c *Constant) Name() string {
 	return c.name
 }
 
-func (c *Constant) Value() interface{} {
+func (c *Constant) Value() any {
 	c.evaluateExpression()
 	return c.value
 }
@@ -42,7 +42,7 @@ func (c *Constant) evaluateExpression() {
 		}
 	}()
 
-	params := make(map[string]interface{}, 0)
+	params := make(map[string]any, 0)
 	params["iota"] = c.iota
 	c.value, c.typ = c.evalConstantExpression(c.expression, params)
 
@@ -74,7 +74,7 @@ func (c *Constant) String() string {
 	return ""
 }
 
-func (c *Constant) evalConstantExpression(exp ast.Expr, variableMap map[string]interface{}) (interface{}, Type) {
+func (c *Constant) evalConstantExpression(exp ast.Expr, variableMap map[string]any) (any, Type) {
 	switch exp := exp.(type) {
 	case *ast.Ident:
 		if value, ok := variableMap[exp.Name]; ok {
@@ -123,7 +123,7 @@ func (c *Constant) evalConstantExpression(exp ast.Expr, variableMap map[string]i
 	return nil, nil
 }
 
-func (c *Constant) evalBinaryExpr(exp *ast.BinaryExpr, variableMap map[string]interface{}) (interface{}, Type) {
+func (c *Constant) evalBinaryExpr(exp *ast.BinaryExpr, variableMap map[string]any) (any, Type) {
 	var expressionType Type
 	left, typLeft := c.evalConstantExpression(exp.X, variableMap)
 	right, typRight := c.evalConstantExpression(exp.Y, variableMap)

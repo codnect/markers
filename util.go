@@ -1,12 +1,29 @@
 package marker
 
 import (
-	"fmt"
-	"golang.org/x/tools/go/packages"
-	"os"
 	"strings"
 	"unicode"
 )
+
+func IsUpper(s string) bool {
+	for _, r := range s {
+		if !unicode.IsUpper(r) && unicode.IsLetter(r) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func IsLower(s string) bool {
+	for _, r := range s {
+		if !unicode.IsLower(r) && unicode.IsLetter(r) {
+			return false
+		}
+	}
+
+	return true
+}
 
 func IsDecimal(character rune) bool {
 	return '0' <= character && character <= '9'
@@ -30,35 +47,16 @@ func LowerCamelCase(str string) string {
 
 }
 
-// GoModDir returns the directory of go.mod file.
-func GoModDir() (string, error) {
-	var wd string
-	var err error
-	wd, err = os.Getwd()
+func UpperCamelCase(str string) string {
+	isFirst := true
 
-	if err != nil {
-		return "", fmt.Errorf("wtf - what a terrible failure! : %s", err.Error())
-	}
+	return strings.Map(func(r rune) rune {
+		if isFirst {
+			isFirst = false
+			return unicode.ToUpper(r)
+		}
 
-	config := &packages.Config{}
-	config.Mode |= packages.NeedModule
+		return r
+	}, str)
 
-	var pkgs []*packages.Package
-	pkgs, err = packages.Load(config, wd)
-
-	if err != nil {
-		return "", fmt.Errorf("an error occurred : %s", err.Error())
-	}
-
-	if pkgs == nil || len(pkgs) == 0 {
-		return "", fmt.Errorf("package not found for the directory %s", wd)
-	}
-
-	pkg := pkgs[0]
-
-	if pkg.Module == nil {
-		return "", fmt.Errorf("go.mod does not exist for the directory %s", wd)
-	}
-
-	return pkg.Module.Dir, nil
 }

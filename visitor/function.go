@@ -153,7 +153,7 @@ func (f *Function) receiverType(receiverExpr ast.Expr) Type {
 		structType.methods = append(structType.methods, f)
 	} else {
 		if !ok {
-			candidateType = newCustomType(receiverTypeSpec, f.file, nil, nil, nil)
+			candidateType = newCustomType(receiverTypeSpec, f.file, f.pkg, f.visitor, nil)
 		}
 
 		customType := candidateType.(*CustomType)

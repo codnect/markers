@@ -1,18 +1,53 @@
 package processor
 
 import (
-	"github.com/procyon-projects/marker"
+	"encoding/json"
+	"github.com/procyon-projects/marker/packages"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
+
+func getConfigFilePath() (string, error) {
+	var err error
+	var modDir string
+	modDir, err = packages.GoModDir()
+
+	if err != nil {
+		return "", err
+	}
+
+	markerJsonFilePath := filepath.FromSlash(path.Join(modDir, "marker.json"))
+	_, err = os.Stat(markerJsonFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	return markerJsonFilePath, nil
+}
+
+func getConfig(configFilePath string) (*Config, error) {
+	data, err := os.ReadFile(configFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &Config{}
+	err = json.Unmarshal(data, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
 
 // getPackageDirectories finds the go module directory and returns
 // the package directories.
 func getPackageDirectories() ([]string, error) {
 	var err error
 	var modDir string
-	modDir, err = marker.GoModDir()
+	modDir, err = packages.GoModDir()
 
 	if err != nil {
 		return nil, err

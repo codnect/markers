@@ -1,6 +1,8 @@
 package marker
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const Whitespace = 1<<'\t' | 1<<'\r' | 1<<' '
 
