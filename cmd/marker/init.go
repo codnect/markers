@@ -47,11 +47,11 @@ func initializeMarkerProject() error {
 	defer markerJsonFile.Close()
 
 	config := &processor.Config{
-		Version: "",
+		Version: Version,
 		Parameters: []processor.Parameter{
 			{
-				Name:  "$OUTPUT_PATH",
-				Value: "$MODULE_ROOT/generated",
+				Name:  "OUTPUT_PATH",
+				Value: "${MODULE_ROOT}/generated",
 			},
 		},
 		Overrides: make([]processor.Override, 0),

@@ -31,7 +31,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		// TODO check marker package details
-		_, err = packages.GetMarkerPackage(fmt.Sprintf("%s.%s", packageName, processorVersion))
+		_, err = packages.GetMarkerPackage(fmt.Sprintf("%s@%s", packageName, processorVersion))
 
 		if err != nil {
 			return err

@@ -144,26 +144,28 @@ func (definition *Definition) Parse(comment string) (interface{}, error) {
 
 	output := reflect.Indirect(reflect.New(definition.Output.Type))
 	comment = strings.TrimLeft(comment, " \t")
-	//name, anonymousName, fields := splitMarker(marker)
+	_, _, fields := splitMarker(comment)
 
 	/*if !definition.Output.UseValueSyntax && len(anonymousName) >= len(name)+1 {
 		fields = anonymousName[len(name)+1:] + "=" + fields
 	}*/
 
-	var errs []error
+	isValueSyntax := true
+	if strings.HasPrefix(comment, "+"+definition.Name+":") {
+		isValueSyntax = false
+	} else {
+		tempComment := strings.Replace(comment, fields, "", -1)
+		tempComment = strings.Replace(tempComment, "+"+definition.Name, "", -1)
+		fields = tempComment + fields
+	}
 
-	scanner := NewScanner("")
+	var errs []error
+	scanner := NewScanner(fields)
 	scanner.ErrorCallback = func(scanner *Scanner, message string) {
 		errs = append(errs, ScannerError{
 			Message: message,
 		})
 	}
-
-	isValueSyntax := true
-	if strings.HasPrefix(comment, "+"+definition.Name+":") {
-		isValueSyntax = false
-	}
-
 	seen := make(map[string]struct{}, len(definition.Output.Fields))
 
 	if len(definition.Output.Fields) != 0 && scanner.Peek() != EOF {

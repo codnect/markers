@@ -11,35 +11,29 @@ type DefinitionMap map[string]*Definition
 // Registry keeps the registered marker definitions.
 type Registry struct {
 	packageMap map[string]DefinitionMap
-
-	initOnce sync.Once
-	mu       sync.RWMutex
+	mu         sync.RWMutex
 }
 
 // NewRegistry returns a new registry to register the markers.
 func NewRegistry() *Registry {
-	return &Registry{}
+	registry := &Registry{}
+	registry.initialize()
+	return registry
 }
 
 // initialize initializes the registry when needed.
 func (registry *Registry) initialize() {
-	registry.initOnce.Do(func() {
-
-		if registry.packageMap == nil {
-			registry.packageMap = make(map[string]DefinitionMap)
-			registry.packageMap[""] = make(DefinitionMap)
-		}
-		registry.packageMap[""][ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", PackageLevel, &ImportMarker{})
-		registry.packageMap[""][OverrideMarkerName], _ = MakeDefinition(OverrideMarkerName, "", StructMethodLevel, &OverrideMarker{})
-		registry.packageMap[""][DeprecatedMarkerName], _ = MakeDefinition(DeprecatedMarkerName, "", TypeLevel|MethodLevel|FieldLevel|FunctionLevel, &DeprecatedMarker{})
-	})
-
+	if registry.packageMap == nil {
+		registry.packageMap = make(map[string]DefinitionMap)
+		registry.packageMap[""] = make(DefinitionMap)
+	}
+	registry.packageMap[""][ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", PackageLevel, &ImportMarker{})
+	registry.packageMap[""][OverrideMarkerName], _ = MakeDefinition(OverrideMarkerName, "", StructMethodLevel, &OverrideMarker{})
+	registry.packageMap[""][DeprecatedMarkerName], _ = MakeDefinition(DeprecatedMarkerName, "", TypeLevel|MethodLevel|FieldLevel|FunctionLevel, &DeprecatedMarker{})
 }
 
 // Register registers a new marker with the given name, target level, and output type.
 func (registry *Registry) Register(name, pkg string, level TargetLevel, output any) error {
-	registry.initialize()
-
 	def, err := MakeDefinition(name, pkg, level, output)
 
 	if err != nil {
@@ -51,8 +45,6 @@ func (registry *Registry) Register(name, pkg string, level TargetLevel, output a
 
 // RegisterWithDefinition registers a new marker with the given definition.
 func (registry *Registry) RegisterWithDefinition(definition *Definition) error {
-	registry.initialize()
-
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
 
