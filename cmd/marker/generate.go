@@ -15,8 +15,6 @@ func Generate(ctx *processor.Context) {
 			return nil
 		}
 
-		file.Structs().At(0).Markers()
-
 		return err
 	})
 

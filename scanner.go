@@ -67,7 +67,7 @@ func (scanner *Scanner) Expect(expected rune, description string) bool {
 	token := scanner.Scan()
 
 	if token != expected {
-		scanner.AddError(fmt.Sprintf("got %q; want %s", scanner.Token(), description))
+		//scanner.AddError(fmt.Sprintf("got %q; want %s", scanner.Token(), description))
 		return false
 	}
 
