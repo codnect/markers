@@ -4,7 +4,7 @@ orbs:
   codecov: codecov/codecov@3.1.1
 
 jobs:
-  build:
+  build-1.18:
     docker:
       - image: cimg/go:1.18
     steps:
@@ -23,7 +23,26 @@ jobs:
           name: Run tests
           command: go test -coverprofile=coverage.txt -covermode=atomic
       - codecov/upload
+  build-1.17:
+    docker:
+      - image: cimg/go:1.17
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+      - run:
+          name: Install Dependencies
+          command: go get ./...
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+      - run:
+          name: Run tests
+          command: go test -coverprofile=coverage.txt -covermode=atomic
 workflows:
   build-workflow:
     jobs:
-      - build
+      - build-1.18
+      - build-1.17
