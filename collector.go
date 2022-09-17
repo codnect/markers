@@ -88,27 +88,18 @@ func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarke
 
 		for _, markerComment := range markerComments {
 			markerText := markerComment.Text()
-
-			// first we need to check if there is any import
-			aliasName, anonymousName, _ := splitMarker(markerText)
-			aliasName = strings.Split(aliasName, ":")[0]
-			// markers can be syntax free such as +build
-			aliasName = strings.Split(aliasName, " ")[0]
-
-			if anonymousName == "" {
-
-			}
-
+			markerName, _, _ := splitMarker(markerText)
 			targetLevel := FindTargetLevelFromNode(node)
+			alias := strings.SplitN(markerName, ":", 2)[0]
 
 			var definition *Definition
 			var exists bool
 
-			if importMarker, ok := importAliases[aliasName]; ok {
-				markerText = strings.Replace(markerText, fmt.Sprintf("+%s", aliasName), fmt.Sprintf("+%s", importMarker.Value), 1)
-				definition, exists = collector.Lookup(markerText, "", targetLevel)
+			if importMarker, ok := importAliases[alias]; ok {
+				markerName = strings.Replace(markerName, fmt.Sprintf("+%s", alias), fmt.Sprintf("+%s", importMarker.Value), 1)
+				definition, exists = collector.Lookup(markerName, importMarker.Pkg, targetLevel)
 			} else {
-				definition, exists = collector.Lookup(markerText, "", targetLevel)
+				continue
 			}
 
 			if !exists {
