@@ -90,10 +90,14 @@ func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarke
 			markerText := markerComment.Text()
 
 			// first we need to check if there is any import
-			aliasName, _, _ := splitMarker(markerText)
+			aliasName, anonymousName, _ := splitMarker(markerText)
 			aliasName = strings.Split(aliasName, ":")[0]
 			// markers can be syntax free such as +build
 			aliasName = strings.Split(aliasName, " ")[0]
+
+			if anonymousName == "" {
+
+			}
 
 			targetLevel := FindTargetLevelFromNode(node)
 
@@ -151,7 +155,11 @@ func (collector *Collector) parseImportMarkerComments(pkg *packages.Package, nod
 
 		for _, markerComment := range markerComments {
 			markerText := markerComment.Text()
-			name, anonymousName, _ := splitMarker(markerText)
+			name, anonymousName, fields := splitMarker(markerText)
+
+			if fields == "" {
+
+			}
 
 			if ImportMarkerName != name || ImportMarkerName != anonymousName {
 				continue

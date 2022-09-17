@@ -91,10 +91,14 @@ func splitMarker(marker string) (name string, anonymousName string, options stri
 	nameFieldParts := strings.SplitN(marker, "=", 2)
 
 	if len(nameFieldParts) == 1 {
-		return nameFieldParts[0], nameFieldParts[0], ""
+		value := strings.TrimRight(nameFieldParts[0], "\t ")
+		value = strings.TrimLeft(value, "\t ")
+		return value, value, ""
 	}
 
-	anonymousName = nameFieldParts[0]
+	fields := nameFieldParts[1]
+	anonymousName = strings.TrimRight(nameFieldParts[0], "\t ")
+	anonymousName = strings.TrimLeft(anonymousName, "\t ")
 	name = anonymousName
 
 	nameParts := strings.Split(name, ":")
@@ -103,7 +107,13 @@ func splitMarker(marker string) (name string, anonymousName string, options stri
 		name = strings.Join(nameParts[:len(nameParts)-1], ":")
 	}
 
-	return name, anonymousName, nameFieldParts[1]
+	if len(anonymousName) >= len(name)+1 {
+		fields = anonymousName[len(name)+1:] + "=" + fields
+	} else {
+		fields = "=" + fields
+	}
+
+	return name, anonymousName, fields
 }
 
 func isMarkerComment(comment string) bool {

@@ -146,10 +146,6 @@ func (definition *Definition) Parse(comment string) (interface{}, error) {
 	comment = strings.TrimLeft(comment, " \t")
 	_, _, fields := splitMarker(comment)
 
-	/*if !definition.Output.UseValueSyntax && len(anonymousName) >= len(name)+1 {
-		fields = anonymousName[len(name)+1:] + "=" + fields
-	}*/
-
 	isValueSyntax := true
 	if strings.HasPrefix(comment, "+"+definition.Name+":") {
 		isValueSyntax = false
