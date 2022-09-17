@@ -4,7 +4,7 @@ orbs:
   codecov: codecov/codecov@3.1.1
 
 jobs:
-  build-1.18:
+  build118:
     docker:
       - image: cimg/go:1.18
     steps:
@@ -23,7 +23,7 @@ jobs:
           name: Run tests
           command: go test -coverprofile=coverage.txt -covermode=atomic
       - codecov/upload
-  build-1.17:
+  build117:
     docker:
       - image: cimg/go:1.17
     steps:
@@ -44,5 +44,5 @@ jobs:
 workflows:
   build-workflow:
     jobs:
-      - build-1.18
-      - build-1.17
+      - build118
+      - build117
