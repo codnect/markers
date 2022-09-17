@@ -9,13 +9,11 @@ import (
 )
 
 func Generate(ctx *processor.Context) {
-	pkg, _ := ctx.LoadResult().Lookup("")
+	pkg, _ := ctx.LoadResult().Lookup("github.com/procyon-projects/marker/test/package1")
 	err := visitor.EachFile(ctx.Collector(), []*packages.Package{pkg}, func(file *visitor.File, err error) error {
 		if file.NumImportMarkers() == 0 {
 			return nil
 		}
-
-		file.Structs().At(0).Markers()
 
 		return err
 	})

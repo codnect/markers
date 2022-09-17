@@ -151,13 +151,15 @@ func (collector *Collector) parseImportMarkerComments(pkg *packages.Package, nod
 
 		for _, markerComment := range markerComments {
 			markerText := markerComment.Text()
-			definition, exists := collector.Lookup(markerText, "", PackageLevel)
+			name, anonymousName, _ := splitMarker(markerText)
 
-			if !exists {
+			if ImportMarkerName != name || ImportMarkerName != anonymousName {
 				continue
 			}
 
-			if ImportMarkerName != definition.Name {
+			definition, exists := collector.Lookup("import", "", PackageLevel)
+
+			if !exists {
 				continue
 			}
 

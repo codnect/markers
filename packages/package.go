@@ -85,8 +85,10 @@ func GetMarkerPackage(path string) (*MarkerPackage, error) {
 
 	if pkgVersion == "latest" && len(markerPackage.DownloadedVersions) != 0 {
 		markerPackage.Version = markerPackage.DownloadedVersions[len(markerPackage.DownloadedVersions)-1]
+		// TODO check if directory exists
 		markerPackage.Dir = MarkerPackagePath(pkgInfo.Path, markerPackage.Version)
 	}
+	// TODO in case pkg version is not equal to latest, also check if directory exists
 
 	return markerPackage, nil
 }

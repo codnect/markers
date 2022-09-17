@@ -12,6 +12,11 @@ var (
 func AddRegistryFunction(function RegistryFunction) {
 	defer registryFunctionMu.Unlock()
 	registryFunctionMu.Lock()
+
+	if function == nil {
+		return
+	}
+
 	registryFunctions = append(registryFunctions, function)
 }
 
