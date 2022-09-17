@@ -30,7 +30,7 @@ func TestScanner_Scan(t *testing.T) {
 	assert.Equal(t, '=', current)
 
 	current = scanner.Scan()
-	assert.Equal(t, String, int(current))
+	assert.Equal(t, StringValue, int(current))
 	assert.Equal(t, "`test`", scanner.Token())
 
 	current = scanner.Scan()
@@ -44,7 +44,7 @@ func TestScanner_Scan(t *testing.T) {
 	assert.Equal(t, '=', current)
 
 	current = scanner.Scan()
-	assert.Equal(t, String, int(current))
+	assert.Equal(t, StringValue, int(current))
 	assert.Equal(t, "\"hello\"", scanner.Token())
 
 	current = scanner.Scan()
