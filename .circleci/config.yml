@@ -1,5 +1,7 @@
-
 version: 2.1
+
+orbs:
+  codecov: codecov/codecov@3.1.1
 
 jobs:
   build:
@@ -20,9 +22,8 @@ jobs:
       - run:
           name: Run tests
           command: go test -v
-
+      - codecov/upload
 workflows:
   build-workflow:
     jobs:
       - build
-
