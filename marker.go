@@ -13,7 +13,13 @@ type Validate interface {
 type MarkerValues map[string][]any
 
 func (markerValues MarkerValues) Count() int {
-	return len(markerValues)
+	count := 0
+
+	for _, markers := range markerValues {
+		count = count + len(markers)
+	}
+
+	return count
 }
 
 func (markerValues MarkerValues) AllMarkers(name string) []any {

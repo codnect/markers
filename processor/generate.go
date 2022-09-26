@@ -50,7 +50,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		var dirs []string
-		dirs, err = getPackageDirectories()
+		dirs, err = GetPackageDirectories()
 
 		if err != nil {
 			return errors.New("go.module not found")

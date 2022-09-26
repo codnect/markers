@@ -6,8 +6,9 @@ import "go/ast"
 type TargetLevel int
 
 const (
+	InvalidLevel TargetLevel = 1 << iota
 	// PackageLevel indicates that a marker is associated with a package.
-	PackageLevel TargetLevel = 1 << iota
+	PackageLevel
 	// StructTypeLevel indicates that a marker is associated with a struct type.
 	StructTypeLevel
 	// InterfaceTypeLevel indicates that a marker is associated with an interface type.
@@ -56,7 +57,9 @@ func FindTargetLevelFromNode(node ast.Node) TargetLevel {
 		} else {
 			return FunctionLevel
 		}
+	case *ast.Package:
+		return PackageLevel
 	}
 
-	return PackageLevel
+	return InvalidLevel
 }
