@@ -1,6 +1,7 @@
 package marker
 
 import (
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 )
@@ -124,7 +125,7 @@ func TestGetArgumentTypeInfo(t *testing.T) {
 	}
 
 	for index, testCase := range testCases {
-		typeInfo, err := GetArgumentTypeInfo(testCase.Type)
+		typeInfo, err := ArgumentTypeInfoFromType(testCase.Type)
 		if testCase.ShouldReturnError && err == nil {
 			t.Errorf("%d. test case must have an error.", index)
 		}
@@ -137,4 +138,179 @@ func TestGetArgumentTypeInfo(t *testing.T) {
 			t.Errorf("item type is not equal to expected, got %q; want %q", typeInfo.ItemType.ActualType, testCase.ExpectedItemType.ActualType)
 		}
 	}
+}
+
+func TestArgumentTypeInfo_ParseString(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf("anyTest"))
+	assert.Nil(t, err)
+	assert.Equal(t, StringType, typeInfo.ActualType)
+
+	strValue := ""
+
+	scanner := NewScanner(" anyTestString ")
+	scanner.Peek()
+
+	err = typeInfo.parseString(scanner, reflect.ValueOf(&strValue))
+	assert.Nil(t, err)
+	assert.Equal(t, "anyTestString", strValue)
+
+	scanner = NewScanner("\"anyTestString\"")
+	scanner.Peek()
+
+	err = typeInfo.parseString(scanner, reflect.ValueOf(&strValue))
+	assert.Nil(t, err)
+	assert.Equal(t, "anyTestString", strValue)
+
+	scanner = NewScanner("`anyTestString`")
+	scanner.Peek()
+
+	err = typeInfo.parseString(scanner, reflect.ValueOf(&strValue))
+	assert.Nil(t, err)
+	assert.Equal(t, "anyTestString", strValue)
+
+	scanner = NewScanner(" anyTestString ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&strValue))
+	assert.Nil(t, err)
+	assert.Equal(t, "anyTestString", strValue)
+
+	scanner = NewScanner("\"anyTestString\"")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&strValue))
+	assert.Nil(t, err)
+	assert.Equal(t, "anyTestString", strValue)
+
+	scanner = NewScanner("`anyTestString`")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&strValue))
+	assert.Nil(t, err)
+	assert.Equal(t, "anyTestString", strValue)
+}
+
+func TestArgumentTypeInfo_ParseBoolean(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(true))
+	assert.Nil(t, err)
+	assert.Equal(t, BoolType, typeInfo.ActualType)
+
+	boolValue := false
+
+	scanner := NewScanner(" true ")
+	scanner.Peek()
+
+	err = typeInfo.parseBoolean(scanner, reflect.ValueOf(&boolValue))
+	assert.Nil(t, err)
+	assert.True(t, boolValue)
+
+	scanner = NewScanner(" false ")
+	scanner.Peek()
+
+	err = typeInfo.parseBoolean(scanner, reflect.ValueOf(&boolValue))
+	assert.Nil(t, err)
+	assert.False(t, boolValue)
+
+	scanner = NewScanner(" true ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&boolValue))
+	assert.Nil(t, err)
+	assert.True(t, boolValue)
+
+	scanner = NewScanner(" false ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&boolValue))
+	assert.Nil(t, err)
+	assert.False(t, boolValue)
+}
+
+func TestArgumentTypeInfo_ParseInteger(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(0))
+	assert.Nil(t, err)
+	assert.Equal(t, SignedIntegerType, typeInfo.ActualType)
+
+	signedIntegerValue := 0
+
+	scanner := NewScanner(" -091215 ")
+	scanner.Peek()
+
+	err = typeInfo.parseInteger(scanner, reflect.ValueOf(&signedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, -91215, signedIntegerValue)
+
+	scanner = NewScanner(" -070519 ")
+	scanner.Peek()
+
+	err = typeInfo.parseInteger(scanner, reflect.ValueOf(&signedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, -70519, signedIntegerValue)
+
+	typeInfo, err = ArgumentTypeInfoFromType(reflect.TypeOf(uint(0)))
+	assert.Nil(t, err)
+	assert.Equal(t, UnsignedIntegerType, typeInfo.ActualType)
+
+	scanner = NewScanner(" -091215 ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&signedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, -91215, signedIntegerValue)
+
+	scanner = NewScanner(" -070519 ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&signedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, -70519, signedIntegerValue)
+
+	typeInfo, err = ArgumentTypeInfoFromType(reflect.TypeOf(uint(0)))
+	assert.Nil(t, err)
+	assert.Equal(t, UnsignedIntegerType, typeInfo.ActualType)
+
+	unsignedIntegerValue := uint(0)
+
+	scanner = NewScanner(" 091215 ")
+	scanner.Peek()
+
+	err = typeInfo.parseInteger(scanner, reflect.ValueOf(&unsignedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, uint(91215), unsignedIntegerValue)
+
+	scanner = NewScanner(" 070519 ")
+	scanner.Peek()
+
+	err = typeInfo.parseInteger(scanner, reflect.ValueOf(&unsignedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, uint(70519), unsignedIntegerValue)
+
+	scanner = NewScanner(" 091215 ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&unsignedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, uint(91215), unsignedIntegerValue)
+
+	scanner = NewScanner(" 070519 ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&unsignedIntegerValue))
+	assert.Nil(t, err)
+	assert.Equal(t, uint(70519), unsignedIntegerValue)
+}
+
+func TestArgumentTypeInfo_ParseMap(t *testing.T) {
+	/*m := make(map[string]any)
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(m))
+	assert.Nil(t, err)
+	assert.Equal(t, MapType, typeInfo.ActualType)
+	assert.Equal(t, AnyType, typeInfo.ItemType.ActualType)
+
+	scanner := NewScanner(" {test:123} ")
+	scanner.Peek()
+
+	err = typeInfo.parseMap(scanner, reflect.ValueOf(m))
+	assert.Nil(t, err)
+	assert.Contains(t, m, "test")*/
 }

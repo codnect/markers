@@ -88,7 +88,7 @@ func (definition *Definition) validate() error {
 func (definition *Definition) extract() error {
 
 	if definition.Output.Type.Kind() != reflect.Struct {
-		argumentTypeInfo, err := GetArgumentTypeInfo(definition.Output.Type)
+		argumentTypeInfo, err := ArgumentTypeInfoFromType(definition.Output.Type)
 
 		if err != nil {
 			return err
