@@ -236,7 +236,7 @@ func (s *Struct) loadAllMethods() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allMethods = append(s.allMethods, structType.AllMethods()...)
+			s.allMethods = append(s.allMethods, structType.AllMethods().ToSlice()...)
 		}
 
 		interfaceType, ok := baseType.(*Interface)
@@ -338,9 +338,11 @@ func (s *Struct) NumMethods() int {
 	return len(s.methods)
 }
 
-func (s *Struct) Methods() []*Function {
+func (s *Struct) Methods() *Functions {
 	s.loadMethods()
-	return s.methods
+	return &Functions{
+		elements: s.methods,
+	}
 }
 
 func (s *Struct) NumAllMethods() int {
@@ -348,9 +350,11 @@ func (s *Struct) NumAllMethods() int {
 	return len(s.allMethods)
 }
 
-func (s *Struct) AllMethods() []*Function {
+func (s *Struct) AllMethods() *Functions {
 	s.loadAllMethods()
-	return s.allMethods
+	return &Functions{
+		elements: s.allMethods,
+	}
 }
 
 func (s *Struct) Implements(i *Interface) bool {

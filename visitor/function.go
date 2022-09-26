@@ -395,6 +395,10 @@ type Functions struct {
 	elements []*Function
 }
 
+func (f *Functions) ToSlice() []*Function {
+	return f.elements
+}
+
 func (f *Functions) Len() int {
 	return len(f.elements)
 }

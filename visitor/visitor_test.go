@@ -51,6 +51,8 @@ type interfaceInfo struct {
 
 type structInfo struct {
 	markers marker.MarkerValues
+	methods map[string]functionInfo
+	fields  map[string]fieldInfo
 }
 
 type functionInfo struct {
@@ -58,6 +60,11 @@ type functionInfo struct {
 	isVariadic bool
 	params     []variableInfo
 	results    []variableInfo
+}
+
+type fieldInfo struct {
+	name     string
+	typeName string
 }
 
 type variableInfo struct {
@@ -345,6 +352,92 @@ var (
 			},
 		},
 	}
+
+	eatMethod = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:struct-method-level": {
+				StructMethodLevel{
+					Name: "Eat",
+				},
+			},
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "bool",
+			},
+		},
+	}
+
+	buyMethod = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:struct-method-level": {
+				StructMethodLevel{
+					Name: "Buy",
+				},
+			},
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "i",
+				typeName: "int",
+			},
+		},
+		results: []variableInfo{},
+	}
+
+	fortuneCookieMethod = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:struct-method-level": {
+				StructMethodLevel{
+					Name: "FortuneCookie",
+				},
+			},
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "v",
+				typeName: "interface{}",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "[]string",
+			},
+		},
+	}
+
+	oreoMethod = functionInfo{
+		markers: marker.MarkerValues{
+			"marker:struct-method-level": {
+				StructMethodLevel{
+					Name: "Oreo",
+				},
+			},
+		},
+		isVariadic: true,
+		params: []variableInfo{
+			{
+				name:     "a",
+				typeName: "[]interface{}",
+			},
+			{
+				name:     "v",
+				typeName: "string",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "error",
+			},
+		},
+	}
 )
 
 // structs
@@ -357,6 +450,13 @@ var (
 				},
 			},
 		},
+		methods: map[string]functionInfo{
+			"Eat": eatMethod,
+			"Buy": buyMethod,
+		},
+		fields: map[string]fieldInfo{
+			"Cookie": {},
+		},
 	}
 
 	cookieStruct = structInfo{
@@ -366,6 +466,13 @@ var (
 					Name: "Cookie",
 				},
 			},
+		},
+		methods: map[string]functionInfo{
+			"FortuneCookie": fortuneCookieMethod,
+			"Oreo":          oreoMethod,
+		},
+		fields: map[string]fieldInfo{
+			"ChocolateChip": {},
 		},
 	}
 )
@@ -528,7 +635,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 			return nil
 		}
 
-		if !assertFunctions(t, file, testCase.functions) {
+		if !assertFunctions(t, file.functions, testCase.functions) {
 			return nil
 		}
 
@@ -599,45 +706,47 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 			continue
 		}
 
+		if actualStruct.NumMethods() != len(expectedStruct.methods) {
+			t.Errorf("the number of the methods of the struct %s should be %d, but got %d", expectedStructName, len(expectedStruct.methods), actualStruct.NumMethods())
+		}
+
+		if actualStruct.NumFields() != len(expectedStruct.fields) {
+			t.Errorf("the number of the fields of the struct %s should be %d, but got %d", expectedStructName, len(expectedStruct.fields), actualStruct.NumFields())
+		}
+
+		assertFunctions(t, actualStruct.Methods(), expectedStruct.methods)
 		assertMarkers(t, expectedStruct.markers, actualStruct.Markers(), fmt.Sprintf("struct %s", expectedStructName))
 	}
 
 	return true
 }
 
-func assertFunctions(t *testing.T, file *File, functions map[string]functionInfo) bool {
+func assertFunctions(t *testing.T, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
 
-	if len(functions) != file.Functions().Len() {
-		t.Errorf("the number of the functions should be %d, but got %d", len(functions), file.Functions().Len())
+	if actualMethods.Len() != len(expectedMethods) {
+		t.Errorf("the number of the methods should be %d, but got %d", len(expectedMethods), actualMethods.Len())
 		return false
 	}
 
-	for expectedFunctionName, expectedFunction := range functions {
-		actualFunction, ok := file.Functions().FindByName(expectedFunctionName)
+	for expectedMethodName, expectedMethod := range expectedMethods {
+		actualMethod, ok := actualMethods.FindByName(expectedMethodName)
 
 		if !ok {
-			t.Errorf("function with name %s is not found", expectedFunctionName)
+			t.Errorf("method with name %s is not found", expectedMethodName)
 			continue
 		}
 
-		if actualFunction.Receiver() != nil {
-			t.Errorf("the receiver of the function %s should be nil", expectedFunctionName)
-			continue
+		if expectedMethod.isVariadic && !actualMethod.IsVariadic() {
+			t.Errorf("the function %s should be a variadic function", expectedMethodName)
+		} else if !expectedMethod.isVariadic && actualMethod.IsVariadic() {
+			t.Errorf("the function %s should not be a variadic function", expectedMethodName)
 		}
 
-		if expectedFunction.isVariadic && !actualFunction.IsVariadic() {
-			t.Errorf("the function %s should be a variadic function", expectedFunctionName)
-			continue
-		} else if !expectedFunction.isVariadic && actualFunction.IsVariadic() {
-			t.Errorf("the function %s should not be a variadic function", expectedFunctionName)
-			continue
-		}
+		assertFunctionParameters(t, expectedMethod.params, actualMethod.Params(), fmt.Sprintf("function %s", expectedMethodName))
 
-		assertFunctionParameters(t, expectedFunction.params, actualFunction.Params(), fmt.Sprintf("function %s", expectedFunctionName))
+		assertFunctionResult(t, expectedMethod.results, actualMethod.Results(), fmt.Sprintf("function %s", expectedMethodName))
 
-		assertFunctionResult(t, expectedFunction.results, actualFunction.Results(), fmt.Sprintf("function %s", expectedFunctionName))
-
-		assertMarkers(t, expectedFunction.markers, actualFunction.markers, fmt.Sprintf("function %s", expectedFunctionName))
+		assertMarkers(t, expectedMethod.markers, actualMethod.markers, fmt.Sprintf("function %s", expectedMethodName))
 	}
 
 	return true
