@@ -21,7 +21,7 @@ jobs:
             - "/go/pkg/mod"
       - run:
           name: Run tests
-          command:  go test ./visitor/... ./. -coverprofile=coverage.txt -covermode=atomic
+          command:  go test ./. ./visitor/... ./packages/... -coverprofile=coverage.txt -covermode=atomic
       - codecov/upload
 workflows:
   build-workflow:
