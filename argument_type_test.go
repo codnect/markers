@@ -301,16 +301,73 @@ func TestArgumentTypeInfo_ParseInteger(t *testing.T) {
 }
 
 func TestArgumentTypeInfo_ParseMap(t *testing.T) {
-	/*m := make(map[string]any)
-	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(m))
+	m := make(map[string]any)
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(&m))
 	assert.Nil(t, err)
 	assert.Equal(t, MapType, typeInfo.ActualType)
 	assert.Equal(t, AnyType, typeInfo.ItemType.ActualType)
 
-	scanner := NewScanner(" {test:123} ")
+	scanner := NewScanner(" {anyKey1:123,anyKey2:true,anyKey3:\"anyValue1\",anyKey4:`anyValue2`} ")
 	scanner.Peek()
 
-	err = typeInfo.parseMap(scanner, reflect.ValueOf(m))
+	err = typeInfo.parseMap(scanner, reflect.ValueOf(&m))
 	assert.Nil(t, err)
-	assert.Contains(t, m, "test")*/
+	assert.Contains(t, m, "anyKey1")
+	assert.Equal(t, 123, m["anyKey1"])
+	assert.Contains(t, m, "anyKey2")
+	assert.Equal(t, true, m["anyKey2"])
+	assert.Contains(t, m, "anyKey3")
+	assert.Equal(t, "anyValue1", m["anyKey3"])
+	assert.Contains(t, m, "anyKey4")
+	assert.Equal(t, "anyValue2", m["anyKey4"])
+
+	scanner = NewScanner(" {anyKey1:123,anyKey2:true,anyKey3:\"anyValue1\",anyKey4:`anyValue2`} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&m))
+	assert.Nil(t, err)
+	assert.Contains(t, m, "anyKey1")
+	assert.Equal(t, 123, m["anyKey1"])
+	assert.Contains(t, m, "anyKey2")
+	assert.Equal(t, true, m["anyKey2"])
+	assert.Contains(t, m, "anyKey3")
+	assert.Equal(t, "anyValue1", m["anyKey3"])
+	assert.Contains(t, m, "anyKey4")
+	assert.Equal(t, "anyValue2", m["anyKey4"])
+}
+
+func TestArgumentTypeInfo_ParseSlice(t *testing.T) {
+	s := make([]int, 0)
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(&s))
+	assert.Nil(t, err)
+	assert.Equal(t, SliceType, typeInfo.ActualType)
+	assert.Equal(t, SignedIntegerType, typeInfo.ItemType.ActualType)
+
+	scanner := NewScanner(" 1;2;3;4;5 ")
+	scanner.Peek()
+
+	err = typeInfo.parseSlice(scanner, reflect.ValueOf(&s))
+	assert.Nil(t, err)
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, s)
+
+	scanner = NewScanner(" 1;2;3;4;5 ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&s))
+	assert.Nil(t, err)
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, s)
+
+	scanner = NewScanner(" {1,2,3,4,5} ")
+	scanner.Peek()
+
+	err = typeInfo.parseSlice(scanner, reflect.ValueOf(&s))
+	assert.Nil(t, err)
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, s)
+
+	scanner = NewScanner(" {1,2,3,4,5} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&s))
+	assert.Nil(t, err)
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, s)
 }

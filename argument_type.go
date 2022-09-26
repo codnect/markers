@@ -282,8 +282,13 @@ func (typeInfo ArgumentTypeInfo) parseSlice(scanner *Scanner, out reflect.Value)
 		return errors.New("scanner cannot be nil")
 	}
 
-	sliceType := reflect.Zero(out.Type())
-	sliceItemType := reflect.Indirect(reflect.New(out.Type().Elem()))
+	reflectVal := out
+	if reflectVal.Kind() == reflect.Ptr {
+		reflectVal = reflectVal.Elem()
+	}
+
+	sliceType := reflect.Zero(reflectVal.Type())
+	sliceItemType := reflect.Indirect(reflect.New(reflectVal.Type().Elem()))
 
 	if scanner.SkipWhitespaces() == '{' {
 
@@ -348,9 +353,14 @@ func (typeInfo ArgumentTypeInfo) parseMap(scanner *Scanner, out reflect.Value) e
 		return errors.New("scanner cannot be nil")
 	}
 
-	mapType := reflect.MakeMap(out.Type())
-	key := reflect.Indirect(reflect.New(out.Type().Key()))
-	value := reflect.Indirect(reflect.New(out.Type().Elem()))
+	reflectVal := out
+	if reflectVal.Kind() == reflect.Ptr {
+		reflectVal = reflectVal.Elem()
+	}
+
+	mapType := reflect.MakeMap(reflectVal.Type())
+	key := reflect.Indirect(reflect.New(reflectVal.Type().Key()))
+	value := reflect.Indirect(reflect.New(reflectVal.Type().Elem()))
 
 	if !scanner.Expect('{', "Left Curly Bracket") {
 		return nil
@@ -389,7 +399,6 @@ func (typeInfo ArgumentTypeInfo) parseMap(scanner *Scanner, out reflect.Value) e
 	}
 
 	typeInfo.setValue(out, mapType)
-
 	return nil
 }
 
