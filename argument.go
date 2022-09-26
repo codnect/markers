@@ -23,7 +23,7 @@ func ExtractArgument(structField reflect.StructField) (Argument, error) {
 	}
 
 	fieldType := structField.Type
-	argumentTypeInfo, err := GetArgumentTypeInfo(fieldType)
+	argumentTypeInfo, err := ArgumentTypeInfoFromType(fieldType)
 
 	if err != nil {
 		return Argument{}, err

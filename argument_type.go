@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type ArgumentType int
@@ -53,7 +54,7 @@ type ArgumentTypeInfo struct {
 	Enum       map[string]any
 }
 
-func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
+func ArgumentTypeInfoFromType(typ reflect.Type) (ArgumentTypeInfo, error) {
 	typeInfo := &ArgumentTypeInfo{}
 
 	if typ.Kind() == reflect.Ptr {
@@ -82,7 +83,7 @@ func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
 		typeInfo.ActualType = BoolType
 	case reflect.Slice:
 		typeInfo.ActualType = SliceType
-		itemType, err := GetArgumentTypeInfo(typ.Elem())
+		itemType, err := ArgumentTypeInfoFromType(typ.Elem())
 
 		if err != nil {
 			return ArgumentTypeInfo{}, fmt.Errorf("bad slice item type: %w", err)
@@ -95,7 +96,7 @@ func GetArgumentTypeInfo(typ reflect.Type) (ArgumentTypeInfo, error) {
 		}
 
 		typeInfo.ActualType = MapType
-		itemType, err := GetArgumentTypeInfo(typ.Elem())
+		itemType, err := ArgumentTypeInfoFromType(typ.Elem())
 
 		if err != nil {
 			return ArgumentTypeInfo{}, fmt.Errorf("bad map item type: %w", err)
@@ -113,8 +114,7 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 	switch typeInfo.ActualType {
 	case BoolType:
 		return typeInfo.parseBoolean(scanner, out)
-	case SignedIntegerType:
-	case UnsignedIntegerType:
+	case SignedIntegerType, UnsignedIntegerType:
 		return typeInfo.parseInteger(scanner, out)
 	case StringType:
 		return typeInfo.parseString(scanner, out)
@@ -194,8 +194,10 @@ func (typeInfo ArgumentTypeInfo) parseBoolean(scanner *Scanner, out reflect.Valu
 	switch scanner.Token() {
 	case "false":
 		typeInfo.setValue(out, reflect.ValueOf(false))
+		return nil
 	case "true":
 		typeInfo.setValue(out, reflect.ValueOf(true))
+		return nil
 	}
 
 	return fmt.Errorf("expected true or false, got %q", scanner.Token())
@@ -207,6 +209,10 @@ func (typeInfo ArgumentTypeInfo) parseInteger(scanner *Scanner, out reflect.Valu
 	}
 
 	nextCharacter := scanner.Peek()
+
+	if Whitespace&(1<<uint(nextCharacter)) != 0 {
+		nextCharacter = scanner.SkipWhitespaces()
+	}
 
 	isNegative := false
 
@@ -264,6 +270,8 @@ func (typeInfo ArgumentTypeInfo) parseString(scanner *Scanner, out reflect.Value
 	endPosition := scanner.searchIndex
 
 	value := string(scanner.source[startPosition:endPosition])
+	value = strings.TrimLeft(value, " \t")
+	value = strings.TrimRight(value, " \t")
 	typeInfo.setValue(out, reflect.ValueOf(value))
 
 	return nil
@@ -274,8 +282,13 @@ func (typeInfo ArgumentTypeInfo) parseSlice(scanner *Scanner, out reflect.Value)
 		return errors.New("scanner cannot be nil")
 	}
 
-	sliceType := reflect.Zero(out.Type())
-	sliceItemType := reflect.Indirect(reflect.New(out.Type().Elem()))
+	reflectVal := out
+	if reflectVal.Kind() == reflect.Ptr {
+		reflectVal = reflectVal.Elem()
+	}
+
+	sliceType := reflect.Zero(reflectVal.Type())
+	sliceItemType := reflect.Indirect(reflect.New(reflectVal.Type().Elem()))
 
 	if scanner.SkipWhitespaces() == '{' {
 
@@ -340,9 +353,14 @@ func (typeInfo ArgumentTypeInfo) parseMap(scanner *Scanner, out reflect.Value) e
 		return errors.New("scanner cannot be nil")
 	}
 
-	mapType := reflect.MakeMap(out.Type())
-	key := reflect.Indirect(reflect.New(out.Type().Key()))
-	value := reflect.Indirect(reflect.New(out.Type().Elem()))
+	reflectVal := out
+	if reflectVal.Kind() == reflect.Ptr {
+		reflectVal = reflectVal.Elem()
+	}
+
+	mapType := reflect.MakeMap(reflectVal.Type())
+	key := reflect.Indirect(reflect.New(reflectVal.Type().Key()))
+	value := reflect.Indirect(reflect.New(reflectVal.Type().Elem()))
 
 	if !scanner.Expect('{', "Left Curly Bracket") {
 		return nil
@@ -381,7 +399,6 @@ func (typeInfo ArgumentTypeInfo) parseMap(scanner *Scanner, out reflect.Value) e
 	}
 
 	typeInfo.setValue(out, mapType)
-
 	return nil
 }
 
