@@ -108,10 +108,10 @@ func initializeMarkerProcessorPackage() error {
 	if moduleName == "" {
 		var loadResult *packages.LoadResult
 		loadResult, err = packages.LoadPackages()
-		if err != nil || len(loadResult.GetPackages()) == 0 {
+		if err != nil || len(loadResult.Packages()) == 0 {
 			return errors.New("go.mod not found, module name is required")
 		}
-		pkg := loadResult.GetPackages()[0]
+		pkg := loadResult.Packages()[0]
 		moduleName = pkg.PkgPath
 	} else {
 		err = generateModFile(moduleName)

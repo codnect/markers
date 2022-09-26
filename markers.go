@@ -27,18 +27,24 @@ type ImportMarker struct {
 }
 
 func (m ImportMarker) Validate() error {
-	if m.Value == "" {
-		return errors.New("'Value' argument cannot be nil or empty")
+	var errs []error
+
+	if strings.Trim(m.Value, " \t") == "" {
+		errs = append(errs, errors.New("'Value' argument cannot be nil or empty"))
 	}
 
-	if m.Pkg == "" {
-		return errors.New("'Pkg' argument cannot be nil or empty")
+	if strings.Trim(m.Pkg, " \t") == "" {
+		errs = append(errs, errors.New("'Pkg' argument cannot be nil or empty"))
+	}
+
+	if len(errs) != 0 {
+		return NewErrorList(errs)
 	}
 
 	return nil
 }
 
-func (m ImportMarker) PkgId() string {
+func (m ImportMarker) PkgPath() string {
 	pkgParts := strings.Split(m.Pkg, "@")
 	return pkgParts[0]
 }

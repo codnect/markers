@@ -513,7 +513,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 
 	collector := marker.NewCollector(registry)
 
-	err := EachFile(collector, result.GetPackages(), func(file *File, err error) error {
+	err := EachFile(collector, result.Packages(), func(file *File, err error) error {
 		if file.pkg.ID == "builtin" {
 			return nil
 		}

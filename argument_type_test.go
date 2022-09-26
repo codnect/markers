@@ -371,3 +371,31 @@ func TestArgumentTypeInfo_ParseSlice(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []int{1, 2, 3, 4, 5}, s)
 }
+
+func TestArgumentTypeInfo_InferType(t *testing.T) {
+	m := make(map[string]any)
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(&m))
+	assert.Nil(t, err)
+	assert.Equal(t, MapType, typeInfo.ActualType)
+	assert.Equal(t, AnyType, typeInfo.ItemType.ActualType)
+
+	scanner := NewScanner(" {anyKey1:123,anyKey2:true,anyKey3:\"anyValue1\",anyKey4:`anyValue2`,anyKey5:{anySubKey1:`anySubValue1`},anyKey6:{1,2,3,4,5},anyKey7:'anySliceValue1';'anySliceValue2'}")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&m))
+	assert.Nil(t, err)
+	assert.Contains(t, m, "anyKey1")
+	assert.Equal(t, 123, m["anyKey1"])
+	assert.Contains(t, m, "anyKey2")
+	assert.Equal(t, true, m["anyKey2"])
+	assert.Contains(t, m, "anyKey3")
+	assert.Equal(t, "anyValue1", m["anyKey3"])
+	assert.Contains(t, m, "anyKey4")
+	assert.Equal(t, "anyValue2", m["anyKey4"])
+	assert.Contains(t, m, "anyKey5")
+	assert.Equal(t, map[string]interface{}{"anySubKey1": "anySubValue1"}, m["anyKey5"])
+	assert.Contains(t, m, "anyKey6")
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, m["anyKey6"])
+	assert.Contains(t, m, "anyKey7")
+	assert.Equal(t, []string{"'anySliceValue1'", "'anySliceValue2'"}, m["anyKey7"])
+}

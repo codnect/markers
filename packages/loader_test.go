@@ -1,63 +1,46 @@
 package packages
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestLoadPackages(t *testing.T) {
-	/*pkgs, err := LoadPackages("./test/package1")
+func TestLoadResult_Packages(t *testing.T) {
+	loadResult, err := LoadPackages("github.com/procyon-projects/marker/test/...")
 
 	assert.Nil(t, err)
-	assert.NotNil(t, pkgs)
-	assert.Len(t, pkgs, 1)
+	assert.NotNil(t, loadResult)
+	assert.Len(t, loadResult.Packages(), 1)
 
-	assert.Equal(t, "package1", pkgs[0].Name)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkgs[0].ID)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkgs[0].PkgPath)
+	pkg := loadResult.Packages()[0]
+	assert.Equal(t, "package1", pkg.Name)
+	assert.False(t, pkg.IsStandardPackage())
+	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkg.ID)
+	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkg.PkgPath)
 
-	assert.NotNil(t, pkgs[0].GoFiles)
-	assert.NotNil(t, pkgs[0].CompiledGoFiles)
-	assert.NotNil(t, pkgs[0].Syntax)
+	assert.NotNil(t, pkg.GoFiles)
+	assert.NotNil(t, pkg.CompiledGoFiles)
+	assert.NotNil(t, pkg.Syntax)
 
-	assert.Len(t, pkgs[0].GoFiles, 1)
-	assert.Len(t, pkgs[0].CompiledGoFiles, 1)
-	assert.Len(t, pkgs[0].Syntax, 1)
+	assert.Len(t, pkg.GoFiles, 1)
+	assert.Len(t, pkg.CompiledGoFiles, 1)
+	assert.Len(t, pkg.Syntax, 1)
 
-	assert.NotNil(t, pkgs[0].Module)*/
+	assert.NotNil(t, pkg.Module)
 }
 
-func TestLoadMultiPackages(t *testing.T) {
-	/*pkgs, err := LoadPackages("./test/...")
+func TestLoadResult_Lookup(t *testing.T) {
+	loadResult, err := LoadPackages("github.com/procyon-projects/marker/test/...")
 
 	assert.Nil(t, err)
-	assert.NotNil(t, pkgs)
-	assert.Len(t, pkgs, 2)
+	assert.NotNil(t, loadResult)
+	assert.Len(t, loadResult.Packages(), 1)
 
-	assert.Equal(t, "package1", pkgs[0].Name)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkgs[0].ID)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkgs[0].PkgPath)
-
-	assert.NotNil(t, pkgs[0].GoFiles)
-	assert.NotNil(t, pkgs[0].CompiledGoFiles)
-	assert.NotNil(t, pkgs[0].Syntax)
-
-	assert.Len(t, pkgs[0].GoFiles, 1)
-	assert.Len(t, pkgs[0].CompiledGoFiles, 1)
-	assert.Len(t, pkgs[0].Syntax, 1)
-
-	assert.NotNil(t, pkgs[0].Module)
-
-	assert.Equal(t, "package2", pkgs[1].Name)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/package2", pkgs[1].ID)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/package2", pkgs[1].PkgPath)
-
-	assert.NotNil(t, pkgs[1].GoFiles)
-	assert.NotNil(t, pkgs[1].CompiledGoFiles)
-	assert.NotNil(t, pkgs[1].Syntax)
-
-	assert.Len(t, pkgs[1].GoFiles, 1)
-	assert.Len(t, pkgs[1].CompiledGoFiles, 1)
-	assert.Len(t, pkgs[1].Syntax, 1)
-
-	assert.NotNil(t, pkgs[1].Module)*/
+	pkg, err := loadResult.Lookup("github.com/procyon-projects/marker/test/package1")
+	assert.Nil(t, err)
+	assert.NotNil(t, pkg)
+	assert.Equal(t, "package1", pkg.Name)
+	assert.False(t, pkg.IsStandardPackage())
+	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkg.ID)
+	assert.Equal(t, "github.com/procyon-projects/marker/test/package1", pkg.PkgPath)
 }
