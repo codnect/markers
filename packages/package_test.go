@@ -39,13 +39,6 @@ func TestMarkerPackagePathFromPackageInfo(t *testing.T) {
 	}), "/marker/pkg/github.com/procyon-projects/marker/anyVersion"))
 }
 
-func TestGoModDir(t *testing.T) {
-	modDir, err := GoModDir()
-	assert.Nil(t, err)
-	assert.NotEmpty(t, modDir)
-	assert.True(t, strings.HasSuffix(modDir, "/marker"))
-}
-
 func TestMarkerProcessorYamlPath(t *testing.T) {
 	assert.True(t, strings.HasSuffix(MarkerProcessorYamlPath(&PackageInfo{
 		Path:    "github.com/procyon-projects/marker",
