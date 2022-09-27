@@ -27,6 +27,9 @@ type FriedCookie struct {
 	// Cookie is an embedded struct
 	// +marker:interface-method-level:Name=Cookie
 	Cookie
+	// ChocolateChip is a field
+	// +marker:struct-field-level:Name=CookieDough
+	cookieDough any
 }
 
 // Buy is a method
@@ -47,6 +50,9 @@ type Cookie struct {
 	// ChocolateChip is a field
 	// +marker:struct-field-level:Name=ChocolateChip
 	ChocolateChip string
+	// tripleChocolateCookie is a field
+	// +marker:struct-field-level:Name=tripleChocolateCookie
+	tripleChocolateCookie string
 }
 
 // FortuneCookie is a method

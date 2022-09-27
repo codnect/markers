@@ -38,6 +38,36 @@ func (f *Field) Tags() string {
 	return f.tags
 }
 
+type Fields struct {
+	elements []*Field
+}
+
+func (f *Fields) ToSlice() []*Field {
+	return f.elements
+}
+
+func (f *Fields) Len() int {
+	return len(f.elements)
+}
+
+func (f *Fields) At(index int) *Field {
+	if index >= 0 && index < len(f.elements) {
+		return f.elements[index]
+	}
+
+	return nil
+}
+
+func (f *Fields) FindByName(name string) (*Field, bool) {
+	for _, field := range f.elements {
+		if field.name == name {
+			return field, true
+		}
+	}
+
+	return nil, false
+}
+
 type Struct struct {
 	name        string
 	isExported  bool
@@ -115,8 +145,8 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 			embeddedType := getTypeFromExpression(rawField.Type, s.visitor)
 
 			field := &Field{
-				name:       "",
-				isExported: false,
+				name:       embeddedType.Name(),
+				isExported: ast.IsExported(embeddedType.Name()),
 				position:   Position{},
 				markers:    markers[rawField],
 				file:       s.file,
@@ -190,7 +220,7 @@ func (s *Struct) loadAllFields() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allFields = append(s.allFields, structType.AllFields()...)
+			s.allFields = append(s.allFields, structType.AllFields().ToSlice()...)
 		}
 
 	}
@@ -299,7 +329,7 @@ func (s *Struct) NumEmbeddedFields() int {
 	return numEmbeddedFields
 }
 
-func (s *Struct) EmbeddedFields() []*Field {
+func (s *Struct) EmbeddedFields() *Fields {
 	s.loadFields()
 
 	embeddedFields := make([]*Field, 0)
@@ -310,7 +340,9 @@ func (s *Struct) EmbeddedFields() []*Field {
 		}
 	}
 
-	return embeddedFields
+	return &Fields{
+		elements: embeddedFields,
+	}
 }
 
 func (s *Struct) NumFields() int {
@@ -318,9 +350,11 @@ func (s *Struct) NumFields() int {
 	return len(s.fields)
 }
 
-func (s *Struct) Fields() []*Field {
+func (s *Struct) Fields() *Fields {
 	s.loadFields()
-	return s.fields
+	return &Fields{
+		elements: s.fields,
+	}
 }
 
 func (s *Struct) NumAllFields() int {
@@ -328,9 +362,11 @@ func (s *Struct) NumAllFields() int {
 	return len(s.allFields)
 }
 
-func (s *Struct) AllFields() []*Field {
+func (s *Struct) AllFields() *Fields {
 	s.loadAllFields()
-	return s.allFields
+	return &Fields{
+		elements: s.allFields,
+	}
 }
 
 func (s *Struct) NumMethods() int {
