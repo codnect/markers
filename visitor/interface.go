@@ -163,7 +163,7 @@ func (i *Interface) loadAllMethods() {
 	i.allMethodsLoaded = true
 }
 
-func (i *Interface) IsEmptyInterface() bool {
+func (i *Interface) IsEmpty() bool {
 	return len(i.fieldList) == 0
 }
 
@@ -217,9 +217,11 @@ func (i *Interface) NumExplicitMethods() int {
 	return len(i.methods)
 }
 
-func (i *Interface) ExplicitMethods() []*Function {
+func (i *Interface) ExplicitMethods() *Functions {
 	i.loadMethods()
-	return i.methods
+	return &Functions{
+		elements: i.methods,
+	}
 }
 
 func (i *Interface) NumEmbeddedTypes() int {
@@ -237,9 +239,11 @@ func (i *Interface) NumMethods() int {
 	return len(i.allMethods)
 }
 
-func (i *Interface) Methods() []*Function {
+func (i *Interface) Methods() *Functions {
 	i.loadAllMethods()
-	return i.allMethods
+	return &Functions{
+		elements: i.allMethods,
+	}
 }
 
 func (i *Interface) InterfaceType() *types.Interface {

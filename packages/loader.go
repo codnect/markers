@@ -78,7 +78,7 @@ type LoadResult struct {
 	standardPackages map[string]*Package
 }
 
-func (result *LoadResult) GetPackages() []*Package {
+func (result *LoadResult) Packages() []*Package {
 	pkgs := make([]*Package, 0)
 
 	for _, pkg := range result.packages {

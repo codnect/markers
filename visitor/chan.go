@@ -24,7 +24,7 @@ func (c *Chan) Underlying() Type {
 	return c
 }
 
-func (a *Chan) Name() string {
+func (c *Chan) Name() string {
 	return ""
 }
 

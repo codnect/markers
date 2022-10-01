@@ -4,6 +4,7 @@ import (
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -36,6 +37,36 @@ func (f *Field) IsEmbedded() bool {
 
 func (f *Field) Tags() string {
 	return f.tags
+}
+
+type Fields struct {
+	elements []*Field
+}
+
+func (f *Fields) ToSlice() []*Field {
+	return f.elements
+}
+
+func (f *Fields) Len() int {
+	return len(f.elements)
+}
+
+func (f *Fields) At(index int) *Field {
+	if index >= 0 && index < len(f.elements) {
+		return f.elements[index]
+	}
+
+	return nil
+}
+
+func (f *Fields) FindByName(name string) (*Field, bool) {
+	for _, field := range f.elements {
+		if field.name == name {
+			return field, true
+		}
+	}
+
+	return nil, false
 }
 
 type Struct struct {
@@ -90,8 +121,10 @@ func (s *Struct) initialize(specType *ast.TypeSpec, structType *ast.StructType, 
 		s.namedType = file.pkg.Types.Scope().Lookup(specType.Name.Name).Type().(*types.Named)
 		s.fieldList = s.specType.Type.(*ast.StructType).Fields.List
 		s.file.structs.elements = append(s.file.structs.elements, s)
-	} else {
-		s.position = getPosition(pkg, structType.Pos())
+	} else if structType != nil {
+		if structType.Pos() != token.NoPos {
+			//i.position = getPosition(pkg, interfaceType.Pos())
+		}
 		s.fieldList = structType.Fields.List
 		s.isAnonymous = true
 	}
@@ -115,8 +148,8 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 			embeddedType := getTypeFromExpression(rawField.Type, s.visitor)
 
 			field := &Field{
-				name:       "",
-				isExported: false,
+				name:       embeddedType.Name(),
+				isExported: ast.IsExported(embeddedType.Name()),
 				position:   Position{},
 				markers:    markers[rawField],
 				file:       s.file,
@@ -190,7 +223,7 @@ func (s *Struct) loadAllFields() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allFields = append(s.allFields, structType.AllFields()...)
+			s.allFields = append(s.allFields, structType.AllFields().ToSlice()...)
 		}
 
 	}
@@ -236,13 +269,13 @@ func (s *Struct) loadAllMethods() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allMethods = append(s.allMethods, structType.AllMethods()...)
+			s.allMethods = append(s.allMethods, structType.AllMethods().ToSlice()...)
 		}
 
 		interfaceType, ok := baseType.(*Interface)
 
 		if ok {
-			s.allMethods = append(s.allMethods, interfaceType.Methods()...)
+			s.allMethods = append(s.allMethods, interfaceType.Methods().ToSlice()...)
 		}
 	}
 
@@ -273,6 +306,10 @@ func (s *Struct) IsExported() bool {
 	return s.isExported
 }
 
+func (s *Struct) IsEmpty() bool {
+	return len(s.fieldList) == 0
+}
+
 func (s *Struct) IsAnonymous() bool {
 	return s.isAnonymous
 }
@@ -299,7 +336,7 @@ func (s *Struct) NumEmbeddedFields() int {
 	return numEmbeddedFields
 }
 
-func (s *Struct) EmbeddedFields() []*Field {
+func (s *Struct) EmbeddedFields() *Fields {
 	s.loadFields()
 
 	embeddedFields := make([]*Field, 0)
@@ -310,7 +347,9 @@ func (s *Struct) EmbeddedFields() []*Field {
 		}
 	}
 
-	return embeddedFields
+	return &Fields{
+		elements: embeddedFields,
+	}
 }
 
 func (s *Struct) NumFields() int {
@@ -318,9 +357,11 @@ func (s *Struct) NumFields() int {
 	return len(s.fields)
 }
 
-func (s *Struct) Fields() []*Field {
+func (s *Struct) Fields() *Fields {
 	s.loadFields()
-	return s.fields
+	return &Fields{
+		elements: s.fields,
+	}
 }
 
 func (s *Struct) NumAllFields() int {
@@ -328,9 +369,11 @@ func (s *Struct) NumAllFields() int {
 	return len(s.allFields)
 }
 
-func (s *Struct) AllFields() []*Field {
+func (s *Struct) AllFields() *Fields {
 	s.loadAllFields()
-	return s.allFields
+	return &Fields{
+		elements: s.allFields,
+	}
 }
 
 func (s *Struct) NumMethods() int {
@@ -338,9 +381,11 @@ func (s *Struct) NumMethods() int {
 	return len(s.methods)
 }
 
-func (s *Struct) Methods() []*Function {
+func (s *Struct) Methods() *Functions {
 	s.loadMethods()
-	return s.methods
+	return &Functions{
+		elements: s.methods,
+	}
 }
 
 func (s *Struct) NumAllMethods() int {
@@ -348,9 +393,11 @@ func (s *Struct) NumAllMethods() int {
 	return len(s.allMethods)
 }
 
-func (s *Struct) AllMethods() []*Function {
+func (s *Struct) AllMethods() *Functions {
 	s.loadAllMethods()
-	return s.allMethods
+	return &Functions{
+		elements: s.allMethods,
+	}
 }
 
 func (s *Struct) Implements(i *Interface) bool {

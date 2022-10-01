@@ -122,8 +122,7 @@ func (typeInfo ArgumentTypeInfo) Parse(scanner *Scanner, out reflect.Value) erro
 		return typeInfo.parseSlice(scanner, out)
 	case MapType:
 		return typeInfo.parseMap(scanner, out)
-	case GoFuncType:
-	case GoType:
+	case GoFuncType, GoType:
 	case AnyType:
 		inferredType, _ := typeInfo.inferType(scanner, out, false)
 		newOut := out
