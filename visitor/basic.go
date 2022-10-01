@@ -32,8 +32,8 @@ const (
 	UntypedString
 	UntypedNil
 
-	Byte = Uint8
-	Rune = Int32
+	Byte
+	Rune
 )
 
 // BasicInfo is a set of flags describing properties of a basic type.
@@ -104,8 +104,8 @@ var basicTypes = []*Basic{
 	UntypedString:  {UntypedString, IsString | IsUntyped, "untyped string"},
 	UntypedNil:     {UntypedNil, IsUntyped, "untyped nil"},
 
-	{Byte, IsInteger | IsUnsigned, "byte"},
-	{Rune, IsInteger, "rune"},
+	Byte: {Byte, IsInteger | IsUnsigned, "byte"},
+	Rune: {Rune, IsInteger, "rune"},
 }
 
 type Basic struct {

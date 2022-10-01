@@ -17,8 +17,8 @@ type functionInfo struct {
 var (
 	breadFunction = functionInfo{
 		markers: marker.MarkerValues{
-			"marker:function-level": {
-				FunctionLevel{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
 					Name: "Bread",
 				},
 			},
@@ -44,8 +44,8 @@ var (
 
 	macaronFunction = functionInfo{
 		markers: marker.MarkerValues{
-			"marker:function-level": {
-				FunctionLevel{
+			"marker:interface-method-level": {
+				InterfaceMethodLevel{
 					Name: "Macaron",
 				},
 			},
@@ -181,7 +181,7 @@ var (
 				},
 			},
 		},
-		isVariadic: true,
+		isVariadic: false,
 		params: []variableInfo{
 			{
 				name:     "a",
@@ -214,10 +214,6 @@ var (
 				name:     "s",
 				typeName: "interface{}",
 			},
-			{
-				name:     "b",
-				typeName: "bool",
-			},
 		},
 		results: []variableInfo{},
 	}
@@ -226,7 +222,7 @@ var (
 		markers: marker.MarkerValues{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
-					Name: "Tart",
+					Name: "Donut",
 				},
 			},
 		},
@@ -289,7 +285,11 @@ var (
 		results: []variableInfo{
 			{
 				name:     "",
-				typeName: "interface{}",
+				typeName: "string",
+			},
+			{
+				name:     "",
+				typeName: "error",
 			},
 		},
 	}
@@ -381,7 +381,7 @@ var (
 	}
 )
 
-func assertFunctions(t *testing.T, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
+func assertFunctions(t *testing.T, descriptior string, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
 
 	if actualMethods.Len() != len(expectedMethods) {
 		t.Errorf("the number of the methods should be %d, but got %d", len(expectedMethods), actualMethods.Len())
@@ -392,21 +392,21 @@ func assertFunctions(t *testing.T, actualMethods *Functions, expectedMethods map
 		actualMethod, ok := actualMethods.FindByName(expectedMethodName)
 
 		if !ok {
-			t.Errorf("method with name %s is not found", expectedMethodName)
+			t.Errorf("method with name %s is not found for %s", expectedMethodName, descriptior)
 			continue
 		}
 
 		if expectedMethod.isVariadic && !actualMethod.IsVariadic() {
-			t.Errorf("the function %s should be a variadic function", expectedMethodName)
+			t.Errorf("the function %s should be a variadic function for %s", expectedMethodName, descriptior)
 		} else if !expectedMethod.isVariadic && actualMethod.IsVariadic() {
-			t.Errorf("the function %s should not be a variadic function", expectedMethodName)
+			t.Errorf("the function %s should not be a variadic function for %s", expectedMethodName, descriptior)
 		}
 
-		assertFunctionParameters(t, expectedMethod.params, actualMethod.Params(), fmt.Sprintf("function %s", expectedMethodName))
+		assertFunctionParameters(t, expectedMethod.params, actualMethod.Params(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptior))
 
-		assertFunctionResult(t, expectedMethod.results, actualMethod.Results(), fmt.Sprintf("function %s", expectedMethodName))
+		assertFunctionResult(t, expectedMethod.results, actualMethod.Results(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptior))
 
-		assertMarkers(t, expectedMethod.markers, actualMethod.markers, fmt.Sprintf("function %s", expectedMethodName))
+		assertMarkers(t, expectedMethod.markers, actualMethod.markers, fmt.Sprintf("function %s (%s)", expectedMethodName, descriptior))
 	}
 
 	return true

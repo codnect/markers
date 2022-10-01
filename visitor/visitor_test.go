@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"github.com/stretchr/testify/assert"
@@ -102,7 +103,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 			return nil
 		}
 
-		if !assertFunctions(t, file.functions, testCase.functions) {
+		if !assertFunctions(t, fmt.Sprintf("file %s", file.Name()), file.functions, testCase.functions) {
 			return nil
 		}
 

@@ -4,6 +4,7 @@ import (
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -120,8 +121,10 @@ func (s *Struct) initialize(specType *ast.TypeSpec, structType *ast.StructType, 
 		s.namedType = file.pkg.Types.Scope().Lookup(specType.Name.Name).Type().(*types.Named)
 		s.fieldList = s.specType.Type.(*ast.StructType).Fields.List
 		s.file.structs.elements = append(s.file.structs.elements, s)
-	} else {
-		s.position = getPosition(pkg, structType.Pos())
+	} else if structType != nil {
+		if structType.Pos() != token.NoPos {
+			//i.position = getPosition(pkg, interfaceType.Pos())
+		}
 		s.fieldList = structType.Fields.List
 		s.isAnonymous = true
 	}
@@ -272,7 +275,7 @@ func (s *Struct) loadAllMethods() {
 		interfaceType, ok := baseType.(*Interface)
 
 		if ok {
-			s.allMethods = append(s.allMethods, interfaceType.Methods()...)
+			s.allMethods = append(s.allMethods, interfaceType.Methods().ToSlice()...)
 		}
 	}
 
@@ -301,6 +304,10 @@ func (s *Struct) Name() string {
 
 func (s *Struct) IsExported() bool {
 	return s.isExported
+}
+
+func (s *Struct) IsEmpty() bool {
+	return len(s.fieldList) == 0
 }
 
 func (s *Struct) IsAnonymous() bool {

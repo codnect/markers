@@ -109,7 +109,7 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 			t.Errorf("the number of the embededed fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.numEmbeddedFields, actualStruct.NumFields())
 		}
 
-		assertFunctions(t, actualStruct.Methods(), expectedStruct.methods)
+		assertFunctions(t, fmt.Sprintf("struct %s", actualStruct.Name()), actualStruct.Methods(), expectedStruct.methods)
 		assertStructFields(t, actualStruct.Name(), actualStruct.Fields(), expectedStruct.fields)
 		assertMarkers(t, expectedStruct.markers, actualStruct.Markers(), fmt.Sprintf("struct %s", expectedStructName))
 	}

@@ -147,6 +147,7 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			}
 		}
 
+		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.Methods(), expectedInterface.methods)
 		assertMarkers(t, expectedInterface.markers, actualInterface.Markers(), fmt.Sprintf("interface %s", expectedInterfaceName))
 
 	}
