@@ -12,5 +12,19 @@ Marker project is inspired by [Kubernetes Markers](https://book.kubebuilder.io/r
 **Markers** are single-comments that start with a plus, followed by a marker name, optionally followed some marker parameters,
 **which are used to generate or verify code but add no logic at runtime.**
 
+## Installation
+To Install Marker CLI quickly, follow the installation instructions.
+
+1. You first need Go installed (version 1.18+ is required), then you can use the below Go command to install Marker CLI.
+
+    `$ go get -u github.com/procyon-projects/marker/...`
+2. Verify that you've installed Marker CLI by typing the following command.
+
+   `$ marker version`
+3. Confirm that the command prints the installed version of Marker CLI.
+
+Type the following command to display usage information for the Marker CLI.
+`$ marker help`
+
 # License
 Marker is released under Apache-2.0 License.
