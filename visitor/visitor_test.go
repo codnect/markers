@@ -60,12 +60,16 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 		"dessert.go": {
 			imports: []importInfo{
 				{
+					name:       "_",
 					path:       "fmt",
 					sideEffect: true,
+					position:   Position{Line: 7, Column: 2},
 				},
 				{
+					name:       "_",
 					path:       "strings",
 					sideEffect: true,
+					position:   Position{Line: 8, Column: 2},
 				},
 			},
 			functions: map[string]functionInfo{
