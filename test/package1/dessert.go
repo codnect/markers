@@ -59,7 +59,7 @@ type Cookie struct {
 	ChocolateChip string
 	// tripleChocolateCookie is a field
 	// +marker:struct-field-level:Name=tripleChocolateCookie
-	tripleChocolateCookie string
+	tripleChocolateCookie map[string]error
 }
 
 // FortuneCookie is a method

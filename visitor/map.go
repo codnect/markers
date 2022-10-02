@@ -1,6 +1,8 @@
 package visitor
 
-import "strings"
+import (
+	"fmt"
+)
 
 type Map struct {
 	key  Type
@@ -8,7 +10,7 @@ type Map struct {
 }
 
 func (m *Map) Name() string {
-	return ""
+	return m.String()
 }
 
 func (m *Map) Key() Type {
@@ -24,10 +26,5 @@ func (m *Map) Underlying() Type {
 }
 
 func (m *Map) String() string {
-	var builder strings.Builder
-	builder.WriteString("map[")
-	builder.WriteString(m.key.String())
-	builder.WriteString("]")
-	builder.WriteString(m.elem.String())
-	return builder.String()
+	return fmt.Sprintf("map[%s]%s", m.key.Name(), m.elem.Name())
 }

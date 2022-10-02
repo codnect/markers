@@ -1,5 +1,7 @@
 package visitor
 
+import "fmt"
+
 type Array struct {
 	len  int64
 	elem Type
@@ -14,7 +16,7 @@ func (a *Array) Elem() Type {
 }
 
 func (a *Array) Name() string {
-	return "[]"
+	return a.String()
 }
 
 func (a *Array) Underlying() Type {
@@ -22,5 +24,5 @@ func (a *Array) Underlying() Type {
 }
 
 func (a *Array) String() string {
-	return ""
+	return fmt.Sprintf("[%d]%s", a.len, a.elem.Name())
 }

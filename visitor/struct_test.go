@@ -40,10 +40,12 @@ var (
 			"Cookie": {
 				isExported:      true,
 				isEmbeddedField: true,
+				typeName:        "Cookie",
 			},
 			"cookieDough": {
 				isExported:      false,
 				isEmbeddedField: false,
+				typeName:        "any",
 			},
 		},
 		numFields:         2,
@@ -67,6 +69,12 @@ var (
 			"ChocolateChip": {
 				isExported:      true,
 				isEmbeddedField: false,
+				typeName:        "string",
+			},
+			"tripleChocolateCookie": {
+				isExported:      false,
+				isEmbeddedField: false,
+				typeName:        "map[string]error",
 			},
 		},
 		numFields:         2,
@@ -129,6 +137,10 @@ func assertStructFields(t *testing.T, structName string, actualFields *Fields, e
 
 		if actualField.Name() != expectedFieldName {
 			t.Errorf("field name for struct %s shoud be %s, but got %s", structName, expectedFieldName, actualField.Name())
+		}
+
+		if actualField.Type().Name() != expectedField.typeName {
+			t.Errorf("type of field with name %s for struct %s shoud be %s, but got %s", actualField.Name(), structName, expectedField.typeName, actualField.Type().Name())
 		}
 
 		if actualField.IsExported() && !expectedField.isExported {

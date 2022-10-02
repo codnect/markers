@@ -197,7 +197,7 @@ func (i *Interface) Constraints() []*Constraint {
 }
 
 func (i *Interface) Name() string {
-	if len(i.fieldList) == 0 {
+	if i.name == "" && len(i.fieldList) == 0 {
 		return "interface{}"
 	}
 
