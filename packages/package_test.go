@@ -52,3 +52,16 @@ func TestMarkerPackageYamlPath(t *testing.T) {
 		Version: "anyVersion",
 	}), "marker/pkg/github.com/procyon-projects/marker/anyVersion/marker.procesors.yaml"))
 }
+
+func TestGoModDir(t *testing.T) {
+	_, err := GoModDir()
+	assert.Nil(t, err)
+}
+
+func TestInstallPackage(t *testing.T) {
+	err := InstallPackage(&PackageInfo{
+		Path:    "github.com/procyon-projects/chrono",
+		Version: "latest",
+	})
+	assert.Nil(t, err)
+}
