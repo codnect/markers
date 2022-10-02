@@ -299,6 +299,10 @@ func (s *Struct) String() string {
 }
 
 func (s *Struct) Name() string {
+	if len(s.fieldList) == 0 {
+		return "struct{}"
+	}
+
 	return s.name
 }
 

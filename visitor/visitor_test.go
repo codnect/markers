@@ -58,6 +58,16 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 
 	testCases := map[string]testFile{
 		"dessert.go": {
+			imports: []importInfo{
+				{
+					path:       "fmt",
+					sideEffect: true,
+				},
+				{
+					path:       "strings",
+					sideEffect: true,
+				},
+			},
 			functions: map[string]functionInfo{
 				"MakeACake":   makeACakeFunction,
 				"BiscuitCake": biscuitCakeFunction,
@@ -95,6 +105,10 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 
 		testCase := testCases[file.Name()]
 
+		if !assertImports(t, file, testCase.imports) {
+			return nil
+		}
+
 		if !assertInterfaces(t, file, testCase.interfaces) {
 			return nil
 		}
@@ -103,7 +117,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 			return nil
 		}
 
-		if !assertFunctions(t, fmt.Sprintf("file %s", file.Name()), file.functions, testCase.functions) {
+		if !assertFunctions(t, fmt.Sprintf("file %s", file.Name()), file.Functions(), testCase.functions) {
 			return nil
 		}
 

@@ -88,7 +88,7 @@ func (p *Pointer) Underlying() Type {
 func (p *Pointer) String() string {
 	var builder strings.Builder
 	builder.WriteString("*")
-	builder.WriteString(p.base.String())
+	builder.WriteString(p.base.Name())
 	return builder.String()
 }
 

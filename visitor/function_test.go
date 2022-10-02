@@ -3,14 +3,84 @@ package visitor
 import (
 	"fmt"
 	"github.com/procyon-projects/marker"
+	"strings"
 	"testing"
 )
+
+type receiverInfo struct {
+	name      string
+	isPointer bool
+	typeName  string
+}
 
 type functionInfo struct {
 	markers    marker.MarkerValues
 	isVariadic bool
+	name       string
+	receiver   *receiverInfo
 	params     []variableInfo
 	results    []variableInfo
+}
+
+func (f functionInfo) String() string {
+	var builder strings.Builder
+	builder.WriteString("func ")
+
+	if f.receiver != nil {
+		builder.WriteString("(")
+		builder.WriteString(f.receiver.name)
+		builder.WriteString(" ")
+		if f.receiver.isPointer {
+			builder.WriteString("*")
+		}
+		builder.WriteString(f.receiver.typeName)
+		builder.WriteString(") ")
+	}
+
+	builder.WriteString(f.name)
+	builder.WriteString("(")
+
+	if len(f.params) != 0 {
+		for i := 0; i < len(f.params); i++ {
+			param := f.params[i]
+			if param.name != "" {
+				builder.WriteString(param.name + " ")
+			}
+
+			builder.WriteString(param.typeName)
+
+			if i != len(f.params)-1 {
+				builder.WriteString(",")
+			}
+		}
+	}
+
+	builder.WriteString(") ")
+
+	if len(f.results) > 1 {
+		builder.WriteString("(")
+	}
+
+	if len(f.results) != 0 {
+		for i := 0; i < len(f.results); i++ {
+			result := f.results[i]
+			if result.name != "" {
+				builder.WriteString(result.name + " ")
+			}
+
+			builder.WriteString(result.typeName)
+
+			if i != len(f.results)-1 {
+				builder.WriteString(",")
+			}
+		}
+	}
+
+	if len(f.results) > 1 {
+		builder.WriteString(")")
+	}
+
+	return builder.String()
 }
 
 // functions
@@ -23,6 +93,7 @@ var (
 				},
 			},
 		},
+		name:       "Bread",
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -50,6 +121,7 @@ var (
 				},
 			},
 		},
+		name:       "Macaron",
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -60,7 +132,7 @@ var (
 		results: []variableInfo{
 			{
 				name:     "",
-				typeName: "book",
+				typeName: "bool",
 			},
 		},
 	}
@@ -73,6 +145,7 @@ var (
 				},
 			},
 		},
+		name:       "MakeACake",
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -96,6 +169,7 @@ var (
 				},
 			},
 		},
+		name:       "BiscuitCake",
 		isVariadic: true,
 		params: []variableInfo{
 			{
@@ -131,6 +205,7 @@ var (
 				},
 			},
 		},
+		name:       "Funfetti",
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -154,6 +229,7 @@ var (
 				},
 			},
 		},
+		name:       "IceCream",
 		isVariadic: true,
 		params: []variableInfo{
 			{
@@ -181,6 +257,7 @@ var (
 				},
 			},
 		},
+		name:       "CupCake",
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -208,6 +285,7 @@ var (
 				},
 			},
 		},
+		name:       "Tart",
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -226,12 +304,13 @@ var (
 				},
 			},
 		},
+		name:       "Donut",
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
 			{
 				name:     "",
-				typeName: "interface{}",
+				typeName: "error",
 			},
 		},
 	}
@@ -244,6 +323,7 @@ var (
 				},
 			},
 		},
+		name:       "Pudding",
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -262,6 +342,7 @@ var (
 				},
 			},
 		},
+		name:       "Pie",
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -280,6 +361,7 @@ var (
 				},
 			},
 		},
+		name:       "muffin",
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -302,6 +384,12 @@ var (
 				},
 			},
 		},
+		name: "Eat",
+		receiver: &receiverInfo{
+			name:      "c",
+			isPointer: true,
+			typeName:  "FriedCookie",
+		},
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -320,6 +408,12 @@ var (
 				},
 			},
 		},
+		name: "Buy",
+		receiver: &receiverInfo{
+			name:      "c",
+			isPointer: true,
+			typeName:  "FriedCookie",
+		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -337,6 +431,12 @@ var (
 					Name: "FortuneCookie",
 				},
 			},
+		},
+		name: "FortuneCookie",
+		receiver: &receiverInfo{
+			name:      "c",
+			isPointer: true,
+			typeName:  "Cookie",
 		},
 		isVariadic: false,
 		params: []variableInfo{
@@ -361,6 +461,12 @@ var (
 				},
 			},
 		},
+		name: "Oreo",
+		receiver: &receiverInfo{
+			name:      "c",
+			isPointer: true,
+			typeName:  "Cookie",
+		},
 		isVariadic: true,
 		params: []variableInfo{
 			{
@@ -381,7 +487,7 @@ var (
 	}
 )
 
-func assertFunctions(t *testing.T, descriptior string, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
+func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
 
 	if actualMethods.Len() != len(expectedMethods) {
 		t.Errorf("the number of the methods should be %d, but got %d", len(expectedMethods), actualMethods.Len())
@@ -392,21 +498,25 @@ func assertFunctions(t *testing.T, descriptior string, actualMethods *Functions,
 		actualMethod, ok := actualMethods.FindByName(expectedMethodName)
 
 		if !ok {
-			t.Errorf("method with name %s is not found for %s", expectedMethodName, descriptior)
+			t.Errorf("method with name %s is not found for %s", expectedMethodName, descriptor)
 			continue
 		}
 
-		if expectedMethod.isVariadic && !actualMethod.IsVariadic() {
-			t.Errorf("the function %s should be a variadic function for %s", expectedMethodName, descriptior)
-		} else if !expectedMethod.isVariadic && actualMethod.IsVariadic() {
-			t.Errorf("the function %s should not be a variadic function for %s", expectedMethodName, descriptior)
+		if expectedMethod.String() != actualMethod.String() {
+			t.Errorf("the signature of the function %s should be %s, but got %s", actualMethod.name, expectedMethod.String(), actualMethod.String())
 		}
 
-		assertFunctionParameters(t, expectedMethod.params, actualMethod.Params(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptior))
+		if expectedMethod.isVariadic && !actualMethod.IsVariadic() {
+			t.Errorf("the function %s should be a variadic function for %s", expectedMethodName, descriptor)
+		} else if !expectedMethod.isVariadic && actualMethod.IsVariadic() {
+			t.Errorf("the function %s should not be a variadic function for %s", expectedMethodName, descriptor)
+		}
 
-		assertFunctionResult(t, expectedMethod.results, actualMethod.Results(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptior))
+		assertFunctionParameters(t, expectedMethod.params, actualMethod.Params(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
 
-		assertMarkers(t, expectedMethod.markers, actualMethod.markers, fmt.Sprintf("function %s (%s)", expectedMethodName, descriptior))
+		assertFunctionResult(t, expectedMethod.results, actualMethod.Results(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
+
+		assertMarkers(t, expectedMethod.markers, actualMethod.markers, fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
 	}
 
 	return true

@@ -72,9 +72,16 @@ func (f *File) initialize() *File {
 			importName = importPackage.Name.Name
 		}
 
+		sideEffect := false
+
+		if importName == "_" {
+			sideEffect = true
+		}
+
 		f.imports.elements = append(f.imports.elements, &Import{
-			name: importName,
-			path: importPackage.Path.Value[1 : len(importPackage.Path.Value)-1],
+			name:       importName,
+			path:       importPackage.Path.Value[1 : len(importPackage.Path.Value)-1],
+			sideEffect: sideEffect,
 			position: Position{
 				importPosition.Line,
 				importPosition.Column,

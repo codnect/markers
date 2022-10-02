@@ -3,6 +3,11 @@
 
 package package1
 
+import (
+	_ "fmt"
+	_ "strings"
+)
+
 // BakeryShop is an interface
 // +marker:interface-type-level:Name=BakeryShop
 type BakeryShop interface {

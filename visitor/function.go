@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
@@ -21,7 +22,11 @@ func (v *Variable) Type() Type {
 }
 
 func (v *Variable) String() string {
-	return ""
+	if v.name == "" {
+		return v.typ.Name()
+	}
+
+	return fmt.Sprintf("%s %s", v.name, v.typ.Name())
 }
 
 type Variables []*Variable
@@ -350,7 +355,7 @@ func (f *Function) String() string {
 			result := f.Results().At(i)
 			builder.WriteString(result.String())
 
-			if i != f.Params().Len()-1 {
+			if i != f.Results().Len()-1 {
 				builder.WriteString(",")
 			}
 		}

@@ -29,6 +29,10 @@ type Imports struct {
 	elements []*Import
 }
 
+func (i *Imports) ToSlice() []*Import {
+	return i.elements
+}
+
 func (i *Imports) Len() int {
 	return len(i.elements)
 }
@@ -39,6 +43,17 @@ func (i *Imports) At(index int) *Import {
 	}
 
 	return nil
+}
+
+func (i *Imports) SideEffects() []*Import {
+	result := make([]*Import, 0)
+	for _, importItem := range i.elements {
+		if importItem.SideEffect() {
+			result = append(result, importItem)
+		}
+	}
+
+	return result
 }
 
 func (i *Imports) FindByName(name string) (*Import, bool) {
