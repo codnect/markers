@@ -97,7 +97,7 @@ type Dessert interface {
 
 	// Pudding is a method
 	// +marker:interface-method-level:Name=Pudding
-	Pudding() []string
+	Pudding() [5]string
 
 	// Pie is a method
 	// +marker:interface-method-level:Name=Pie
@@ -130,7 +130,7 @@ type SweetShop interface {
 
 	// Macaron is a method
 	// +marker:interface-method-level:Name=Macaron
-	Macaron(c complex128) (bool, fmt.Stringer)
+	Macaron(c complex128) (chan string, fmt.Stringer)
 
 	// Dessert is an embedded interface
 	// +marker:interface-method-level:Name=Dessert

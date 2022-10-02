@@ -132,7 +132,7 @@ var (
 		results: []variableInfo{
 			{
 				name:     "",
-				typeName: "bool",
+				typeName: "chan string",
 			},
 			{
 				name:     "",
@@ -333,7 +333,7 @@ var (
 		results: []variableInfo{
 			{
 				name:     "",
-				typeName: "[]string",
+				typeName: "[5]string",
 			},
 		},
 	}

@@ -1,10 +1,13 @@
 package visitor
 
+import "fmt"
+
 type ChanDirection int
 
 const (
-	SEND ChanDirection = 1 << iota
-	RECEIVE
+	SendDir ChanDirection = 1 << iota
+	ReceiveDir
+	BothDir = SendDir | ReceiveDir
 )
 
 type Chan struct {
@@ -25,9 +28,15 @@ func (c *Chan) Underlying() Type {
 }
 
 func (c *Chan) Name() string {
-	return ""
+	return c.String()
 }
 
 func (c *Chan) String() string {
-	return ""
+	if c.direction == BothDir {
+		return fmt.Sprintf("chan %s", c.elem.Name())
+	} else if c.direction == SendDir {
+		return fmt.Sprintf("chan<- %s", c.elem.Name())
+	}
+
+	return fmt.Sprintf("<-chan %s", c.elem.Name())
 }

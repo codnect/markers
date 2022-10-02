@@ -295,11 +295,11 @@ func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
 		}
 
 		if typed.Dir&ast.SEND == ast.SEND {
-			chanType.direction |= SEND
+			chanType.direction |= SendDir
 		}
 
 		if typed.Dir&ast.RECV == ast.RECV {
-			chanType.direction |= RECEIVE
+			chanType.direction |= ReceiveDir
 		}
 
 		return chanType
