@@ -4,7 +4,7 @@
 package package1
 
 import (
-	_ "fmt"
+	"fmt"
 	_ "strings"
 )
 
@@ -130,7 +130,7 @@ type SweetShop interface {
 
 	// Macaron is a method
 	// +marker:interface-method-level:Name=Macaron
-	Macaron(c complex128) bool
+	Macaron(c complex128) (bool, fmt.Stringer)
 
 	// Dessert is an embedded interface
 	// +marker:interface-method-level:Name=Dessert

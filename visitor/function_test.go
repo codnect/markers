@@ -134,6 +134,10 @@ var (
 				name:     "",
 				typeName: "bool",
 			},
+			{
+				name:     "",
+				typeName: "fmt.Stringer",
+			},
 		},
 	}
 

@@ -56,13 +56,17 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 		{Name: "marker:struct-field-level", Level: marker.FieldLevel, Output: &StructFieldLevel{}},
 	}
 
+	testCasePkgs := map[string]struct{}{
+		"github.com/procyon-projects/marker/test/package1": {},
+	}
+
 	testCases := map[string]testFile{
 		"dessert.go": {
 			imports: []importInfo{
 				{
-					name:       "_",
+					name:       "",
 					path:       "fmt",
-					sideEffect: true,
+					sideEffect: false,
 					position:   Position{Line: 7, Column: 2},
 				},
 				{
@@ -103,11 +107,16 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 	collector := marker.NewCollector(registry)
 
 	err := EachFile(collector, result.Packages(), func(file *File, err error) error {
-		if file.pkg.ID == "builtin" {
+		if _, isTestCasePkg := testCasePkgs[file.pkg.ID]; !isTestCasePkg {
 			return nil
 		}
 
-		testCase := testCases[file.Name()]
+		testCase, exists := testCases[file.Name()]
+
+		if !exists {
+			t.Errorf("file %s not found in test cases", file.Name())
+			return nil
+		}
 
 		if !assertImports(t, file, testCase.imports) {
 			return nil

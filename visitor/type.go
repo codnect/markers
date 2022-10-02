@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
@@ -46,7 +47,7 @@ func (i *ImportedType) String() string {
 }
 
 func (i *ImportedType) Name() string {
-	return ""
+	return fmt.Sprintf("%s.%s", i.pkg.Name, i.typ.Name())
 }
 
 type Variadic struct {
