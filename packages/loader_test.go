@@ -22,9 +22,9 @@ func TestLoadResult_Packages(t *testing.T) {
 	assert.NotNil(t, pkg.CompiledGoFiles)
 	assert.NotNil(t, pkg.Syntax)
 
-	assert.Len(t, pkg.GoFiles, 1)
-	assert.Len(t, pkg.CompiledGoFiles, 1)
-	assert.Len(t, pkg.Syntax, 1)
+	assert.Len(t, pkg.GoFiles, 2)
+	assert.Len(t, pkg.CompiledGoFiles, 2)
+	assert.Len(t, pkg.Syntax, 2)
 
 	assert.NotNil(t, pkg.Module)
 }

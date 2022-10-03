@@ -221,7 +221,7 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 	case *ast.StructType:
 		return newStruct(typeSpec, nil, file, pkg, visitor, visitor.packageMarkers[typeSpec])
 	default:
-		return newCustomType(typeSpec, file, pkg, visitor, nil)
+		return newCustomType(typeSpec, file, pkg, visitor, visitor.packageMarkers[typeSpec])
 	}
 }
 

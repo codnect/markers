@@ -6,6 +6,7 @@ import (
 )
 
 type testFile struct {
+	constants  map[string]struct{}
 	interfaces map[string]interfaceInfo
 	structs    map[string]structInfo
 	functions  map[string]functionInfo

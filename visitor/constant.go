@@ -202,6 +202,10 @@ type Constants struct {
 	elements []*Constant
 }
 
+func (c *Constants) ToSlice() []*Constant {
+	return c.elements
+}
+
 func (c *Constants) Len() int {
 	return len(c.elements)
 }
@@ -247,7 +251,8 @@ func collectConstants(valueSpec *ast.ValueSpec, lastValueSpec *ast.ValueSpec, io
 			isExported: ast.IsExported(name.Name),
 			iota:       iota,
 			pkg:        file.pkg,
-			//visitor:    visitor,
+			file:       file,
+			visitor:    file.visitor,
 		}
 
 		if valueSpec.Values != nil {

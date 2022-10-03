@@ -120,6 +120,10 @@ func (f *File) NumImportMarkers() int {
 	return len(f.importMarkers)
 }
 
+func (f *File) Constants() *Constants {
+	return f.constants
+}
+
 func (f *File) Functions() *Functions {
 	return f.functions
 }

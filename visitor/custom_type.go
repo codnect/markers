@@ -32,7 +32,12 @@ func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, vi
 		visitor:     visitor,
 	}
 
-	return customType
+	return customType.initialize()
+}
+
+func (c *CustomType) initialize() *CustomType {
+	c.file.customTypes.elements = append(c.file.customTypes.elements, c)
+	return c
 }
 
 func (c *CustomType) Name() string {

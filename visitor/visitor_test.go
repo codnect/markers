@@ -61,6 +61,9 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 	}
 
 	testCases := map[string]testFile{
+		"coffee.go": {
+			constants: map[string]struct{}{},
+		},
 		"dessert.go": {
 			imports: []importInfo{
 				{
@@ -116,6 +119,19 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 		if !exists {
 			t.Errorf("file %s not found in test cases", file.Name())
 			return nil
+		}
+
+		for _, constant := range file.Constants().ToSlice() {
+			n := constant.Name()
+			v := constant.Value()
+			n = constant.Type().Name()
+			if n == "" {
+
+			}
+
+			if v == nil {
+
+			}
 		}
 
 		if !assertImports(t, file, testCase.imports) {
