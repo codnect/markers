@@ -60,6 +60,10 @@ type CustomTypes struct {
 	elements []*CustomType
 }
 
+func (c *CustomTypes) ToSlice() []*CustomType {
+	return c.elements
+}
+
 func (c *CustomTypes) Len() int {
 	return len(c.elements)
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/procyon-projects/marker/internal/cmd"
 	"golang.org/x/tools/go/packages"
 	"os"
 	"os/exec"
@@ -105,9 +106,10 @@ func GetPackageInfo(path string) (*PackageInfo, error) {
 	}
 
 	goArgs := []string{"list", "-m", "-versions", "-json", fmt.Sprintf("%s@%s", pkgName, pkgVersion)}
-	cmd := exec.Command("go", goArgs...)
+	command := exec.Command("go", goArgs...)
+	executor := cmd.GetCommandExecutor()
 
-	stdout, err := cmd.Output()
+	stdout, err := executor.Execute(command)
 	if err != nil {
 		return nil, err
 	}
@@ -125,9 +127,11 @@ func GetPackageInfo(path string) (*PackageInfo, error) {
 
 func GoPath() string {
 	goArgs := []string{"env", "GOPATH"}
-	cmd := exec.Command("go", goArgs...)
+	command := exec.Command("go", goArgs...)
+	executor := cmd.GetCommandExecutor()
 
-	stdout, err := cmd.Output()
+	stdout, err := executor.Execute(command)
+
 	if err != nil {
 		return ""
 	}
@@ -171,12 +175,14 @@ func InstallPackage(info *PackageInfo) error {
 	pkg := fmt.Sprintf("%s/...@%s", info.Path, info.Version)
 	markerPath := MarkerPackagePathFromPackageInfo(info)
 
-	cmd := exec.Command("go", "install", pkg)
+	executor := cmd.GetCommandExecutor()
+
+	command := exec.Command("go", "install", pkg)
 	environmentVariables := []string{fmt.Sprintf("GOBIN=%s", markerPath)}
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	cmd.Env = append(cmd.Env, environmentVariables...)
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	err := cmd.Run()
+	command.Env = append(command.Env, os.Environ()...)
+	command.Env = append(command.Env, environmentVariables...)
+	command.Stdout, command.Stderr = os.Stdout, os.Stderr
+	_, err := executor.Execute(command)
 
 	if err != nil {
 		return fmt.Errorf("could not install package %s", info.Name())
