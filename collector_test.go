@@ -7,8 +7,8 @@ import (
 )
 
 func TestCollector_Collect(t *testing.T) {
-	result, _ := packages.LoadPackages("github.com/procyon-projects/marker/test/package1")
-	pkg, _ := result.Lookup("github.com/procyon-projects/marker/test/package1")
+	result, _ := packages.LoadPackages("github.com/procyon-projects/marker/test/...")
+	pkg, _ := result.Lookup("github.com/procyon-projects/marker/test/menu")
 
 	registry := NewRegistry()
 	collector := NewCollector(registry)
