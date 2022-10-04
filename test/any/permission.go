@@ -19,3 +19,11 @@ const (
 	RequestPatch  RequestMethod = "PATCH"
 	RequestDelete RequestMethod = "DELETE"
 )
+
+type Chan int
+
+const (
+	SendDir Chan = 1 >> iota
+	ReceiveDir
+	BothDir = SendDir | ReceiveDir
+)

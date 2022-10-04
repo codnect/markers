@@ -3,6 +3,7 @@ package visitor
 import (
 	"fmt"
 	"github.com/procyon-projects/marker"
+	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 )
@@ -17,6 +18,8 @@ type functionInfo struct {
 	markers    marker.MarkerValues
 	isVariadic bool
 	name       string
+	fileName   string
+	position   Position
 	receiver   *receiverInfo
 	params     []variableInfo
 	results    []variableInfo
@@ -93,7 +96,12 @@ var (
 				},
 			},
 		},
-		name:       "Bread",
+		name:     "Bread",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   16,
+			Column: 7,
+		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -121,7 +129,12 @@ var (
 				},
 			},
 		},
-		name:       "Macaron",
+		name:     "Macaron",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   133,
+			Column: 9,
+		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -149,7 +162,12 @@ var (
 				},
 			},
 		},
-		name:       "MakeACake",
+		name:     "MakeACake",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   113,
+			Column: 1,
+		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -173,7 +191,12 @@ var (
 				},
 			},
 		},
-		name:       "BiscuitCake",
+		name:     "BiscuitCake",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   119,
+			Column: 1,
+		},
 		isVariadic: true,
 		params: []variableInfo{
 			{
@@ -209,7 +232,12 @@ var (
 				},
 			},
 		},
-		name:       "Funfetti",
+		name:     "Funfetti",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   51,
+			Column: 10,
+		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -233,7 +261,12 @@ var (
 				},
 			},
 		},
-		name:       "IceCream",
+		name:     "IceCream",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   84,
+			Column: 10,
+		},
 		isVariadic: true,
 		params: []variableInfo{
 			{
@@ -261,7 +294,12 @@ var (
 				},
 			},
 		},
-		name:       "CupCake",
+		name:     "CupCake",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   88,
+			Column: 9,
+		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -289,7 +327,12 @@ var (
 				},
 			},
 		},
-		name:       "Tart",
+		name:     "Tart",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   92,
+			Column: 6,
+		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
@@ -308,7 +351,12 @@ var (
 				},
 			},
 		},
-		name:       "Donut",
+		name:     "Donut",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   96,
+			Column: 7,
+		},
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -327,7 +375,12 @@ var (
 				},
 			},
 		},
-		name:       "Pudding",
+		name:     "Pudding",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   100,
+			Column: 9,
+		},
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -346,7 +399,12 @@ var (
 				},
 			},
 		},
-		name:       "Pie",
+		name:     "Pie",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   104,
+			Column: 5,
+		},
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -365,7 +423,12 @@ var (
 				},
 			},
 		},
-		name:       "muffin",
+		name:     "muffin",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   108,
+			Column: 8,
+		},
 		isVariadic: false,
 		params:     []variableInfo{},
 		results: []variableInfo{
@@ -388,7 +451,12 @@ var (
 				},
 			},
 		},
-		name: "Eat",
+		name:     "Eat",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   24,
+			Column: 1,
+		},
 		receiver: &receiverInfo{
 			name:      "c",
 			isPointer: true,
@@ -412,7 +480,12 @@ var (
 				},
 			},
 		},
-		name: "Buy",
+		name:     "Buy",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   42,
+			Column: 1,
+		},
 		receiver: &receiverInfo{
 			name:      "c",
 			isPointer: true,
@@ -436,7 +509,12 @@ var (
 				},
 			},
 		},
-		name: "FortuneCookie",
+		name:     "FortuneCookie",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   67,
+			Column: 1,
+		},
 		receiver: &receiverInfo{
 			name:      "c",
 			isPointer: true,
@@ -465,7 +543,12 @@ var (
 				},
 			},
 		},
-		name: "Oreo",
+		name:     "Oreo",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   73,
+			Column: 1,
+		},
 		receiver: &receiverInfo{
 			name:      "c",
 			isPointer: true,
@@ -489,6 +572,19 @@ var (
 			},
 		},
 	}
+
+	genericFunction = functionInfo{
+		markers:  marker.MarkerValues{},
+		name:     "GenericFunction",
+		fileName: "generics.go",
+		position: Position{
+			Line:   3,
+			Column: 1,
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results:    []variableInfo{},
+	}
 )
 
 func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
@@ -506,6 +602,14 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 			continue
 		}
 
+		if expectedMethodName != actualMethod.Name() {
+			t.Errorf("the name of the function should be %s, but got %s", expectedMethodName, actualMethod.Name())
+		}
+
+		if expectedMethod.fileName != actualMethod.File().Name() {
+			t.Errorf("the file name of the function should be %s, but got %s", expectedMethodName, actualMethod.File().Name())
+		}
+
 		if expectedMethod.String() != actualMethod.String() {
 			t.Errorf("the signature of the function %s should be %s, but got %s", actualMethod.name, expectedMethod.String(), actualMethod.String())
 		}
@@ -515,6 +619,16 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 		} else if !expectedMethod.isVariadic && actualMethod.IsVariadic() {
 			t.Errorf("the function %s should not be a variadic function for %s", expectedMethodName, descriptor)
 		}
+
+		typeParam := actualMethod.TypeParams()
+		if typeParam != nil {
+			typeParam.Len()
+		}
+
+		assert.Equal(t, actualMethod, actualMethod.Underlying())
+
+		assert.Equal(t, expectedMethod.position, actualMethod.Position(), "the position of the function %s for %s should be %w, but got %w",
+			expectedMethodName, descriptor, expectedMethod.position, actualMethod.Position())
 
 		assertFunctionParameters(t, expectedMethod.params, actualMethod.Params(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
 

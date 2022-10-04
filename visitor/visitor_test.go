@@ -102,7 +102,21 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			"math.go": {
 				constants: map[string]struct{}{},
 			},
+			"generics.go": {
+				constants: map[string]struct{}{},
+				functions: map[string]functionInfo{
+					"GenericFunction": genericFunction,
+				},
+			},
 			"string.go": {
+				imports: []importInfo{
+					{
+						name:       "",
+						path:       "net/http",
+						sideEffect: false,
+						position:   Position{Line: 3, Column: 8},
+					},
+				},
 				constants: map[string]struct{}{},
 			},
 		},
