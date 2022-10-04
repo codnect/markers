@@ -1,3 +1,6 @@
+// +import=marker, Pkg=github.com/procyon-projects/marker
+// +marker:package-level:Name=permission.go
+
 package any
 
 type Permission int

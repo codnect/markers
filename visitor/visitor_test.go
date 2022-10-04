@@ -41,7 +41,7 @@ type variableInfo struct {
 	typeName string
 }
 
-func TestVisitor_VisitPackage1(t *testing.T) {
+func TestVisitor_VisitPackage(t *testing.T) {
 	markers := []struct {
 		Name   string
 		Level  marker.TargetLevel
