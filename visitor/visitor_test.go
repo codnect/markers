@@ -99,6 +99,12 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			"permission.go": {
 				constants: map[string]struct{}{},
 			},
+			"math.go": {
+				constants: map[string]struct{}{},
+			},
+			"string.go": {
+				constants: map[string]struct{}{},
+			},
 		},
 	}
 

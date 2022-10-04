@@ -4,6 +4,7 @@ import (
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
+	"reflect"
 	"strconv"
 )
 
@@ -37,6 +38,7 @@ func (c *Constant) evaluateExpression() {
 		return
 	}
 
+	// TODO: There might be some issues with const expressions.
 	defer func() {
 		if r := recover(); r != nil {
 		}
@@ -137,6 +139,18 @@ func (c *Constant) evalBinaryExpr(exp *ast.BinaryExpr, variableMap map[string]an
 		expressionType = typLeft
 	} else if !isTypeRightBasic {
 		expressionType = typRight
+	}
+
+	leftType := reflect.TypeOf(left)
+	rightType := reflect.TypeOf(right)
+	if leftType.Kind() == reflect.Float32 ||
+		leftType.Kind() == reflect.Float64 ||
+		rightType.Kind() == reflect.Float32 ||
+		rightType.Kind() == reflect.Float64 {
+
+		floatType := reflect.TypeOf(0.0)
+		left = reflect.ValueOf(left).Convert(floatType).Interface()
+		right = reflect.ValueOf(right).Convert(floatType).Interface()
 	}
 
 	switch left.(type) {
