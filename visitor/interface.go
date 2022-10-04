@@ -117,7 +117,7 @@ func (i *Interface) getInterfaceEmbeddedTypes() []Type {
 		_, ok := field.Type.(*ast.FuncType)
 
 		if !ok {
-			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.visitor))
+			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.file, i.visitor))
 		}
 	}
 

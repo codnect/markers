@@ -145,7 +145,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 		}
 
 		if rawField.Names == nil {
-			embeddedType := getTypeFromExpression(rawField.Type, s.visitor)
+			embeddedType := getTypeFromExpression(rawField.Type, s.file, s.visitor)
 
 			field := &Field{
 				name:       embeddedType.Name(),
@@ -163,7 +163,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 		}
 
 		for _, fieldName := range rawField.Names {
-			typ := getTypeFromExpression(rawField.Type, s.visitor)
+			typ := getTypeFromExpression(rawField.Type, s.file, s.visitor)
 
 			field := &Field{
 				name:       fieldName.Name,

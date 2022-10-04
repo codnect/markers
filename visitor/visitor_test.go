@@ -56,47 +56,53 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 		{Name: "marker:struct-field-level", Level: marker.FieldLevel, Output: &StructFieldLevel{}},
 	}
 
-	testCasePkgs := map[string]struct{}{
-		"github.com/procyon-projects/marker/test/package1": {},
+	testCasePkgs := map[string]map[string]testFile{
+		"github.com/procyon-projects/marker/test/menu": {
+			"coffee.go": {
+				constants: map[string]struct{}{},
+			},
+			"fresh.go": {
+				constants: map[string]struct{}{},
+			},
+			"dessert.go": {
+				imports: []importInfo{
+					{
+						name:       "",
+						path:       "fmt",
+						sideEffect: false,
+						position:   Position{Line: 7, Column: 2},
+					},
+					{
+						name:       "_",
+						path:       "strings",
+						sideEffect: true,
+						position:   Position{Line: 8, Column: 2},
+					},
+				},
+				functions: map[string]functionInfo{
+					"MakeACake":   makeACakeFunction,
+					"BiscuitCake": biscuitCakeFunction,
+				},
+				interfaces: map[string]interfaceInfo{
+					"BakeryShop":        bakeryShopInterface,
+					"Dessert":           dessertInterface,
+					"NewYearsEveCookie": newYearsEveCookieInterface,
+					"SweetShop":         sweetShopInterface,
+				},
+				structs: map[string]structInfo{
+					"FriedCookie": friedCookieStruct,
+					"Cookie":      cookieStruct,
+				},
+			},
+		},
+		"github.com/procyon-projects/marker/test/any": {
+			"permission.go": {
+				constants: map[string]struct{}{},
+			},
+		},
 	}
 
-	testCases := map[string]testFile{
-		"coffee.go": {
-			constants: map[string]struct{}{},
-		},
-		"dessert.go": {
-			imports: []importInfo{
-				{
-					name:       "",
-					path:       "fmt",
-					sideEffect: false,
-					position:   Position{Line: 7, Column: 2},
-				},
-				{
-					name:       "_",
-					path:       "strings",
-					sideEffect: true,
-					position:   Position{Line: 8, Column: 2},
-				},
-			},
-			functions: map[string]functionInfo{
-				"MakeACake":   makeACakeFunction,
-				"BiscuitCake": biscuitCakeFunction,
-			},
-			interfaces: map[string]interfaceInfo{
-				"BakeryShop":        bakeryShopInterface,
-				"Dessert":           dessertInterface,
-				"NewYearsEveCookie": newYearsEveCookieInterface,
-				"SweetShop":         sweetShopInterface,
-			},
-			structs: map[string]structInfo{
-				"FriedCookie": friedCookieStruct,
-				"Cookie":      cookieStruct,
-			},
-		},
-	}
-
-	result, _ := packages.LoadPackages("../test/package1")
+	result, _ := packages.LoadPackages("../test/...")
 	registry := marker.NewRegistry()
 
 	for _, m := range markers {
@@ -114,7 +120,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 			return nil
 		}
 
-		testCase, exists := testCases[file.Name()]
+		testCase, exists := testCasePkgs[file.pkg.ID][file.Name()]
 
 		if !exists {
 			t.Errorf("file %s not found in test cases", file.Name())

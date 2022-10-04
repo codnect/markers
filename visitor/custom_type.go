@@ -22,7 +22,7 @@ type CustomType struct {
 func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *CustomType {
 	customType := &CustomType{
 		name:        specType.Name.Name,
-		aliasType:   getTypeFromExpression(specType.Type, visitor),
+		aliasType:   getTypeFromExpression(specType.Type, file, visitor),
 		isExported:  ast.IsExported(specType.Name.Name),
 		position:    getPosition(file.Package(), specType.Pos()),
 		markers:     markers,

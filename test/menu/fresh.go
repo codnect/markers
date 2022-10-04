@@ -1,4 +1,4 @@
-package package1
+package menu
 
 type Lemonade uint
 
@@ -8,13 +8,4 @@ const (
 	WatermelonLemonade
 	MangoLemonade
 	StrawberryLemonade
-)
-
-type Coffee int
-
-const (
-	Cappuccino Coffee = -(iota + 1)
-	Americano
-	Latte
-	TurkishCoffee
 )

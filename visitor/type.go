@@ -225,8 +225,7 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 	}
 }
 
-func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
-	file := visitor.file
+func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) Type {
 	pkg := visitor.pkg
 	collector := visitor.collector
 
@@ -265,13 +264,13 @@ func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
 		return collector.findTypeByImportAndTypeName(importName, typeName, file)
 	case *ast.StarExpr:
 		return &Pointer{
-			base: getTypeFromExpression(typed.X, visitor),
+			base: getTypeFromExpression(typed.X, file, visitor),
 		}
 	case *ast.ArrayType:
 
 		if typed.Len == nil {
 			return &Slice{
-				elem: getTypeFromExpression(typed.Elt, visitor),
+				elem: getTypeFromExpression(typed.Elt, file, visitor),
 			}
 		} else {
 			basicLit, isBasicLit := typed.Len.(*ast.BasicLit)
@@ -279,19 +278,19 @@ func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
 			if isBasicLit {
 				length, _ := strconv.ParseInt(basicLit.Value, 10, 64)
 				return &Array{
-					elem: getTypeFromExpression(typed.Elt, visitor),
+					elem: getTypeFromExpression(typed.Elt, file, visitor),
 					len:  length,
 				}
 			}
 
 			return &Array{
-				elem: getTypeFromExpression(typed.Elt, visitor),
+				elem: getTypeFromExpression(typed.Elt, file, visitor),
 				len:  -1,
 			}
 		}
 	case *ast.ChanType:
 		chanType := &Chan{
-			elem: getTypeFromExpression(typed.Value, visitor),
+			elem: getTypeFromExpression(typed.Value, file, visitor),
 		}
 
 		if typed.Dir&ast.SEND == ast.SEND {
@@ -305,14 +304,14 @@ func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
 		return chanType
 	case *ast.Ellipsis:
 		return &Variadic{
-			elem: getTypeFromExpression(typed.Elt, visitor),
+			elem: getTypeFromExpression(typed.Elt, file, visitor),
 		}
 	case *ast.FuncType:
 		return &Function{}
 	case *ast.MapType:
 		return &Map{
-			key:  getTypeFromExpression(typed.Key, visitor),
-			elem: getTypeFromExpression(typed.Value, visitor),
+			key:  getTypeFromExpression(typed.Key, file, visitor),
+			elem: getTypeFromExpression(typed.Value, file, visitor),
 		}
 	case *ast.InterfaceType:
 		return newInterface(nil, typed, nil, nil, visitor, nil)

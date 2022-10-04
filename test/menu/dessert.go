@@ -1,7 +1,7 @@
 // +import=marker, Pkg=github.com/procyon-projects/marker
 // +marker:package-level:Name=dessert.go
 
-package package1
+package menu
 
 import (
 	"fmt"

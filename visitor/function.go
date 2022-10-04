@@ -181,7 +181,7 @@ func (f *Function) getTypeParams(fieldList []*ast.Field) *TypeParams {
 
 	for _, field := range fieldList {
 
-		typ := getTypeFromExpression(field.Type, f.visitor)
+		typ := getTypeFromExpression(field.Type, f.file, f.visitor)
 
 		if field.Names == nil {
 			typeParams.params = append(typeParams.params, &TypeParam{
@@ -237,7 +237,7 @@ func (f *Function) getVariables(fieldList []*ast.Field) Variables {
 		typ := f.getGenericTypeFromExpression(field.Type)
 
 		if typ == nil {
-			typ = getTypeFromExpression(field.Type, f.visitor)
+			typ = getTypeFromExpression(field.Type, f.file, f.visitor)
 		}
 
 		if field.Names == nil {
