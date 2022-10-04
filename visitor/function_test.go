@@ -607,7 +607,7 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 		}
 
 		if expectedMethod.fileName != actualMethod.File().Name() {
-			t.Errorf("the file name of the function should be %s, but got %s", expectedMethodName, actualMethod.File().Name())
+			t.Errorf("the file name for function %s should be %s, but got %s", expectedMethodName, expectedMethod.fileName, actualMethod.File().Name())
 		}
 
 		if expectedMethod.String() != actualMethod.String() {

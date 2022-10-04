@@ -3,11 +3,15 @@ package visitor
 import (
 	"fmt"
 	"github.com/procyon-projects/marker"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 type interfaceInfo struct {
 	markers         marker.MarkerValues
+	name            string
+	fileName        string
+	position        Position
 	explicitMethods map[string]functionInfo
 	methods         map[string]functionInfo
 	embeddedTypes   []string
@@ -22,6 +26,12 @@ var (
 					Name: "BakeryShop",
 				},
 			},
+		},
+		name:     "BakeryShop",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   13,
+			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
 			"Bread": breadFunction,
@@ -46,6 +56,12 @@ var (
 					Name: "Dessert",
 				},
 			},
+		},
+		name:     "Dessert",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   79,
+			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
 			"IceCream": iceCreamFunction,
@@ -75,6 +91,12 @@ var (
 				},
 			},
 		},
+		name:     "NewYearsEveCookie",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   48,
+			Column: 6,
+		},
 		methods: map[string]functionInfo{
 			"Funfetti": funfettiFunction,
 		},
@@ -90,6 +112,12 @@ var (
 					Name: "SweetShop",
 				},
 			},
+		},
+		name:     "SweetShop",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   125,
+			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
 			"Macaron": macaronFunction,
@@ -124,6 +152,16 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			continue
 		}
 
+		if expectedInterface.fileName != actualInterface.File().Name() {
+			t.Errorf("the file name for interface %s should be %s, but got %s", expectedInterfaceName, expectedInterface.fileName, actualInterface.File().Name())
+		}
+
+		if actualInterface.NumMethods() == 0 && !actualInterface.IsEmpty() {
+			t.Errorf("the interface %s should be empty", actualInterface.Name())
+		} else if actualInterface.NumMethods() != 0 && actualInterface.IsEmpty() {
+			t.Errorf("the interface %s should not be empty", actualInterface.Name())
+		}
+
 		if actualInterface.NumMethods() != len(expectedInterface.methods) {
 			t.Errorf("the number of the methods of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.methods), actualInterface.NumMethods())
 			continue
@@ -146,6 +184,11 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 				continue
 			}
 		}
+
+		assert.Equal(t, actualInterface, actualInterface.Underlying())
+
+		assert.Equal(t, expectedInterface.position, actualInterface.Position(), "the position of the interface %s should be %w, but got %w",
+			expectedInterfaceName, expectedInterface.position, actualInterface.Position())
 
 		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.Methods(), expectedInterface.methods)
 		assertMarkers(t, expectedInterface.markers, actualInterface.Markers(), fmt.Sprintf("interface %s", expectedInterfaceName))

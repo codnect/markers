@@ -20,6 +20,7 @@ type structInfo struct {
 	numFields         int
 	numAllFields      int
 	numEmbeddedFields int
+	implements        map[string]struct{}
 }
 
 // structs
