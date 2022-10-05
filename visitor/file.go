@@ -136,6 +136,10 @@ func (f *File) Interfaces() *Interfaces {
 	return f.interfaces
 }
 
+func (f *File) CustomTypes() *CustomTypes {
+	return f.customTypes
+}
+
 type Files struct {
 	elements []*File
 }

@@ -73,8 +73,8 @@ func (c *Constant) Type() Type {
 	return c.typ
 }
 
-func (c *Constant) IsExported() string {
-	return c.name
+func (c *Constant) IsExported() bool {
+	return c.isExported
 }
 
 func (c *Constant) Underlying() Type {

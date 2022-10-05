@@ -6,11 +6,12 @@ import (
 )
 
 type testFile struct {
-	constants  []constantInfo
-	interfaces map[string]interfaceInfo
-	structs    map[string]structInfo
-	functions  map[string]functionInfo
-	imports    []importInfo
+	constants   []constantInfo
+	interfaces  map[string]interfaceInfo
+	structs     map[string]structInfo
+	functions   map[string]functionInfo
+	imports     []importInfo
+	customTypes map[string]customTypeInfo
 }
 
 type importInfo struct {

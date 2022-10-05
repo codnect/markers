@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
@@ -44,6 +45,10 @@ func (c *CustomType) Name() string {
 	return c.name
 }
 
+func (c *CustomType) IsExported() bool {
+	return c.isExported
+}
+
 func (c *CustomType) AliasType() Type {
 	return c.aliasType
 }
@@ -53,7 +58,7 @@ func (c *CustomType) Underlying() Type {
 }
 
 func (c *CustomType) String() string {
-	return ""
+	return fmt.Sprintf("type %s %s", c.name, c.aliasType.Name())
 }
 
 type CustomTypes struct {

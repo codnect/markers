@@ -59,10 +59,12 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	testCasePkgs := map[string]map[string]testFile{
 		"github.com/procyon-projects/marker/test/menu": {
 			"coffee.go": {
-				constants: coffeeConstants,
+				constants:   coffeeConstants,
+				customTypes: coffeeCustomTypes,
 			},
 			"fresh.go": {
-				constants: freshConstants,
+				constants:   freshConstants,
+				customTypes: freshCustomTypes,
 			},
 			"dessert.go": {
 				imports: []importInfo{
@@ -96,8 +98,13 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			},
 		},
 		"github.com/procyon-projects/marker/test/any": {
+			"error.go": {
+				constants:   []constantInfo{},
+				customTypes: errorCustomTypes,
+			},
 			"permission.go": {
-				constants: permissionConstants,
+				constants:   permissionConstants,
+				customTypes: permissionCustomTypes,
 			},
 			"math.go": {
 				constants: mathConstants,
@@ -152,6 +159,10 @@ func TestVisitor_VisitPackage(t *testing.T) {
 		}
 
 		if !assertConstants(t, file, testCase.constants) {
+			return nil
+		}
+
+		if !assertCustomTypes(t, file, testCase.customTypes) {
 			return nil
 		}
 
