@@ -7,13 +7,25 @@ import (
 
 // Reserved markers
 const (
-	ImportMarkerName     = "import"
-	DeprecatedMarkerName = "deprecated"
-	OverrideMarkerName   = "override"
+	ImportMarkerName              = "import"
+	DeprecatedMarkerName          = "deprecated"
+	OverrideMarkerName            = "override"
+	DefinitionMarkerName          = "marker"
+	DefinitionParameterMarkerName = "marker:parameter"
+	DefinitionEnumMarkerName      = "marker:enum"
 )
 
+var reservedMarkerMap = map[string]struct{}{
+	ImportMarkerName:              {},
+	DeprecatedMarkerName:          {},
+	OverrideMarkerName:            {},
+	DefinitionMarkerName:          {},
+	DefinitionParameterMarkerName: {},
+	DefinitionEnumMarkerName:      {},
+}
+
 func IsReservedMarker(marker string) bool {
-	if marker == ImportMarkerName || marker == DeprecatedMarkerName || marker == OverrideMarkerName {
+	if _, exists := reservedMarkerMap[marker]; exists {
 		return true
 	}
 
@@ -68,14 +80,15 @@ type OverrideMarker struct {
 	Value string `parameter:"Value"`
 }
 
-type Marker struct {
-	Value       string `parameter:"Value" required:"true"`
-	Description string `parameter:"Description" required:"true"`
-	Repeatable  bool   `parameter:"Repeatable" required:"false"`
-	SyntaxFree  bool   `parameter:"SyntaxFree" required:"false"`
+type DefinitionMarker struct {
+	Value       string   `parameter:"Value" required:"true"`
+	Description string   `parameter:"Description" required:"true"`
+	Repeatable  bool     `parameter:"Repeatable" required:"false"`
+	SyntaxFree  bool     `parameter:"SyntaxFree" required:"false"`
+	Targets     []string `parameter:"Targets" required:"true" enum:"PACKAGE_LEVEL,STRUCT_TYPE_LEVEL,INTERFACE_TYPE_LEVEL,FIELD_LEVEL,FUNCTION_LEVEL,STRUCT_METHOD_LEVEL,INTERFACE_METHOD_LEVEL"`
 }
 
-type Parameter struct {
+type DefinitionParameterMarker struct {
 	Value       string `parameter:"Value" required:"true"`
 	Description string `parameter:"Description" required:"true"`
 	Required    bool   `parameter:"Required" required:"false"`
@@ -83,7 +96,7 @@ type Parameter struct {
 	Default     any    `parameter:"Default" required:"false"`
 }
 
-type ParameterEnum struct {
+type DefinitionEnumMarker struct {
 	Value string `parameter:"Value" required:"true"`
 	Name  string `parameter:"Name" required:"true"`
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type testFile struct {
-	constants  map[string]struct{}
+	constants  []constantInfo
 	interfaces map[string]interfaceInfo
 	structs    map[string]structInfo
 	functions  map[string]functionInfo
@@ -73,7 +73,7 @@ func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool 
 			t.Errorf("import with path %s in file %s is an import side effect, but should not be an import side effect", expectedImport.path, file.name)
 		}
 
-		assert.Equal(t, expectedImport.position, actualImport.Position(), "position for import with path %s in file %s should be %w, but got %w", expectedImport.position, fileImport.Position())
+		assert.Equal(t, expectedImport.position, actualImport.Position(), "position for import with path %s in file %s should be %w, but got %w", expectedImport.name, "", expectedImport.position, fileImport.Position())
 	}
 
 	return true

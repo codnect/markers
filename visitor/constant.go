@@ -10,6 +10,7 @@ import (
 
 type Constant struct {
 	name       string
+	position   Position
 	isExported bool
 	value      any
 	typ        Type
@@ -31,6 +32,14 @@ func (c *Constant) Name() string {
 func (c *Constant) Value() any {
 	c.evaluateExpression()
 	return c.value
+}
+
+func (c *Constant) File() *File {
+	return c.file
+}
+
+func (c *Constant) Position() Position {
+	return c.position
 }
 
 func (c *Constant) evaluateExpression() {
@@ -266,6 +275,7 @@ func collectConstants(valueSpec *ast.ValueSpec, lastValueSpec *ast.ValueSpec, io
 			iota:       iota,
 			pkg:        file.pkg,
 			file:       file,
+			position:   getPosition(file.pkg, valueSpec.Pos()),
 			visitor:    file.visitor,
 		}
 

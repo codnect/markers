@@ -23,7 +23,7 @@ const (
 type Chan int
 
 const (
-	SendDir Chan = 1 >> iota
+	SendDir Chan = 2 >> iota
 	ReceiveDir
 	BothDir = SendDir | ReceiveDir
 )

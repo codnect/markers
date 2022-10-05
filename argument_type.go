@@ -55,7 +55,9 @@ type ArgumentTypeInfo struct {
 }
 
 func ArgumentTypeInfoFromType(typ reflect.Type) (ArgumentTypeInfo, error) {
-	typeInfo := &ArgumentTypeInfo{}
+	typeInfo := &ArgumentTypeInfo{
+		Enum: map[string]any{},
+	}
 
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()

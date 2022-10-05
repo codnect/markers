@@ -30,6 +30,9 @@ func (registry *Registry) initialize() {
 	registry.packageMap[""][ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", PackageLevel, &ImportMarker{})
 	registry.packageMap[""][OverrideMarkerName], _ = MakeDefinition(OverrideMarkerName, "", StructMethodLevel, &OverrideMarker{})
 	registry.packageMap[""][DeprecatedMarkerName], _ = MakeDefinition(DeprecatedMarkerName, "", TypeLevel|MethodLevel|FieldLevel|FunctionLevel, &DeprecatedMarker{})
+	registry.packageMap[""][DeprecatedMarkerName], _ = MakeDefinition(DefinitionMarkerName, "", StructTypeLevel, &DefinitionMarker{})
+	registry.packageMap[""][DefinitionParameterMarkerName], _ = MakeDefinition(DefinitionParameterMarkerName, "", FieldLevel, &DefinitionParameterMarker{})
+	registry.packageMap[""][DefinitionEnumMarkerName], _ = MakeDefinition(DefinitionEnumMarkerName, "", FieldLevel, &DefinitionEnumMarker{})
 }
 
 // Register registers a new marker with the given name, target level, and output type.

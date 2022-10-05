@@ -6,6 +6,7 @@ type Import struct {
 	name       string
 	path       string
 	sideEffect bool
+	file       *File
 	position   Position
 }
 
@@ -19,6 +20,10 @@ func (i *Import) Path() string {
 
 func (i *Import) SideEffect() bool {
 	return i.sideEffect
+}
+
+func (i *Import) File() *File {
+	return i.file
 }
 
 func (i *Import) Position() Position {

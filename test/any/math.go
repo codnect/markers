@@ -1,6 +1,6 @@
 package any
 
-const IntegerMathOperation = (3*4 + 2 - 6) / 2
+const IntegerMathOperation = -(3*4 + 2 - 6) / 2
 const FloatMathOperation = (3*4.0 + 5 - 6.2) / 2
 const ModOperation = 5 % 2
 const EqualOperation = 2 == 2

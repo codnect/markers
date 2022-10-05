@@ -59,10 +59,10 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	testCasePkgs := map[string]map[string]testFile{
 		"github.com/procyon-projects/marker/test/menu": {
 			"coffee.go": {
-				constants: map[string]struct{}{},
+				constants: coffeeConstants,
 			},
 			"fresh.go": {
-				constants: map[string]struct{}{},
+				constants: freshConstants,
 			},
 			"dessert.go": {
 				imports: []importInfo{
@@ -97,13 +97,13 @@ func TestVisitor_VisitPackage(t *testing.T) {
 		},
 		"github.com/procyon-projects/marker/test/any": {
 			"permission.go": {
-				constants: map[string]struct{}{},
+				constants: permissionConstants,
 			},
 			"math.go": {
-				constants: map[string]struct{}{},
+				constants: mathConstants,
 			},
 			"generics.go": {
-				constants: map[string]struct{}{},
+				constants: []constantInfo{},
 				functions: map[string]functionInfo{
 					"GenericFunction": genericFunction,
 				},
@@ -117,7 +117,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 						position:   Position{Line: 3, Column: 8},
 					},
 				},
-				constants: map[string]struct{}{},
+				constants: stringConstants,
 			},
 		},
 	}
@@ -147,20 +147,11 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			return nil
 		}
 
-		for _, constant := range file.Constants().ToSlice() {
-			n := constant.Name()
-			v := constant.Value()
-			n = constant.Type().Name()
-			if n == "" {
-
-			}
-
-			if v == nil {
-
-			}
+		if !assertImports(t, file, testCase.imports) {
+			return nil
 		}
 
-		if !assertImports(t, file, testCase.imports) {
+		if !assertConstants(t, file, testCase.constants) {
 			return nil
 		}
 
