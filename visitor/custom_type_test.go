@@ -68,7 +68,7 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			continue
 		}
 
-		if fileCustomType != file.CustomTypes().At(index) {
+		if file.CustomTypes().elements[index] != file.CustomTypes().At(index) {
 			t.Errorf("custom type with name %s does not match with custom type at index %d", fileCustomType.Name(), index)
 			continue
 		}

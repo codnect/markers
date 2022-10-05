@@ -15,4 +15,10 @@ func TestCollector_Collect(t *testing.T) {
 	nodes, err := collector.Collect(pkg)
 	assert.NotNil(t, nodes)
 	assert.NoError(t, err)
+
+	pkg, _ = result.Lookup("github.com/procyon-projects/marker/test/any")
+
+	nodes, err = collector.Collect(pkg)
+	assert.NotNil(t, nodes)
+	assert.NoError(t, err)
 }
