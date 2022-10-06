@@ -590,7 +590,7 @@ var (
 func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
 
 	if actualMethods.Len() != len(expectedMethods) {
-		t.Errorf("the number of the methods should be %d, but got %d", len(expectedMethods), actualMethods.Len())
+		t.Errorf("the number of the methods of %s should be %d, but got %d", descriptor, len(expectedMethods), actualMethods.Len())
 		return false
 	}
 

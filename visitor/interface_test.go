@@ -195,24 +195,45 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			t.Errorf("the number of the embedded types of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.embeddedTypes), actualInterface.NumEmbeddedTypes())
 		}
 
-		for index, expectedEmbeddedType := range expectedInterface.embeddedTypes {
-			actualEmbeddedType := actualInterface.EmbeddedTypes()[index]
-			if expectedEmbeddedType != actualEmbeddedType.Name() {
-				t.Errorf("the interface %s should have the embedded type %s at index %d, but got %s", expectedInterfaceName, expectedEmbeddedType, index, actualEmbeddedType.Name())
-				continue
-			}
-		}
-
 		assert.Equal(t, actualInterface, actualInterface.Underlying())
 
 		assert.Equal(t, expectedInterface.position, actualInterface.Position(), "the position of the interface %s should be %w, but got %w",
 			expectedInterfaceName, expectedInterface.position, actualInterface.Position())
 
+		assertInterfaceEmbeddedTypes(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.EmbeddedTypes(), expectedInterface.embeddedTypes)
 		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.Methods(), expectedInterface.methods)
 		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.ExplicitMethods(), expectedInterface.explicitMethods)
 		assertMarkers(t, expectedInterface.markers, actualInterface.Markers(), fmt.Sprintf("interface %s", expectedInterfaceName))
 
 		index++
+	}
+
+	return true
+}
+
+func assertInterfaceEmbeddedTypes(t *testing.T, interfaceName string, actualEmbeddedTypes *Types, expectedEmbeddedTypes []string) bool {
+
+	if len(expectedEmbeddedTypes) != actualEmbeddedTypes.Len() {
+		t.Errorf("the number of the embedded types should be %d, but got %d", len(expectedEmbeddedTypes), actualEmbeddedTypes.Len())
+		return false
+	}
+
+	for index, expectedTypeName := range expectedEmbeddedTypes {
+		actualEmbeddedType, ok := actualEmbeddedTypes.FindByName(expectedTypeName)
+
+		if !ok {
+			t.Errorf("embedded type with name %s for %s is not found", expectedTypeName, interfaceName)
+			continue
+		}
+
+		if actualEmbeddedTypes.elements[index] != actualEmbeddedTypes.At(index) {
+			t.Errorf("embedded type with name %s does not match with interface at index %d", actualEmbeddedType.Name(), index)
+			continue
+		}
+
+		if actualEmbeddedType.Name() != expectedTypeName {
+			t.Errorf("expected type name shoud be %s, but got %s", expectedTypeName, actualEmbeddedType.Name())
+		}
 	}
 
 	return true

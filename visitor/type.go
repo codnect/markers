@@ -16,6 +16,32 @@ type Type interface {
 	String() string
 }
 
+type Types struct {
+	elements []Type
+}
+
+func (t *Types) Len() int {
+	return len(t.elements)
+}
+
+func (t *Types) At(index int) Type {
+	if index >= 0 && index < len(t.elements) {
+		return t.elements[index]
+	}
+
+	return nil
+}
+
+func (t *Types) FindByName(name string) (Type, bool) {
+	for _, typ := range t.elements {
+		if typ.Name() == name {
+			return typ, true
+		}
+	}
+
+	return nil, false
+}
+
 type Position struct {
 	Line   int
 	Column int

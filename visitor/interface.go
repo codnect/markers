@@ -229,9 +229,11 @@ func (i *Interface) NumEmbeddedTypes() int {
 	return len(i.embeddeds)
 }
 
-func (i *Interface) EmbeddedTypes() []Type {
+func (i *Interface) EmbeddedTypes() *Types {
 	i.loadEmbeddedTypes()
-	return i.embeddeds
+	return &Types{
+		i.embeddeds,
+	}
 }
 
 func (i *Interface) NumMethods() int {

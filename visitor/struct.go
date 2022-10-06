@@ -223,7 +223,7 @@ func (s *Struct) loadAllFields() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allFields = append(s.allFields, structType.AllFields().ToSlice()...)
+			s.allFields = append(s.allFields, structType.FieldsInHierarchy().ToSlice()...)
 		}
 
 	}
@@ -246,6 +246,7 @@ func (s *Struct) loadAllMethods() {
 	}
 
 	s.loadMethods()
+	s.loadFields()
 
 	for _, field := range s.fields {
 
@@ -269,7 +270,7 @@ func (s *Struct) loadAllMethods() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allMethods = append(s.allMethods, structType.AllMethods().ToSlice()...)
+			s.allMethods = append(s.allMethods, structType.MethodsInHierarchy().ToSlice()...)
 		}
 
 		interfaceType, ok := baseType.(*Interface)
@@ -368,12 +369,12 @@ func (s *Struct) Fields() *Fields {
 	}
 }
 
-func (s *Struct) NumAllFields() int {
+func (s *Struct) NumFieldsInHierarchy() int {
 	s.loadAllFields()
 	return len(s.allFields)
 }
 
-func (s *Struct) AllFields() *Fields {
+func (s *Struct) FieldsInHierarchy() *Fields {
 	s.loadAllFields()
 	return &Fields{
 		elements: s.allFields,
@@ -392,12 +393,12 @@ func (s *Struct) Methods() *Functions {
 	}
 }
 
-func (s *Struct) NumAllMethods() int {
+func (s *Struct) NumMethodsInHierarchy() int {
 	s.loadAllMethods()
 	return len(s.allMethods)
 }
 
-func (s *Struct) AllMethods() *Functions {
+func (s *Struct) MethodsInHierarchy() *Functions {
 	s.loadAllMethods()
 	return &Functions{
 		elements: s.allMethods,

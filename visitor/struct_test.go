@@ -3,6 +3,7 @@ package visitor
 import (
 	"fmt"
 	"github.com/procyon-projects/marker"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -16,11 +17,14 @@ type fieldInfo struct {
 type structInfo struct {
 	fileName          string
 	isExported        bool
+	position          Position
 	markers           marker.MarkerValues
 	methods           map[string]functionInfo
+	allMethods        map[string]functionInfo
 	fields            map[string]fieldInfo
+	embeddedFields    map[string]fieldInfo
 	numFields         int
-	numAllFields      int
+	totalFields       int
 	numEmbeddedFields int
 	implements        map[string]struct{}
 }
@@ -37,9 +41,19 @@ var (
 		},
 		fileName:   "dessert.go",
 		isExported: true,
+		position: Position{
+			Line:   30,
+			Column: 6,
+		},
 		methods: map[string]functionInfo{
 			"Eat": eatMethod,
 			"Buy": buyMethod,
+		},
+		allMethods: map[string]functionInfo{
+			"Eat":           eatMethod,
+			"Buy":           buyMethod,
+			"Oreo":          oreoMethod,
+			"FortuneCookie": fortuneCookieMethod,
 		},
 		fields: map[string]fieldInfo{
 			"cookie": {
@@ -53,8 +67,15 @@ var (
 				typeName:        "any",
 			},
 		},
+		embeddedFields: map[string]fieldInfo{
+			"cookie": {
+				isExported:      false,
+				isEmbeddedField: true,
+				typeName:        "cookie",
+			},
+		},
 		numFields:         2,
-		numAllFields:      3,
+		totalFields:       3,
 		numEmbeddedFields: 1,
 	}
 
@@ -68,7 +89,15 @@ var (
 		},
 		fileName:   "dessert.go",
 		isExported: false,
+		position: Position{
+			Line:   56,
+			Column: 6,
+		},
 		methods: map[string]functionInfo{
+			"FortuneCookie": fortuneCookieMethod,
+			"Oreo":          oreoMethod,
+		},
+		allMethods: map[string]functionInfo{
 			"FortuneCookie": fortuneCookieMethod,
 			"Oreo":          oreoMethod,
 		},
@@ -84,8 +113,9 @@ var (
 				typeName:        "map[string]error",
 			},
 		},
+		embeddedFields:    map[string]fieldInfo{},
 		numFields:         2,
-		numAllFields:      2,
+		totalFields:       2,
 		numEmbeddedFields: 0,
 	}
 )
@@ -130,8 +160,8 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 			t.Errorf("the struct %s should not be empty", actualStruct.Name())
 		}
 
-		if actualStruct.NumAllMethods() != len(expectedStruct.methods) {
-			t.Errorf("the number of the methods of the struct %s should be %d, but got %d", expectedStructName, len(expectedStruct.methods), actualStruct.NumMethods())
+		if actualStruct.NumMethodsInHierarchy() != len(expectedStruct.allMethods) {
+			t.Errorf("the number of the methods of the struct %s should be %d, but got %d", expectedStructName, len(expectedStruct.allMethods), actualStruct.NumMethodsInHierarchy())
 		}
 
 		if actualStruct.NumMethods() != len(expectedStruct.methods) {
@@ -139,27 +169,25 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 		}
 
 		if actualStruct.NumFields() != expectedStruct.numFields {
-			t.Errorf("the number of the fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.numAllFields-expectedStruct.numEmbeddedFields, actualStruct.NumFields())
+			t.Errorf("the number of the fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.totalFields-expectedStruct.numEmbeddedFields, actualStruct.NumFields())
 		}
 
-		if actualStruct.NumAllFields() != expectedStruct.numAllFields {
-			t.Errorf("the number of the all fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.numAllFields, actualStruct.NumFields())
+		if actualStruct.NumFieldsInHierarchy() != expectedStruct.totalFields {
+			t.Errorf("the number of the all fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.totalFields, actualStruct.NumFields())
 		}
 
 		if actualStruct.NumEmbeddedFields() != expectedStruct.numEmbeddedFields {
 			t.Errorf("the number of the embededed fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.numEmbeddedFields, actualStruct.NumFields())
 		}
 
-		/*
-			for embeddedTypeIndex, expectedEmbeddedType := range expectedStruct.embeddedTypes {
-				actualEmbeddedField := actualStruct.EmbeddedFields().At(embeddedTypeIndex)
-				if expectedEmbeddedType != actualEmbeddedField.Name() {
-					t.Errorf("the interface %s should have the embedded type %s at index %d, but got %s", expectedInterfaceName, expectedEmbeddedType, index, actualEmbeddedType.Name())
-					continue
-				}
-			}*/
+		assert.Equal(t, actualStruct, actualStruct.Underlying())
+
+		assert.Equal(t, expectedStruct.position, actualStruct.Position(), "the position of the struct %s should be %w, but got %w",
+			expectedStructName, expectedStruct.position, actualStruct.Position())
 
 		assertFunctions(t, fmt.Sprintf("struct %s", actualStruct.Name()), actualStruct.Methods(), expectedStruct.methods)
+		assertFunctions(t, fmt.Sprintf("struct %s", actualStruct.Name()), actualStruct.MethodsInHierarchy(), expectedStruct.allMethods)
+		assertStructFields(t, actualStruct.Name(), actualStruct.EmbeddedFields(), expectedStruct.embeddedFields)
 		assertStructFields(t, actualStruct.Name(), actualStruct.Fields(), expectedStruct.fields)
 		assertMarkers(t, expectedStruct.markers, actualStruct.Markers(), fmt.Sprintf("struct %s", expectedStructName))
 
