@@ -31,7 +31,7 @@ type FriedCookie struct {
 
 	// Cookie is an embedded struct
 	// +marker:interface-method-level:Name=Cookie
-	Cookie
+	cookie
 	// ChocolateChip is a field
 	// +marker:struct-field-level:Name=CookieDough
 	cookieDough any
@@ -44,16 +44,16 @@ func (c *FriedCookie) Buy(i int) {
 }
 
 // NewYearsEveCookie is an interface
-// +marker:interface-type-level:Name=NewYearsEveCookie
-type NewYearsEveCookie interface {
+// +marker:interface-type-level:Name=newYearsEveCookie
+type newYearsEveCookie interface {
 	// Funfetti is a method
 	// +marker:interface-method-level:Name=Funfetti
 	Funfetti(v rune) byte
 }
 
 // Cookie is a struct
-// +marker:struct-type-level:Name=Cookie
-type Cookie struct {
+// +marker:struct-type-level:Name=cookie
+type cookie struct {
 	// ChocolateChip is a field
 	// +marker:struct-field-level:Name=ChocolateChip
 	ChocolateChip string
@@ -64,13 +64,13 @@ type Cookie struct {
 
 // FortuneCookie is a method
 // +marker:struct-method-level:Name=FortuneCookie
-func (c *Cookie) FortuneCookie(v interface{}) []string {
+func (c *cookie) FortuneCookie(v interface{}) []string {
 	return nil
 }
 
 // Oreo is a method
 // +marker:struct-method-level:Name=Oreo
-func (c *Cookie) Oreo(a []interface{}, v ...string) error {
+func (c *cookie) Oreo(a []interface{}, v ...string) error {
 	return nil
 }
 
@@ -126,7 +126,7 @@ type SweetShop interface {
 
 	// NewYearsEveCookie is an embedded interface
 	// +marker:interface-method-level:Name=NewYearsEveCookie
-	NewYearsEveCookie
+	newYearsEveCookie
 
 	// Macaron is a method
 	// +marker:interface-method-level:Name=Macaron

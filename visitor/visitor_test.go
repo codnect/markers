@@ -88,12 +88,12 @@ func TestVisitor_VisitPackage(t *testing.T) {
 				interfaces: map[string]interfaceInfo{
 					"BakeryShop":        bakeryShopInterface,
 					"Dessert":           dessertInterface,
-					"NewYearsEveCookie": newYearsEveCookieInterface,
+					"newYearsEveCookie": newYearsEveCookieInterface,
 					"SweetShop":         sweetShopInterface,
 				},
 				structs: map[string]structInfo{
 					"FriedCookie": friedCookieStruct,
-					"Cookie":      cookieStruct,
+					"cookie":      cookieStruct,
 				},
 			},
 		},

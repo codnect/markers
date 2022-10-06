@@ -518,7 +518,7 @@ var (
 		receiver: &receiverInfo{
 			name:      "c",
 			isPointer: true,
-			typeName:  "Cookie",
+			typeName:  "cookie",
 		},
 		isVariadic: false,
 		params: []variableInfo{
@@ -552,7 +552,7 @@ var (
 		receiver: &receiverInfo{
 			name:      "c",
 			isPointer: true,
-			typeName:  "Cookie",
+			typeName:  "cookie",
 		},
 		isVariadic: true,
 		params: []variableInfo{

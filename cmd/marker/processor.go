@@ -151,7 +151,7 @@ func initializeMarkerProcessorPackage() error {
 		}
 	}
 
-	yamlPath := filepath.FromSlash(path.Join(cmdFolder, "marker.processors.yaml"))
+	yamlPath := filepath.FromSlash(path.Join(wd, "marker.processors.yaml"))
 	_, err = os.Stat(yamlPath)
 	if err == nil {
 		log.Println("marker processor package is already initialized")

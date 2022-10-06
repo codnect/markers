@@ -15,6 +15,7 @@ type interfaceInfo struct {
 	explicitMethods map[string]functionInfo
 	methods         map[string]functionInfo
 	embeddedTypes   []string
+	isExported      bool
 }
 
 // interfaces
@@ -27,8 +28,9 @@ var (
 				},
 			},
 		},
-		name:     "BakeryShop",
-		fileName: "dessert.go",
+		name:       "BakeryShop",
+		fileName:   "dessert.go",
+		isExported: true,
 		position: Position{
 			Line:   13,
 			Column: 6,
@@ -57,8 +59,9 @@ var (
 				},
 			},
 		},
-		name:     "Dessert",
-		fileName: "dessert.go",
+		name:       "Dessert",
+		fileName:   "dessert.go",
+		isExported: true,
 		position: Position{
 			Line:   79,
 			Column: 6,
@@ -87,12 +90,13 @@ var (
 		markers: marker.MarkerValues{
 			"marker:interface-type-level": {
 				InterfaceTypeLevel{
-					Name: "NewYearsEveCookie",
+					Name: "newYearsEveCookie",
 				},
 			},
 		},
-		name:     "NewYearsEveCookie",
-		fileName: "dessert.go",
+		name:       "newYearsEveCookie",
+		fileName:   "dessert.go",
+		isExported: false,
 		position: Position{
 			Line:   48,
 			Column: 6,
@@ -113,8 +117,9 @@ var (
 				},
 			},
 		},
-		name:     "SweetShop",
-		fileName: "dessert.go",
+		name:       "SweetShop",
+		fileName:   "dessert.go",
+		isExported: true,
 		position: Position{
 			Line:   125,
 			Column: 6,
@@ -133,7 +138,7 @@ var (
 			"Pie":      pieFunction,
 			"muffin":   muffinFunction,
 		},
-		embeddedTypes: []string{"NewYearsEveCookie", "Dessert"},
+		embeddedTypes: []string{"newYearsEveCookie", "Dessert"},
 	}
 )
 
@@ -144,6 +149,7 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 		return false
 	}
 
+	index := 0
 	for expectedInterfaceName, expectedInterface := range interfaces {
 		actualInterface, ok := file.Interfaces().FindByName(expectedInterfaceName)
 
@@ -152,8 +158,23 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			continue
 		}
 
+		if actualInterface.InterfaceType() == nil {
+			t.Errorf("InterfaceType() for interface %s should not return nil", actualInterface.Name())
+		}
+
 		if expectedInterface.fileName != actualInterface.File().Name() {
 			t.Errorf("the file name for interface %s should be %s, but got %s", expectedInterfaceName, expectedInterface.fileName, actualInterface.File().Name())
+		}
+
+		if file.Interfaces().elements[index] != file.Interfaces().At(index) {
+			t.Errorf("interface with name %s does not match with interface at index %d", actualInterface.Name(), index)
+			continue
+		}
+
+		if actualInterface.IsExported() && !expectedInterface.isExported {
+			t.Errorf("interface with name %s is exported, but should be unexported", actualInterface.Name())
+		} else if !actualInterface.IsExported() && expectedInterface.isExported {
+			t.Errorf("interface with name %s is not exported, but should be exported", actualInterface.Name())
 		}
 
 		if actualInterface.NumMethods() == 0 && !actualInterface.IsEmpty() {
@@ -164,17 +185,14 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 
 		if actualInterface.NumMethods() != len(expectedInterface.methods) {
 			t.Errorf("the number of the methods of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.methods), actualInterface.NumMethods())
-			continue
 		}
 
 		if actualInterface.NumExplicitMethods() != len(expectedInterface.explicitMethods) {
 			t.Errorf("the number of the explicit methods of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.explicitMethods), actualInterface.NumExplicitMethods())
-			continue
 		}
 
 		if actualInterface.NumEmbeddedTypes() != len(expectedInterface.embeddedTypes) {
 			t.Errorf("the number of the embedded types of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.embeddedTypes), actualInterface.NumEmbeddedTypes())
-			continue
 		}
 
 		for index, expectedEmbeddedType := range expectedInterface.embeddedTypes {
@@ -191,8 +209,10 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			expectedInterfaceName, expectedInterface.position, actualInterface.Position())
 
 		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.Methods(), expectedInterface.methods)
+		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.ExplicitMethods(), expectedInterface.explicitMethods)
 		assertMarkers(t, expectedInterface.markers, actualInterface.Markers(), fmt.Sprintf("interface %s", expectedInterfaceName))
 
+		index++
 	}
 
 	return true
