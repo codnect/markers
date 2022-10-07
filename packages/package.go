@@ -74,8 +74,8 @@ func GetMarkerPackage(path string) (*MarkerPackage, error) {
 	}
 
 	for _, version := range pkgInfo.Versions {
-		fileInfo, err := os.Stat(MarkerPackagePath(pkgInfo.Path, version))
-		if err == nil && fileInfo.IsDir() {
+		fileInfo, fileError := os.Stat(MarkerPackagePath(pkgInfo.Path, version))
+		if fileError == nil && fileInfo.IsDir() {
 			markerPackage.DownloadedVersions = append(markerPackage.DownloadedVersions, version)
 		}
 	}

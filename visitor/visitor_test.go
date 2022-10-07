@@ -14,6 +14,7 @@ type PackageLevel struct {
 
 type StructTypeLevel struct {
 	Name string `marker:"Name"`
+	Any  any    `marker:"Any"`
 }
 
 type StructMethodLevel struct {

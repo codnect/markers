@@ -57,6 +57,10 @@ func NewErrorList(errors []error) error {
 	return ErrorList(errors)
 }
 
+func (errorList ErrorList) ToErrors() []error {
+	return errorList
+}
+
 func (errorList ErrorList) Error() string {
 	return fmt.Sprintf("%v", []error(errorList))
 }

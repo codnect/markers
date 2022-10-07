@@ -65,6 +65,31 @@ func TestGetPackageInfo(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, pkg)
 	assert.Equal(t, packageInfo, pkg)
+	assert.Equal(t, "anyGoPath/pkg/mod/github.com/procyon-projects/marker@v2.0.5", packageInfo.ModulePath())
+}
+
+func TestGetMarkerPackageShouldReturnErrorIfAnyErrorOccurs(t *testing.T) {
+	mockExecutor := &mockExecutor{}
+	cmd.SetCommandExecutor(mockExecutor)
+
+	execLookupPath, _ := exec.LookPath("go")
+	goPathCmd := &exec.Cmd{
+		Path: execLookupPath,
+		Args: []string{"go", "env", "GOPATH"},
+	}
+
+	goListCmd := &exec.Cmd{
+		Path: execLookupPath,
+		Args: []string{"go", "list", "-m", "-versions", "-json", fmt.Sprintf("%s@%s", "github.com/procyon-projects/marker", "latest")},
+	}
+
+	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
+	anyError := errors.New("anyError")
+	mockExecutor.On("Execute", goListCmd).Return(nil, anyError)
+
+	pkg, err := GetMarkerPackage("github.com/procyon-projects/marker")
+	assert.Nil(t, pkg)
+	assert.Equal(t, anyError, err)
 }
 
 func TestGetMarkerPackage(t *testing.T) {
@@ -107,6 +132,51 @@ func TestGetMarkerPackage(t *testing.T) {
 	mockExecutor.On("Execute", goListCmd).Return(byteData, nil)
 
 	pkg, err := GetMarkerPackage("github.com/procyon-projects/marker")
+	assert.Nil(t, err)
+	assert.NotNil(t, pkg)
+	assert.Equal(t, expectedMarkerPackage, pkg)
+}
+
+func TestGetMarkerPackageWithVersion(t *testing.T) {
+	mockExecutor := &mockExecutor{}
+	cmd.SetCommandExecutor(mockExecutor)
+
+	execLookupPath, _ := exec.LookPath("go")
+	goPathCmd := &exec.Cmd{
+		Path: execLookupPath,
+		Args: []string{"go", "env", "GOPATH"},
+	}
+
+	goListCmd := &exec.Cmd{
+		Path: execLookupPath,
+		Args: []string{"go", "list", "-m", "-versions", "-json", fmt.Sprintf("%s@%s", "github.com/procyon-projects/marker", "v2.0.5")},
+	}
+
+	packageInfo := &PackageInfo{
+		Path:      "github.com/procyon-projects/marker",
+		Version:   "v2.0.5",
+		Versions:  []string{"v1.2.6", "v2.0.5"},
+		Time:      time.Time{},
+		Dir:       "anyDir",
+		GoMod:     "",
+		GoVersion: "1.18",
+	}
+	byteData, _ := json.Marshal(packageInfo)
+
+	expectedMarkerPackage := &MarkerPackage{
+		Path:               "github.com/procyon-projects/marker",
+		Version:            "v2.0.5",
+		LatestVersion:      "v2.0.5",
+		DownloadedVersions: []string{},
+		AvailableVersions:  []string{"v1.2.6", "v2.0.5"},
+		Dir:                "",
+		GoVersion:          "1.18",
+	}
+
+	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
+	mockExecutor.On("Execute", goListCmd).Return(byteData, nil)
+
+	pkg, err := GetMarkerPackage("github.com/procyon-projects/marker@v2.0.5")
 	assert.Nil(t, err)
 	assert.NotNil(t, pkg)
 	assert.Equal(t, expectedMarkerPackage, pkg)

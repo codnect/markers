@@ -84,6 +84,9 @@ var (
 			"marker:struct-type-level": {
 				StructTypeLevel{
 					Name: "cookie",
+					Any: map[string]interface{}{
+						"key": "value",
+					},
 				},
 			},
 		},

@@ -7,6 +7,28 @@ import (
 	"testing"
 )
 
+func TestNewError(t *testing.T) {
+	err := NewError(errors.New("anyError"), "anyFileName", Position{
+		Line:   2,
+		Column: 4,
+	})
+	assert.Equal(t, Error{
+		FileName: "anyFileName",
+		Position: Position{
+			Line:   2,
+			Column: 4,
+		},
+		error: errors.New("anyError"),
+	}, err)
+}
+
+func TestScannerError_Error(t *testing.T) {
+	scannerError := &ScannerError{
+		Message: "anyErrorMessage",
+	}
+	assert.Equal(t, "anyErrorMessage", scannerError.Error())
+}
+
 func TestImportError_Error(t *testing.T) {
 	importErr := &ImportError{
 		Marker: "anyMarker",
@@ -32,10 +54,21 @@ func TestToParseError(t *testing.T) {
 	assert.Equal(t, Position{Line: 10, Column: 13}, parserError.Position)
 }
 
-func TestToParseErrorWithErrorList(t *testing.T) {
-	errors := NewErrorList([]error{errors.New("anyError1"), errors.New("anyError2")})
+func TestErrorList_ToErrors(t *testing.T) {
+	errorSlice := []error{errors.New("anyError1"), errors.New("anyError2")}
+	anyErrorList := NewErrorList(errorSlice)
+	assert.Equal(t, errorSlice, anyErrorList.(ErrorList).ToErrors())
+}
 
-	convertedError := toParseError(errors, nil, token.Position{
+func TestErrorList_Error(t *testing.T) {
+	anyErrorList := NewErrorList([]error{errors.New("anyError1"), errors.New("anyError2")})
+	assert.Equal(t, "[anyError1 anyError2]", anyErrorList.Error())
+}
+
+func TestToParseErrorWithErrorList(t *testing.T) {
+	anyErrorList := NewErrorList([]error{errors.New("anyError1"), errors.New("anyError2")})
+
+	convertedError := toParseError(anyErrorList, nil, token.Position{
 		Filename: "anyFileName",
 		Offset:   0,
 		Line:     10,

@@ -52,7 +52,7 @@ type newYearsEveCookie interface {
 }
 
 // Cookie is a struct
-// +marker:struct-type-level:Name=cookie
+// +marker:struct-type-level:Name=cookie, Any={key:"value"}
 type cookie struct {
 	// ChocolateChip is a field
 	// +marker:struct-field-level:Name=ChocolateChip
