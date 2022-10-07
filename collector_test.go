@@ -12,6 +12,7 @@ func TestCollector_Collect(t *testing.T) {
 
 	registry := NewRegistry()
 	collector := NewCollector(registry)
+
 	nodes, err := collector.Collect(pkg)
 	assert.NotNil(t, nodes)
 	assert.NoError(t, err)

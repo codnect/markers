@@ -371,3 +371,31 @@ func TestArgumentTypeInfo_ParseSlice(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []int{1, 2, 3, 4, 5}, s)
 }
+
+func TestArgumentTypeInfo_TypeInference(t *testing.T) {
+	var value any
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(&value))
+
+	assert.Nil(t, err)
+	assert.Equal(t, AnyType, typeInfo.ActualType)
+
+	scanner := NewScanner(" {1,2,3,4,5} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
+	assert.Nil(t, err)
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, value)
+
+	scanner = NewScanner(" {anyKey1:\"anyValue1\",anyKey2:true,anyKey3:23,anyKey4:{1,2,3},anyKey5:`anyValue5`} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
+	assert.Nil(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"anyKey1": "anyValue1",
+		"anyKey2": true,
+		"anyKey3": 23,
+		"anyKey4": []int{1, 2, 3},
+		"anyKey5": "anyValue5",
+	}, value)
+}
