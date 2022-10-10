@@ -8,7 +8,7 @@ import (
 )
 
 type interfaceInfo struct {
-	markers         marker.MarkerValues
+	markers         markers.MarkerValues
 	name            string
 	fileName        string
 	position        Position
@@ -21,7 +21,7 @@ type interfaceInfo struct {
 // interfaces
 var (
 	bakeryShopInterface = interfaceInfo{
-		markers: marker.MarkerValues{
+		markers: markers.MarkerValues{
 			"marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "BakeryShop",
@@ -52,7 +52,7 @@ var (
 	}
 
 	dessertInterface = interfaceInfo{
-		markers: marker.MarkerValues{
+		markers: markers.MarkerValues{
 			"marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "Dessert",
@@ -87,7 +87,7 @@ var (
 	}
 
 	newYearsEveCookieInterface = interfaceInfo{
-		markers: marker.MarkerValues{
+		markers: markers.MarkerValues{
 			"marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "newYearsEveCookie",
@@ -110,7 +110,7 @@ var (
 	}
 
 	sweetShopInterface = interfaceInfo{
-		markers: marker.MarkerValues{
+		markers: markers.MarkerValues{
 			"marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "SweetShop",

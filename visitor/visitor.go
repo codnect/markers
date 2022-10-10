@@ -14,8 +14,8 @@ type packageVisitor struct {
 	collector *packageCollector
 
 	pkg               *packages.Package
-	packageMarkers    map[ast.Node]marker.MarkerValues
-	allPackageMarkers map[string]map[ast.Node]marker.MarkerValues
+	packageMarkers    map[ast.Node]markers.MarkerValues
+	allPackageMarkers map[string]map[ast.Node]markers.MarkerValues
 
 	file *File
 
@@ -64,7 +64,7 @@ func (visitor *packageVisitor) Visit(node ast.Node) ast.Visitor {
 	}
 }
 
-func visitPackage(pkg *packages.Package, collector *packageCollector, allPackageMarkers map[string]map[ast.Node]marker.MarkerValues) {
+func visitPackage(pkg *packages.Package, collector *packageCollector, allPackageMarkers map[string]map[ast.Node]markers.MarkerValues) {
 	pkgVisitor := &packageVisitor{
 		collector:         collector,
 		pkg:               pkg,
@@ -78,7 +78,7 @@ func visitPackage(pkg *packages.Package, collector *packageCollector, allPackage
 	pkgVisitor.VisitPackage()
 }
 
-func EachFile(collector *marker.Collector, pkgs []*packages.Package, callback FileCallback) error {
+func EachFile(collector *markers.Collector, pkgs []*packages.Package, callback FileCallback) error {
 	if collector == nil {
 		return errors.New("collector cannot be nil")
 	}
@@ -88,21 +88,21 @@ func EachFile(collector *marker.Collector, pkgs []*packages.Package, callback Fi
 	}
 
 	var errs []error
-	packageMarkers := make(map[string]map[ast.Node]marker.MarkerValues)
+	packageMarkers := make(map[string]map[ast.Node]markers.MarkerValues)
 
 	for _, pkg := range pkgs {
-		markers, err := collector.Collect(pkg)
+		markerValues, err := collector.Collect(pkg)
 
 		if err != nil {
-			errs = append(errs, err.(marker.ErrorList)...)
+			errs = append(errs, err.(markers.ErrorList)...)
 			continue
 		}
 
-		packageMarkers[pkg.ID] = markers
+		packageMarkers[pkg.ID] = markerValues
 	}
 
 	if len(errs) != 0 {
-		return marker.NewErrorList(errs)
+		return markers.NewErrorList(errs)
 	}
 
 	pkgCollector := newPackageCollector()

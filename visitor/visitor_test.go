@@ -43,18 +43,18 @@ type variableInfo struct {
 }
 
 func TestVisitor_VisitPackage(t *testing.T) {
-	markers := []struct {
+	markerList := []struct {
 		Name   string
-		Level  marker.TargetLevel
+		Level  markers.TargetLevel
 		Output interface{}
 	}{
-		{Name: "marker:package-level", Level: marker.PackageLevel, Output: &PackageLevel{}},
-		{Name: "marker:interface-type-level", Level: marker.InterfaceTypeLevel, Output: &InterfaceTypeLevel{}},
-		{Name: "marker:interface-method-level", Level: marker.InterfaceMethodLevel, Output: &InterfaceMethodLevel{}},
-		{Name: "marker:function-level", Level: marker.FunctionLevel, Output: &FunctionLevel{}},
-		{Name: "marker:struct-type-level", Level: marker.StructTypeLevel, Output: &StructTypeLevel{}},
-		{Name: "marker:struct-method-level", Level: marker.StructMethodLevel, Output: &StructMethodLevel{}},
-		{Name: "marker:struct-field-level", Level: marker.FieldLevel, Output: &StructFieldLevel{}},
+		{Name: "marker:package-level", Level: markers.PackageLevel, Output: &PackageLevel{}},
+		{Name: "marker:interface-type-level", Level: markers.InterfaceTypeLevel, Output: &InterfaceTypeLevel{}},
+		{Name: "marker:interface-method-level", Level: markers.InterfaceMethodLevel, Output: &InterfaceMethodLevel{}},
+		{Name: "marker:function-level", Level: markers.FunctionLevel, Output: &FunctionLevel{}},
+		{Name: "marker:struct-type-level", Level: markers.StructTypeLevel, Output: &StructTypeLevel{}},
+		{Name: "marker:struct-method-level", Level: markers.StructMethodLevel, Output: &StructMethodLevel{}},
+		{Name: "marker:struct-field-level", Level: markers.FieldLevel, Output: &StructFieldLevel{}},
 	}
 
 	testCasePkgs := map[string]map[string]testFile{
@@ -131,9 +131,9 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	}
 
 	result, _ := packages.LoadPackages("../test/...")
-	registry := marker.NewRegistry()
+	registry := markers.NewRegistry()
 
-	for _, m := range markers {
+	for _, m := range markerList {
 		err := registry.Register(m.Name, "github.com/procyon-projects/marker", m.Level, m.Output)
 		if err != nil {
 			t.Errorf("marker %s could not be registered", m.Name)
@@ -141,7 +141,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 		}
 	}
 
-	collector := marker.NewCollector(registry)
+	collector := markers.NewCollector(registry)
 
 	err := EachFile(collector, result.Packages(), func(file *File, err error) error {
 		if _, isTestCasePkg := testCasePkgs[file.pkg.ID]; !isTestCasePkg {
@@ -187,7 +187,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	}
 }
 
-func assertMarkers(t *testing.T, expectedMarkers marker.MarkerValues, actualMarkers marker.MarkerValues, msg string) {
+func assertMarkers(t *testing.T, expectedMarkers markers.MarkerValues, actualMarkers markers.MarkerValues, msg string) {
 	if actualMarkers.Count() != expectedMarkers.Count() {
 		t.Errorf("the number of the markers of the %s should be %d, but got %d", msg, expectedMarkers.Count(), actualMarkers.Count())
 		return

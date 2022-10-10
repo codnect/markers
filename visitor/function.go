@@ -46,7 +46,7 @@ func (v Variables) At(index int) *Variable {
 type Function struct {
 	name       string
 	isExported bool
-	markers    marker.MarkerValues
+	markers    markers.MarkerValues
 	position   Position
 	receiver   *Variable
 	typeParams *TypeParams
@@ -68,7 +68,7 @@ type Function struct {
 	loadedReturnValues bool
 }
 
-func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Function {
+func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *Function {
 	function := &Function{
 		file:       file,
 		typeParams: &TypeParams{},
@@ -392,7 +392,7 @@ func (f *Function) IsVariadic() bool {
 	return f.variadic
 }
 
-func (f *Function) Markers() marker.MarkerValues {
+func (f *Function) Markers() markers.MarkerValues {
 	return f.markers
 }
 

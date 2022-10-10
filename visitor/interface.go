@@ -29,7 +29,7 @@ type Interface struct {
 	isExported  bool
 	isAnonymous bool
 	position    Position
-	markers     marker.MarkerValues
+	markers     markers.MarkerValues
 	embeddeds   []Type
 	constrains  []*Constraint
 	allMethods  []*Function
@@ -51,7 +51,7 @@ type Interface struct {
 	allMethodsLoaded    bool
 }
 
-func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Interface {
+func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *Interface {
 	i := &Interface{
 		methods:     make([]*Function, 0),
 		allMethods:  make([]*Function, 0),
@@ -208,7 +208,7 @@ func (i *Interface) IsExported() bool {
 	return i.isExported
 }
 
-func (i *Interface) Markers() marker.MarkerValues {
+func (i *Interface) Markers() markers.MarkerValues {
 	return i.markers
 }
 

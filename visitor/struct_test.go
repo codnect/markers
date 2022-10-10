@@ -18,7 +18,7 @@ type structInfo struct {
 	fileName          string
 	isExported        bool
 	position          Position
-	markers           marker.MarkerValues
+	markers           markers.MarkerValues
 	methods           map[string]functionInfo
 	allMethods        map[string]functionInfo
 	fields            map[string]fieldInfo
@@ -32,7 +32,7 @@ type structInfo struct {
 // structs
 var (
 	friedCookieStruct = structInfo{
-		markers: marker.MarkerValues{
+		markers: markers.MarkerValues{
 			"marker:struct-type-level": {
 				StructTypeLevel{
 					Name: "FriedCookie",
@@ -80,7 +80,7 @@ var (
 	}
 
 	cookieStruct = structInfo{
-		markers: marker.MarkerValues{
+		markers: markers.MarkerValues{
 			"marker:struct-type-level": {
 				StructTypeLevel{
 					Name: "cookie",

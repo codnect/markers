@@ -14,7 +14,7 @@ type Field struct {
 	tags       string
 	typ        Type
 	position   Position
-	markers    marker.MarkerValues
+	markers    markers.MarkerValues
 	file       *File
 	isEmbedded bool
 }
@@ -74,7 +74,7 @@ type Struct struct {
 	isExported  bool
 	isAnonymous bool
 	position    Position
-	markers     marker.MarkerValues
+	markers     markers.MarkerValues
 	fields      []*Field
 	allFields   []*Field
 	methods     []*Function
@@ -97,7 +97,7 @@ type Struct struct {
 	allFieldsLoaded bool
 }
 
-func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Struct {
+func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *Struct {
 	s := &Struct{
 		markers:     markers,
 		file:        file,
@@ -319,7 +319,7 @@ func (s *Struct) IsAnonymous() bool {
 	return s.isAnonymous
 }
 
-func (s *Struct) Markers() marker.MarkerValues {
+func (s *Struct) Markers() markers.MarkerValues {
 	return s.markers
 }
 

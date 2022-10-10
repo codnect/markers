@@ -12,7 +12,7 @@ type CustomType struct {
 	aliasType  Type
 	isExported bool
 	position   Position
-	markers    marker.MarkerValues
+	markers    markers.MarkerValues
 	methods    []*Function
 	file       *File
 
@@ -20,7 +20,7 @@ type CustomType struct {
 	visitor     *packageVisitor
 }
 
-func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *CustomType {
+func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *CustomType {
 	customType := &CustomType{
 		name:        specType.Name.Name,
 		aliasType:   getTypeFromExpression(specType.Type, file, visitor),

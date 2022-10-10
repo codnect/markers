@@ -183,7 +183,7 @@ func addProcessorCommand(processorName string) error {
 		return err
 	}
 
-	if !marker.IsLower(processorName) {
+	if !markers.IsLower(processorName) {
 		return errors.New("processor name must only contain lower case letters")
 	}
 
