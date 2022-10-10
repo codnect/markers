@@ -384,18 +384,211 @@ func TestArgumentTypeInfo_TypeInference(t *testing.T) {
 
 	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
 	assert.Nil(t, err)
-	assert.Equal(t, []int{1, 2, 3, 4, 5}, value)
+	assert.Equal(t, []interface{}{1, 2, 3, 4, 5}, value)
+
+	scanner = NewScanner(" {anyValue1, anyValue2, anyValue3} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
+	assert.Nil(t, err)
+	assert.Equal(t, []interface{}{"anyValue1", "anyValue2", "anyValue3"}, value)
+
+	scanner = NewScanner(" {`anyValue1`, `anyValue2`, `anyValue3`} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
+	assert.Nil(t, err)
+	assert.Equal(t, []interface{}{"anyValue1", "anyValue2", "anyValue3"}, value)
+
+	scanner = NewScanner(" {\"anyValue1\", \"anyValue2\", \"anyValue3\"} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
+	assert.Nil(t, err)
+	assert.Equal(t, []interface{}{"anyValue1", "anyValue2", "anyValue3"}, value)
+
+	scanner = NewScanner(" {{1,2,3},{4,5,6}} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
+	assert.Nil(t, err)
+	assert.Equal(t, []interface{}{[]interface{}{1, 2, 3}, []interface{}{4, 5, 6}}, value)
+
+	scanner = NewScanner(" {{anyKey1:\"anyValue1\"},{anyKey2:32},{anyKey3:`anyValue3`}} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
+	assert.Nil(t, err)
+	assert.Equal(t, []interface{}{map[string]interface{}{"anyKey1": "anyValue1"}, map[string]interface{}{"anyKey2": 32}, map[string]interface{}{"anyKey3": "anyValue3"}}, value)
 
 	scanner = NewScanner(" {anyKey1:\"anyValue1\",anyKey2:true,anyKey3:23,anyKey4:{1,2,3},anyKey5:`anyValue5`} ")
 	scanner.Peek()
 
 	err = typeInfo.Parse(scanner, reflect.ValueOf(&value))
 	assert.Nil(t, err)
+	assert.Equal(t, map[string]interface{}{"anyKey1": "anyValue1", "anyKey2": true, "anyKey3": 23, "anyKey4": []interface{}{1, 2, 3}, "anyKey5": "anyValue5"}, value)
+
+}
+
+func TestDefinition_Parse(t *testing.T) {
+	m := map[string]any{}
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(&m))
+	assert.Nil(t, err)
+	assert.Equal(t, MapType, typeInfo.ActualType)
+	assert.Equal(t, AnyType, typeInfo.ItemType.ActualType)
+
+	scanner := NewScanner(" {anyKey1:{anySubKey1:23,anySubKey2:\"anySubKeyValue2\"}} ")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&m))
+	assert.Nil(t, err)
 	assert.Equal(t, map[string]interface{}{
-		"anyKey1": "anyValue1",
-		"anyKey2": true,
-		"anyKey3": 23,
-		"anyKey4": []int{1, 2, 3},
-		"anyKey5": "anyValue5",
-	}, value)
+		"anyKey1": map[string]interface{}{
+			"anySubKey1": 23,
+			"anySubKey2": "anySubKeyValue2",
+		},
+	}, m)
+
+	s := make([]any, 0)
+	typeInfo, err = ArgumentTypeInfoFromType(reflect.TypeOf(&s))
+	assert.Nil(t, err)
+	assert.Equal(t, SliceType, typeInfo.ActualType)
+	assert.Equal(t, AnyType, typeInfo.ItemType.ActualType)
+
+	scanner = NewScanner("{anyItem1, `anyItem2`, 2, true, -2}")
+	scanner.Peek()
+
+	err = typeInfo.Parse(scanner, reflect.ValueOf(&s))
+	assert.Nil(t, err)
+	assert.Equal(t, []interface{}{"anyItem1", "anyItem2", 2, true, -2}, s)
+}
+
+func TestArgumentTypeInfo_MakeMapType(t *testing.T) {
+	anyMap := map[string]any{}
+	typeInfo, _ := ArgumentTypeInfoFromType(reflect.TypeOf(&anyMap))
+	mapType, err := typeInfo.makeMapType()
+
+	assert.Nil(t, err)
+	result := reflect.MakeMap(mapType).Interface()
+
+	assert.Equal(t, map[string]interface{}{}, result)
+
+	intMap := map[string]int{}
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&intMap))
+	mapType, err = typeInfo.makeMapType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeMap(mapType).Interface()
+
+	assert.Equal(t, map[string]int{}, result)
+
+	boolMap := map[string]bool{}
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&boolMap))
+	mapType, err = typeInfo.makeMapType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeMap(mapType).Interface()
+
+	assert.Equal(t, map[string]bool{}, result)
+
+	uintMap := map[string]uint{}
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&uintMap))
+	mapType, err = typeInfo.makeMapType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeMap(mapType).Interface()
+
+	assert.Equal(t, map[string]uint{}, result)
+
+	stringMap := map[string]string{}
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&stringMap))
+	mapType, err = typeInfo.makeMapType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeMap(mapType).Interface()
+
+	assert.Equal(t, map[string]string{}, result)
+
+	sliceMap := map[string][]int{}
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&sliceMap))
+	mapType, err = typeInfo.makeMapType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeMap(mapType).Interface()
+
+	assert.Equal(t, map[string][]int{}, result)
+
+	mapOfMap := map[string]map[string]any{}
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&mapOfMap))
+	mapType, err = typeInfo.makeMapType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeMap(mapType).Interface()
+
+	assert.Equal(t, map[string]map[string]any{}, result)
+}
+
+func TestArgumentTypeInfo_MakeSliceType(t *testing.T) {
+	var anySlice []any
+	typeInfo, _ := ArgumentTypeInfoFromType(reflect.TypeOf(&anySlice))
+	sliceType, err := typeInfo.makeSliceType()
+
+	assert.Nil(t, err)
+	result := reflect.MakeSlice(sliceType, 0, 0).Interface()
+
+	assert.Equal(t, []any{}, result)
+
+	var intSlice []int
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&intSlice))
+	sliceType, err = typeInfo.makeSliceType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeSlice(sliceType, 0, 0).Interface()
+
+	assert.Equal(t, []int{}, result)
+
+	var boolSlice []bool
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&boolSlice))
+	sliceType, err = typeInfo.makeSliceType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeSlice(sliceType, 0, 0).Interface()
+
+	assert.Equal(t, []bool{}, result)
+
+	var uintSlice []uint
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&uintSlice))
+	sliceType, err = typeInfo.makeSliceType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeSlice(sliceType, 0, 0).Interface()
+
+	assert.Equal(t, []uint{}, result)
+
+	var stringSlice []string
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&stringSlice))
+	sliceType, err = typeInfo.makeSliceType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeSlice(sliceType, 0, 0).Interface()
+
+	assert.Equal(t, []string{}, result)
+
+	var sliceOfSlice [][]string
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&sliceOfSlice))
+	sliceType, err = typeInfo.makeSliceType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeSlice(sliceType, 0, 0).Interface()
+
+	assert.Equal(t, [][]string{}, result)
+
+	var sliceOfMap []map[string]any
+	typeInfo, _ = ArgumentTypeInfoFromType(reflect.TypeOf(&sliceOfMap))
+	sliceType, err = typeInfo.makeSliceType()
+
+	assert.Nil(t, err)
+	result = reflect.MakeSlice(sliceType, 0, 0).Interface()
+
+	assert.Equal(t, []map[string]any{}, result)
 }

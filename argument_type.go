@@ -43,8 +43,8 @@ var argumentTypeText = map[ArgumentType]string{
 }
 
 var (
-	interfaceType = reflect.TypeOf((*interface{})(nil)).Elem()
-	rawType       = reflect.TypeOf((*[]byte)(nil)).Elem()
+	anyType = reflect.TypeOf((*any)(nil)).Elem()
+	rawType = reflect.TypeOf((*[]byte)(nil)).Elem()
 )
 
 type ArgumentTypeInfo struct {
@@ -69,7 +69,7 @@ func ArgumentTypeInfoFromType(typ reflect.Type) (ArgumentTypeInfo, error) {
 		return *typeInfo, nil
 	}
 
-	if typ == interfaceType {
+	if typ == anyType {
 		typeInfo.ActualType = AnyType
 		return *typeInfo, nil
 	}
@@ -420,7 +420,9 @@ func (typeInfo ArgumentTypeInfo) inferType(scanner *Scanner, out reflect.Value, 
 		if token == ';' {
 			return ArgumentTypeInfo{
 				ActualType: SliceType,
-				ItemType:   &itemType,
+				ItemType: &ArgumentTypeInfo{
+					ActualType: AnyType,
+				},
 			}, nil
 		}
 
@@ -463,7 +465,9 @@ func (typeInfo ArgumentTypeInfo) inferType(scanner *Scanner, out reflect.Value, 
 
 		return ArgumentTypeInfo{
 			ActualType: SliceType,
-			ItemType:   &elementType,
+			ItemType: &ArgumentTypeInfo{
+				ActualType: AnyType,
+			},
 		}, nil
 	}
 
@@ -545,6 +549,8 @@ func (typeInfo ArgumentTypeInfo) makeSliceType() (reflect.Type, error) {
 		}
 
 		itemType = subItemType
+	case AnyType:
+		itemType = anyType
 	default:
 		return nil, fmt.Errorf("invalid type: %v", typeInfo.ItemType.ActualType)
 	}
@@ -586,7 +592,7 @@ func (typeInfo ArgumentTypeInfo) makeMapType() (reflect.Type, error) {
 		}
 		itemType = subItemType
 	case AnyType:
-		itemType = interfaceType
+		itemType = anyType
 	default:
 		return nil, fmt.Errorf("invalid type: %v", typeInfo.ItemType.ActualType)
 	}
