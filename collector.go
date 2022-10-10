@@ -1,4 +1,4 @@
-package marker
+package markers
 
 import (
 	"errors"
@@ -98,8 +98,10 @@ func (collector *Collector) parseMarkerComments(pkg *packages.Package, nodeMarke
 			if importMarker, ok := importAliases[alias]; ok {
 				markerName = strings.Replace(markerName, fmt.Sprintf("+%s", alias), fmt.Sprintf("+%s", importMarker.Value), 1)
 				definition, exists = collector.Lookup(markerName, importMarker.Pkg, targetLevel)
-			} else {
+			} else if _, isReservedMarker := reservedMarkerMap[markerName]; !isReservedMarker {
 				continue
+			} else {
+				definition, exists = collector.Lookup(markerName, "", targetLevel)
 			}
 
 			if !exists {

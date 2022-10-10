@@ -12,11 +12,11 @@ type File struct {
 	path string
 	pkg  *packages.Package
 
-	allMarkers  marker.MarkerValues
-	fileMarkers marker.MarkerValues
+	allMarkers  markers.MarkerValues
+	fileMarkers markers.MarkerValues
 
 	imports       *Imports
-	importMarkers []marker.ImportMarker
+	importMarkers []markers.ImportMarker
 
 	functions   *Functions
 	structs     *Structs
@@ -29,7 +29,7 @@ type File struct {
 	visitor *packageVisitor
 }
 
-func newFile(rawFile *ast.File, pkg *packages.Package, markers marker.MarkerValues, visitor *packageVisitor) *File {
+func newFile(rawFile *ast.File, pkg *packages.Package, markerValues markers.MarkerValues, visitor *packageVisitor) *File {
 	position := pkg.Fset.Position(rawFile.Pos())
 	path := position.Filename
 
@@ -37,10 +37,10 @@ func newFile(rawFile *ast.File, pkg *packages.Package, markers marker.MarkerValu
 		name:          filepath.Base(path),
 		path:          path,
 		pkg:           pkg,
-		allMarkers:    markers,
-		fileMarkers:   make(marker.MarkerValues, 0),
+		allMarkers:    markerValues,
+		fileMarkers:   make(markers.MarkerValues, 0),
 		imports:       &Imports{},
-		importMarkers: make([]marker.ImportMarker, 0),
+		importMarkers: make([]markers.ImportMarker, 0),
 		functions:     &Functions{},
 		structs:       &Structs{},
 		interfaces:    &Interfaces{},
@@ -54,13 +54,13 @@ func newFile(rawFile *ast.File, pkg *packages.Package, markers marker.MarkerValu
 }
 
 func (f *File) initialize() *File {
-	for markerName, markers := range f.allMarkers {
-		if marker.ImportMarkerName == markerName {
-			for _, importMarker := range markers {
-				f.importMarkers = append(f.importMarkers, importMarker.(marker.ImportMarker))
+	for markerName, markerValues := range f.allMarkers {
+		if markers.ImportMarkerName == markerName {
+			for _, importMarker := range markerValues {
+				f.importMarkers = append(f.importMarkers, importMarker.(markers.ImportMarker))
 			}
 		} else {
-			f.fileMarkers[markerName] = append(f.fileMarkers[markerName], markers...)
+			f.fileMarkers[markerName] = append(f.fileMarkers[markerName], markerValues...)
 		}
 	}
 
@@ -72,9 +72,16 @@ func (f *File) initialize() *File {
 			importName = importPackage.Name.Name
 		}
 
+		sideEffect := false
+
+		if importName == "_" {
+			sideEffect = true
+		}
+
 		f.imports.elements = append(f.imports.elements, &Import{
-			name: importName,
-			path: importPackage.Path.Value[1 : len(importPackage.Path.Value)-1],
+			name:       importName,
+			path:       importPackage.Path.Value[1 : len(importPackage.Path.Value)-1],
+			sideEffect: sideEffect,
 			position: Position{
 				importPosition.Line,
 				importPosition.Column,
@@ -93,7 +100,7 @@ func (f *File) Path() string {
 	return f.path
 }
 
-func (f *File) Markers() marker.MarkerValues {
+func (f *File) Markers() markers.MarkerValues {
 	return f.fileMarkers
 }
 
@@ -105,12 +112,16 @@ func (f *File) Imports() *Imports {
 	return f.imports
 }
 
-func (f *File) ImportMarkers() []marker.ImportMarker {
+func (f *File) ImportMarkers() []markers.ImportMarker {
 	return f.importMarkers
 }
 
 func (f *File) NumImportMarkers() int {
 	return len(f.importMarkers)
+}
+
+func (f *File) Constants() *Constants {
+	return f.constants
 }
 
 func (f *File) Functions() *Functions {
@@ -123,6 +134,10 @@ func (f *File) Structs() *Structs {
 
 func (f *File) Interfaces() *Interfaces {
 	return f.interfaces
+}
+
+func (f *File) CustomTypes() *CustomTypes {
+	return f.customTypes
 }
 
 type Files struct {

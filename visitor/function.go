@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
@@ -21,7 +22,11 @@ func (v *Variable) Type() Type {
 }
 
 func (v *Variable) String() string {
-	return ""
+	if v.name == "" {
+		return v.typ.Name()
+	}
+
+	return fmt.Sprintf("%s %s", v.name, v.typ.Name())
 }
 
 type Variables []*Variable
@@ -41,7 +46,7 @@ func (v Variables) At(index int) *Variable {
 type Function struct {
 	name       string
 	isExported bool
-	markers    marker.MarkerValues
+	markers    markers.MarkerValues
 	position   Position
 	receiver   *Variable
 	typeParams *TypeParams
@@ -63,7 +68,7 @@ type Function struct {
 	loadedReturnValues bool
 }
 
-func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Function {
+func newFunction(funcDecl *ast.FuncDecl, funcField *ast.Field, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *Function {
 	function := &Function{
 		file:       file,
 		typeParams: &TypeParams{},
@@ -176,7 +181,7 @@ func (f *Function) getTypeParams(fieldList []*ast.Field) *TypeParams {
 
 	for _, field := range fieldList {
 
-		typ := getTypeFromExpression(field.Type, f.visitor)
+		typ := getTypeFromExpression(field.Type, f.file, f.visitor)
 
 		if field.Names == nil {
 			typeParams.params = append(typeParams.params, &TypeParam{
@@ -232,7 +237,7 @@ func (f *Function) getVariables(fieldList []*ast.Field) Variables {
 		typ := f.getGenericTypeFromExpression(field.Type)
 
 		if typ == nil {
-			typ = getTypeFromExpression(field.Type, f.visitor)
+			typ = getTypeFromExpression(field.Type, f.file, f.visitor)
 		}
 
 		if field.Names == nil {
@@ -350,7 +355,7 @@ func (f *Function) String() string {
 			result := f.Results().At(i)
 			builder.WriteString(result.String())
 
-			if i != f.Params().Len()-1 {
+			if i != f.Results().Len()-1 {
 				builder.WriteString(",")
 			}
 		}
@@ -387,7 +392,7 @@ func (f *Function) IsVariadic() bool {
 	return f.variadic
 }
 
-func (f *Function) Markers() marker.MarkerValues {
+func (f *Function) Markers() markers.MarkerValues {
 	return f.markers
 }
 

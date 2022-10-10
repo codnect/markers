@@ -4,11 +4,13 @@ import (
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
+	"reflect"
 	"strconv"
 )
 
 type Constant struct {
 	name       string
+	position   Position
 	isExported bool
 	value      any
 	typ        Type
@@ -32,11 +34,20 @@ func (c *Constant) Value() any {
 	return c.value
 }
 
+func (c *Constant) File() *File {
+	return c.file
+}
+
+func (c *Constant) Position() Position {
+	return c.position
+}
+
 func (c *Constant) evaluateExpression() {
 	if c.expressionEvaluated {
 		return
 	}
 
+	// TODO: There might be some issues with const expressions.
 	defer func() {
 		if r := recover(); r != nil {
 		}
@@ -62,8 +73,8 @@ func (c *Constant) Type() Type {
 	return c.typ
 }
 
-func (c *Constant) IsExported() string {
-	return c.name
+func (c *Constant) IsExported() bool {
+	return c.isExported
 }
 
 func (c *Constant) Underlying() Type {
@@ -139,6 +150,18 @@ func (c *Constant) evalBinaryExpr(exp *ast.BinaryExpr, variableMap map[string]an
 		expressionType = typRight
 	}
 
+	leftType := reflect.TypeOf(left)
+	rightType := reflect.TypeOf(right)
+	if leftType.Kind() == reflect.Float32 ||
+		leftType.Kind() == reflect.Float64 ||
+		rightType.Kind() == reflect.Float32 ||
+		rightType.Kind() == reflect.Float64 {
+
+		floatType := reflect.TypeOf(0.0)
+		left = reflect.ValueOf(left).Convert(floatType).Interface()
+		right = reflect.ValueOf(right).Convert(floatType).Interface()
+	}
+
 	switch left.(type) {
 	case int:
 		switch exp.Op {
@@ -202,6 +225,10 @@ type Constants struct {
 	elements []*Constant
 }
 
+func (c *Constants) ToSlice() []*Constant {
+	return c.elements
+}
+
 func (c *Constants) Len() int {
 	return len(c.elements)
 }
@@ -247,7 +274,9 @@ func collectConstants(valueSpec *ast.ValueSpec, lastValueSpec *ast.ValueSpec, io
 			isExported: ast.IsExported(name.Name),
 			iota:       iota,
 			pkg:        file.pkg,
-			//visitor:    visitor,
+			file:       file,
+			position:   getPosition(file.pkg, valueSpec.Pos()),
+			visitor:    file.visitor,
 		}
 
 		if valueSpec.Values != nil {

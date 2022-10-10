@@ -1,4 +1,4 @@
-package marker
+package markers
 
 import (
 	"errors"
@@ -16,7 +16,6 @@ type Output struct {
 	Type              reflect.Type
 	IsAnonymous       bool
 	SyntaxFree        bool
-	UseValueSyntax    bool
 	AnonymousTypeInfo ArgumentTypeInfo
 	Fields            map[string]Argument
 	FieldNames        map[string]string
@@ -275,11 +274,7 @@ func (definition *Definition) parseSyntaxFree(marker string) any {
 		fieldValue = fieldValue.Elem()
 	}
 
-	name, _, _ := splitMarker(marker)
-	// markers can be syntax free such as +build
-	name = strings.Split(name, " ")[0]
-
-	value := reflect.ValueOf(strings.Replace(marker, fmt.Sprintf("+%s", name), "", 1))
+	value := reflect.ValueOf(strings.Trim(strings.Replace(marker, fmt.Sprintf("+%s", definition.Name), "", 1), " "))
 
 	if fieldOutType != value.Type() {
 		value = value.Convert(fieldOutType)

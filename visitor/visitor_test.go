@@ -14,6 +14,7 @@ type PackageLevel struct {
 
 type StructTypeLevel struct {
 	Name string `marker:"Name"`
+	Any  any    `marker:"Any"`
 }
 
 type StructMethodLevel struct {
@@ -41,44 +42,98 @@ type variableInfo struct {
 	typeName string
 }
 
-func TestVisitor_VisitPackage1(t *testing.T) {
-	markers := []struct {
+func TestVisitor_VisitPackage(t *testing.T) {
+	markerList := []struct {
 		Name   string
-		Level  marker.TargetLevel
+		Level  markers.TargetLevel
 		Output interface{}
 	}{
-		{Name: "marker:package-level", Level: marker.PackageLevel, Output: &PackageLevel{}},
-		{Name: "marker:interface-type-level", Level: marker.InterfaceTypeLevel, Output: &InterfaceTypeLevel{}},
-		{Name: "marker:interface-method-level", Level: marker.InterfaceMethodLevel, Output: &InterfaceMethodLevel{}},
-		{Name: "marker:function-level", Level: marker.FunctionLevel, Output: &FunctionLevel{}},
-		{Name: "marker:struct-type-level", Level: marker.StructTypeLevel, Output: &StructTypeLevel{}},
-		{Name: "marker:struct-method-level", Level: marker.StructMethodLevel, Output: &StructMethodLevel{}},
-		{Name: "marker:struct-field-level", Level: marker.FieldLevel, Output: &StructFieldLevel{}},
+		{Name: "marker:package-level", Level: markers.PackageLevel, Output: &PackageLevel{}},
+		{Name: "marker:interface-type-level", Level: markers.InterfaceTypeLevel, Output: &InterfaceTypeLevel{}},
+		{Name: "marker:interface-method-level", Level: markers.InterfaceMethodLevel, Output: &InterfaceMethodLevel{}},
+		{Name: "marker:function-level", Level: markers.FunctionLevel, Output: &FunctionLevel{}},
+		{Name: "marker:struct-type-level", Level: markers.StructTypeLevel, Output: &StructTypeLevel{}},
+		{Name: "marker:struct-method-level", Level: markers.StructMethodLevel, Output: &StructMethodLevel{}},
+		{Name: "marker:struct-field-level", Level: markers.FieldLevel, Output: &StructFieldLevel{}},
 	}
 
-	testCases := map[string]testFile{
-		"dessert.go": {
-			functions: map[string]functionInfo{
-				"MakeACake":   makeACakeFunction,
-				"BiscuitCake": biscuitCakeFunction,
+	testCasePkgs := map[string]map[string]testFile{
+		"github.com/procyon-projects/marker/test/menu": {
+			"coffee.go": {
+				constants:   coffeeConstants,
+				customTypes: coffeeCustomTypes,
 			},
-			interfaces: map[string]interfaceInfo{
-				"BakeryShop":        bakeryShopInterface,
-				"Dessert":           dessertInterface,
-				"NewYearsEveCookie": newYearsEveCookieInterface,
-				"SweetShop":         sweetShopInterface,
+			"fresh.go": {
+				constants:   freshConstants,
+				customTypes: freshCustomTypes,
 			},
-			structs: map[string]structInfo{
-				"FriedCookie": friedCookieStruct,
-				"Cookie":      cookieStruct,
+			"dessert.go": {
+				imports: []importInfo{
+					{
+						name:       "",
+						path:       "fmt",
+						sideEffect: false,
+						position:   Position{Line: 7, Column: 2},
+					},
+					{
+						name:       "_",
+						path:       "strings",
+						sideEffect: true,
+						position:   Position{Line: 8, Column: 2},
+					},
+				},
+				functions: map[string]functionInfo{
+					"MakeACake":   makeACakeFunction,
+					"BiscuitCake": biscuitCakeFunction,
+				},
+				interfaces: map[string]interfaceInfo{
+					"BakeryShop":        bakeryShopInterface,
+					"Dessert":           dessertInterface,
+					"newYearsEveCookie": newYearsEveCookieInterface,
+					"SweetShop":         sweetShopInterface,
+				},
+				structs: map[string]structInfo{
+					"FriedCookie": friedCookieStruct,
+					"cookie":      cookieStruct,
+				},
+			},
+		},
+		"github.com/procyon-projects/marker/test/any": {
+			"error.go": {
+				constants:   []constantInfo{},
+				customTypes: errorCustomTypes,
+			},
+			"permission.go": {
+				constants:   permissionConstants,
+				customTypes: permissionCustomTypes,
+			},
+			"math.go": {
+				constants: mathConstants,
+			},
+			"generics.go": {
+				constants: []constantInfo{},
+				functions: map[string]functionInfo{
+					"GenericFunction": genericFunction,
+				},
+			},
+			"string.go": {
+				imports: []importInfo{
+					{
+						name:       "",
+						path:       "net/http",
+						sideEffect: false,
+						position:   Position{Line: 3, Column: 8},
+					},
+				},
+				constants: stringConstants,
 			},
 		},
 	}
 
-	result, _ := packages.LoadPackages("../test/package1")
-	registry := marker.NewRegistry()
+	result, _ := packages.LoadPackages("../test/...")
+	registry := markers.NewRegistry()
 
-	for _, m := range markers {
+	for _, m := range markerList {
 		err := registry.Register(m.Name, "github.com/procyon-projects/marker", m.Level, m.Output)
 		if err != nil {
 			t.Errorf("marker %s could not be registered", m.Name)
@@ -86,14 +141,31 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 		}
 	}
 
-	collector := marker.NewCollector(registry)
+	collector := markers.NewCollector(registry)
 
 	err := EachFile(collector, result.Packages(), func(file *File, err error) error {
-		if file.pkg.ID == "builtin" {
+		if _, isTestCasePkg := testCasePkgs[file.pkg.ID]; !isTestCasePkg {
 			return nil
 		}
 
-		testCase := testCases[file.Name()]
+		testCase, exists := testCasePkgs[file.pkg.ID][file.Name()]
+
+		if !exists {
+			t.Errorf("file %s not found in test cases", file.Name())
+			return nil
+		}
+
+		if !assertImports(t, file, testCase.imports) {
+			return nil
+		}
+
+		if !assertConstants(t, file, testCase.constants) {
+			return nil
+		}
+
+		if !assertCustomTypes(t, file, testCase.customTypes) {
+			return nil
+		}
 
 		if !assertInterfaces(t, file, testCase.interfaces) {
 			return nil
@@ -103,7 +175,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 			return nil
 		}
 
-		if !assertFunctions(t, fmt.Sprintf("file %s", file.Name()), file.functions, testCase.functions) {
+		if !assertFunctions(t, fmt.Sprintf("file %s", file.Name()), file.Functions(), testCase.functions) {
 			return nil
 		}
 
@@ -115,7 +187,7 @@ func TestVisitor_VisitPackage1(t *testing.T) {
 	}
 }
 
-func assertMarkers(t *testing.T, expectedMarkers marker.MarkerValues, actualMarkers marker.MarkerValues, msg string) {
+func assertMarkers(t *testing.T, expectedMarkers markers.MarkerValues, actualMarkers markers.MarkerValues, msg string) {
 	if actualMarkers.Count() != expectedMarkers.Count() {
 		t.Errorf("the number of the markers of the %s should be %d, but got %d", msg, expectedMarkers.Count(), actualMarkers.Count())
 		return

@@ -1,4 +1,4 @@
-package marker
+package markers
 
 import (
 	"go/ast"
@@ -97,8 +97,9 @@ func splitMarker(marker string) (name string, anonymousName string, options stri
 	nameFieldParts := strings.SplitN(marker, "=", 2)
 
 	if len(nameFieldParts) == 1 {
-		value := strings.TrimRight(nameFieldParts[0], "\t ")
-		value = strings.TrimLeft(value, "\t ")
+		value := strings.TrimRight(nameFieldParts[0], " ")
+		value = strings.TrimLeft(value, " ")
+		value = strings.Split(value, " ")[0]
 		return value, value, ""
 	}
 

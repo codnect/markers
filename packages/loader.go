@@ -3,6 +3,7 @@ package packages
 import (
 	"errors"
 	"fmt"
+	"github.com/procyon-projects/marker/internal/cmd"
 	"go/token"
 	"golang.org/x/tools/go/packages"
 	"os/exec"
@@ -139,10 +140,11 @@ func LoadPackagesWithConfig(config *packages.Config, patterns ...string) (*LoadR
 	}
 
 	// get standard package list
-	cmd := exec.Command("go", "list", "std")
+	command := exec.Command("go", "list", "std")
+	executor := cmd.GetCommandExecutor()
 
 	var stdPackageListOutput []byte
-	stdPackageListOutput, err = cmd.Output()
+	stdPackageListOutput, err = executor.Execute(command)
 
 	if err != nil {
 		return nil, errors.New("std packages could not be loaded")

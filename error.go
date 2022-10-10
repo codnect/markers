@@ -1,4 +1,4 @@
-package marker
+package markers
 
 import (
 	"fmt"
@@ -55,6 +55,10 @@ func NewErrorList(errors []error) error {
 	}
 
 	return ErrorList(errors)
+}
+
+func (errorList ErrorList) ToErrors() []error {
+	return errorList
 }
 
 func (errorList ErrorList) Error() string {

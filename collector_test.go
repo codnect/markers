@@ -1,4 +1,4 @@
-package marker
+package markers
 
 import (
 	"github.com/procyon-projects/marker/packages"
@@ -7,12 +7,19 @@ import (
 )
 
 func TestCollector_Collect(t *testing.T) {
-	result, _ := packages.LoadPackages("github.com/procyon-projects/marker/test/package1")
-	pkg, _ := result.Lookup("github.com/procyon-projects/marker/test/package1")
+	result, _ := packages.LoadPackages("github.com/procyon-projects/marker/test/...")
+	pkg, _ := result.Lookup("github.com/procyon-projects/marker/test/menu")
 
 	registry := NewRegistry()
 	collector := NewCollector(registry)
+
 	nodes, err := collector.Collect(pkg)
+	assert.NotNil(t, nodes)
+	assert.NoError(t, err)
+
+	pkg, _ = result.Lookup("github.com/procyon-projects/marker/test/any")
+
+	nodes, err = collector.Collect(pkg)
 	assert.NotNil(t, nodes)
 	assert.NoError(t, err)
 }

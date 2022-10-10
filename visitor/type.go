@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
@@ -13,6 +14,32 @@ type Type interface {
 	Name() string
 	Underlying() Type
 	String() string
+}
+
+type Types struct {
+	elements []Type
+}
+
+func (t *Types) Len() int {
+	return len(t.elements)
+}
+
+func (t *Types) At(index int) Type {
+	if index >= 0 && index < len(t.elements) {
+		return t.elements[index]
+	}
+
+	return nil
+}
+
+func (t *Types) FindByName(name string) (Type, bool) {
+	for _, typ := range t.elements {
+		if typ.Name() == name {
+			return typ, true
+		}
+	}
+
+	return nil, false
 }
 
 type Position struct {
@@ -46,7 +73,7 @@ func (i *ImportedType) String() string {
 }
 
 func (i *ImportedType) Name() string {
-	return ""
+	return fmt.Sprintf("%s.%s", i.pkg.Name, i.typ.Name())
 }
 
 type Variadic struct {
@@ -88,7 +115,7 @@ func (p *Pointer) Underlying() Type {
 func (p *Pointer) String() string {
 	var builder strings.Builder
 	builder.WriteString("*")
-	builder.WriteString(p.base.String())
+	builder.WriteString(p.base.Name())
 	return builder.String()
 }
 
@@ -220,12 +247,11 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 	case *ast.StructType:
 		return newStruct(typeSpec, nil, file, pkg, visitor, visitor.packageMarkers[typeSpec])
 	default:
-		return newCustomType(typeSpec, file, pkg, visitor, nil)
+		return newCustomType(typeSpec, file, pkg, visitor, visitor.packageMarkers[typeSpec])
 	}
 }
 
-func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
-	file := visitor.file
+func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) Type {
 	pkg := visitor.pkg
 	collector := visitor.collector
 
@@ -264,13 +290,13 @@ func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
 		return collector.findTypeByImportAndTypeName(importName, typeName, file)
 	case *ast.StarExpr:
 		return &Pointer{
-			base: getTypeFromExpression(typed.X, visitor),
+			base: getTypeFromExpression(typed.X, file, visitor),
 		}
 	case *ast.ArrayType:
 
 		if typed.Len == nil {
 			return &Slice{
-				elem: getTypeFromExpression(typed.Elt, visitor),
+				elem: getTypeFromExpression(typed.Elt, file, visitor),
 			}
 		} else {
 			basicLit, isBasicLit := typed.Len.(*ast.BasicLit)
@@ -278,40 +304,40 @@ func getTypeFromExpression(expr ast.Expr, visitor *packageVisitor) Type {
 			if isBasicLit {
 				length, _ := strconv.ParseInt(basicLit.Value, 10, 64)
 				return &Array{
-					elem: getTypeFromExpression(typed.Elt, visitor),
+					elem: getTypeFromExpression(typed.Elt, file, visitor),
 					len:  length,
 				}
 			}
 
 			return &Array{
-				elem: getTypeFromExpression(typed.Elt, visitor),
+				elem: getTypeFromExpression(typed.Elt, file, visitor),
 				len:  -1,
 			}
 		}
 	case *ast.ChanType:
 		chanType := &Chan{
-			elem: getTypeFromExpression(typed.Value, visitor),
+			elem: getTypeFromExpression(typed.Value, file, visitor),
 		}
 
 		if typed.Dir&ast.SEND == ast.SEND {
-			chanType.direction |= SEND
+			chanType.direction |= SendDir
 		}
 
 		if typed.Dir&ast.RECV == ast.RECV {
-			chanType.direction |= RECEIVE
+			chanType.direction |= ReceiveDir
 		}
 
 		return chanType
 	case *ast.Ellipsis:
 		return &Variadic{
-			elem: getTypeFromExpression(typed.Elt, visitor),
+			elem: getTypeFromExpression(typed.Elt, file, visitor),
 		}
 	case *ast.FuncType:
 		return &Function{}
 	case *ast.MapType:
 		return &Map{
-			key:  getTypeFromExpression(typed.Key, visitor),
-			elem: getTypeFromExpression(typed.Value, visitor),
+			key:  getTypeFromExpression(typed.Key, file, visitor),
+			elem: getTypeFromExpression(typed.Value, file, visitor),
 		}
 	case *ast.InterfaceType:
 		return newInterface(nil, typed, nil, nil, visitor, nil)

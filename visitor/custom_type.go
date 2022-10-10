@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
@@ -11,7 +12,7 @@ type CustomType struct {
 	aliasType  Type
 	isExported bool
 	position   Position
-	markers    marker.MarkerValues
+	markers    markers.MarkerValues
 	methods    []*Function
 	file       *File
 
@@ -19,10 +20,10 @@ type CustomType struct {
 	visitor     *packageVisitor
 }
 
-func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *CustomType {
+func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *CustomType {
 	customType := &CustomType{
 		name:        specType.Name.Name,
-		aliasType:   getTypeFromExpression(specType.Type, visitor),
+		aliasType:   getTypeFromExpression(specType.Type, file, visitor),
 		isExported:  ast.IsExported(specType.Name.Name),
 		position:    getPosition(file.Package(), specType.Pos()),
 		markers:     markers,
@@ -32,11 +33,20 @@ func newCustomType(specType *ast.TypeSpec, file *File, pkg *packages.Package, vi
 		visitor:     visitor,
 	}
 
-	return customType
+	return customType.initialize()
+}
+
+func (c *CustomType) initialize() *CustomType {
+	c.file.customTypes.elements = append(c.file.customTypes.elements, c)
+	return c
 }
 
 func (c *CustomType) Name() string {
 	return c.name
+}
+
+func (c *CustomType) IsExported() bool {
+	return c.isExported
 }
 
 func (c *CustomType) AliasType() Type {
@@ -48,11 +58,15 @@ func (c *CustomType) Underlying() Type {
 }
 
 func (c *CustomType) String() string {
-	return ""
+	return fmt.Sprintf("type %s %s", c.name, c.aliasType.Name())
 }
 
 type CustomTypes struct {
 	elements []*CustomType
+}
+
+func (c *CustomTypes) ToSlice() []*CustomType {
+	return c.elements
 }
 
 func (c *CustomTypes) Len() int {

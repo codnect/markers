@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/procyon-projects/marker/internal/cmd"
 	"github.com/procyon-projects/marker/packages"
 	"io"
 	"os"
@@ -10,9 +11,10 @@ import (
 )
 
 func generateModFile(moduleName string) error {
-	cmd := exec.Command("go", "mod", "init", moduleName)
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	err := cmd.Run()
+	command := exec.Command("go", "mod", "init", moduleName)
+	command.Stdout, command.Stderr = os.Stdout, os.Stderr
+	executor := cmd.GetCommandExecutor()
+	_, err := executor.Execute(command)
 
 	if err != nil {
 		return fmt.Errorf("could not create go.mod file %s", moduleName)

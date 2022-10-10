@@ -14,7 +14,7 @@ type Field struct {
 	tags       string
 	typ        Type
 	position   Position
-	markers    marker.MarkerValues
+	markers    markers.MarkerValues
 	file       *File
 	isEmbedded bool
 }
@@ -74,7 +74,7 @@ type Struct struct {
 	isExported  bool
 	isAnonymous bool
 	position    Position
-	markers     marker.MarkerValues
+	markers     markers.MarkerValues
 	fields      []*Field
 	allFields   []*Field
 	methods     []*Function
@@ -97,7 +97,7 @@ type Struct struct {
 	allFieldsLoaded bool
 }
 
-func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Struct {
+func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *Struct {
 	s := &Struct{
 		markers:     markers,
 		file:        file,
@@ -145,7 +145,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 		}
 
 		if rawField.Names == nil {
-			embeddedType := getTypeFromExpression(rawField.Type, s.visitor)
+			embeddedType := getTypeFromExpression(rawField.Type, s.file, s.visitor)
 
 			field := &Field{
 				name:       embeddedType.Name(),
@@ -163,7 +163,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 		}
 
 		for _, fieldName := range rawField.Names {
-			typ := getTypeFromExpression(rawField.Type, s.visitor)
+			typ := getTypeFromExpression(rawField.Type, s.file, s.visitor)
 
 			field := &Field{
 				name:       fieldName.Name,
@@ -223,7 +223,7 @@ func (s *Struct) loadAllFields() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allFields = append(s.allFields, structType.AllFields().ToSlice()...)
+			s.allFields = append(s.allFields, structType.FieldsInHierarchy().ToSlice()...)
 		}
 
 	}
@@ -246,6 +246,7 @@ func (s *Struct) loadAllMethods() {
 	}
 
 	s.loadMethods()
+	s.loadFields()
 
 	for _, field := range s.fields {
 
@@ -269,7 +270,7 @@ func (s *Struct) loadAllMethods() {
 		structType, ok := baseType.(*Struct)
 
 		if ok {
-			s.allMethods = append(s.allMethods, structType.AllMethods().ToSlice()...)
+			s.allMethods = append(s.allMethods, structType.MethodsInHierarchy().ToSlice()...)
 		}
 
 		interfaceType, ok := baseType.(*Interface)
@@ -299,6 +300,10 @@ func (s *Struct) String() string {
 }
 
 func (s *Struct) Name() string {
+	if len(s.fieldList) == 0 {
+		return "struct{}"
+	}
+
 	return s.name
 }
 
@@ -314,7 +319,7 @@ func (s *Struct) IsAnonymous() bool {
 	return s.isAnonymous
 }
 
-func (s *Struct) Markers() marker.MarkerValues {
+func (s *Struct) Markers() markers.MarkerValues {
 	return s.markers
 }
 
@@ -364,12 +369,12 @@ func (s *Struct) Fields() *Fields {
 	}
 }
 
-func (s *Struct) NumAllFields() int {
+func (s *Struct) NumFieldsInHierarchy() int {
 	s.loadAllFields()
 	return len(s.allFields)
 }
 
-func (s *Struct) AllFields() *Fields {
+func (s *Struct) FieldsInHierarchy() *Fields {
 	s.loadAllFields()
 	return &Fields{
 		elements: s.allFields,
@@ -388,12 +393,12 @@ func (s *Struct) Methods() *Functions {
 	}
 }
 
-func (s *Struct) NumAllMethods() int {
+func (s *Struct) NumMethodsInHierarchy() int {
 	s.loadAllMethods()
 	return len(s.allMethods)
 }
 
-func (s *Struct) AllMethods() *Functions {
+func (s *Struct) MethodsInHierarchy() *Functions {
 	s.loadAllMethods()
 	return &Functions{
 		elements: s.allMethods,

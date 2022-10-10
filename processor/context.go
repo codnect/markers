@@ -15,8 +15,8 @@ var placeHolderRegex = regexp.MustCompile(`{(.*?)}`)
 type Context struct {
 	dirs           []string
 	loadResult     *packages.LoadResult
-	registry       *marker.Registry
-	collector      *marker.Collector
+	registry       *markers.Registry
+	collector      *markers.Collector
 	config         Config
 	configFilePath string
 	goModuleDir    string
@@ -31,7 +31,7 @@ func (ctx *Context) Directories() []string {
 	return ctx.dirs
 }
 
-func (ctx *Context) Registry() *marker.Registry {
+func (ctx *Context) Registry() *markers.Registry {
 	return ctx.registry
 }
 
@@ -199,7 +199,7 @@ func (ctx *Context) ConfigFilePath() string {
 	return ctx.configFilePath
 }
 
-func (ctx *Context) Collector() *marker.Collector {
+func (ctx *Context) Collector() *markers.Collector {
 	return ctx.collector
 }
 
@@ -215,7 +215,7 @@ func (ctx *Context) printError(err error) {
 	if err != nil {
 
 		switch typedErr := err.(type) {
-		case marker.ErrorList:
+		case markers.ErrorList:
 			ctx.printErrors(typedErr)
 			return
 		}
@@ -225,20 +225,20 @@ func (ctx *Context) printError(err error) {
 	}
 }
 
-func (ctx *Context) printErrors(errorList marker.ErrorList) {
+func (ctx *Context) printErrors(errorList markers.ErrorList) {
 	if errorList == nil || len(errorList) == 0 {
 		return
 	}
 
 	for _, err := range errorList {
 		switch typedErr := err.(type) {
-		case marker.Error:
+		case markers.Error:
 			pos := typedErr.Position
 			log.Printf("%s (%d:%d) : %s\n", typedErr.FileName, pos.Line, pos.Column, typedErr.Error())
-		case marker.ParserError:
+		case markers.ParserError:
 			pos := typedErr.Position
 			log.Printf("%s (%d:%d) : %s\n", typedErr.FileName, pos.Line, pos.Column, typedErr.Error())
-		case marker.ErrorList:
+		case markers.ErrorList:
 			ctx.printErrors(typedErr)
 		default:
 			ctx.printError(err)

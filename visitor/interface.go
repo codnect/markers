@@ -29,7 +29,7 @@ type Interface struct {
 	isExported  bool
 	isAnonymous bool
 	position    Position
-	markers     marker.MarkerValues
+	markers     markers.MarkerValues
 	embeddeds   []Type
 	constrains  []*Constraint
 	allMethods  []*Function
@@ -51,7 +51,7 @@ type Interface struct {
 	allMethodsLoaded    bool
 }
 
-func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, visitor *packageVisitor, markers marker.MarkerValues) *Interface {
+func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *Interface {
 	i := &Interface{
 		methods:     make([]*Function, 0),
 		allMethods:  make([]*Function, 0),
@@ -117,7 +117,7 @@ func (i *Interface) getInterfaceEmbeddedTypes() []Type {
 		_, ok := field.Type.(*ast.FuncType)
 
 		if !ok {
-			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.visitor))
+			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.file, i.visitor))
 		}
 	}
 
@@ -197,7 +197,7 @@ func (i *Interface) Constraints() []*Constraint {
 }
 
 func (i *Interface) Name() string {
-	if len(i.fieldList) == 0 {
+	if i.name == "" && len(i.fieldList) == 0 {
 		return "interface{}"
 	}
 
@@ -208,7 +208,7 @@ func (i *Interface) IsExported() bool {
 	return i.isExported
 }
 
-func (i *Interface) Markers() marker.MarkerValues {
+func (i *Interface) Markers() markers.MarkerValues {
 	return i.markers
 }
 
@@ -229,9 +229,11 @@ func (i *Interface) NumEmbeddedTypes() int {
 	return len(i.embeddeds)
 }
 
-func (i *Interface) EmbeddedTypes() []Type {
+func (i *Interface) EmbeddedTypes() *Types {
 	i.loadEmbeddedTypes()
-	return i.embeddeds
+	return &Types{
+		i.embeddeds,
+	}
 }
 
 func (i *Interface) NumMethods() int {

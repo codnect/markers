@@ -68,7 +68,7 @@ var validateCmd = &cobra.Command{
 			return errors.New("packages could not be loaded")
 		}
 
-		registry := marker.NewRegistry()
+		registry := markers.NewRegistry()
 		ctx.loadResult = loadResult
 		ctx.registry = registry
 
@@ -77,7 +77,7 @@ var validateCmd = &cobra.Command{
 			return err
 		}
 
-		collector := marker.NewCollector(registry)
+		collector := markers.NewCollector(registry)
 		ctx.collector = collector
 
 		validateCallback := getValidateCommandCallback()

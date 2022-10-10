@@ -1,16 +1,15 @@
 package visitor
 
-import "strings"
+import (
+	"fmt"
+)
 
 type Slice struct {
 	elem Type
 }
 
 func (s *Slice) Name() string {
-	var builder strings.Builder
-	builder.WriteString("[]")
-	builder.WriteString(s.elem.Name())
-	return builder.String()
+	return s.String()
 }
 
 func (s *Slice) Elem() Type {
@@ -22,8 +21,5 @@ func (s *Slice) Underlying() Type {
 }
 
 func (s *Slice) String() string {
-	var builder strings.Builder
-	builder.WriteString("[]")
-	builder.WriteString(s.elem.String())
-	return builder.String()
+	return fmt.Sprintf("[]%s", s.elem.Name())
 }
