@@ -1,5 +1,7 @@
 
-![Marker Logo](https://user-images.githubusercontent.com/5354910/189712369-f647731b-dc34-405a-a7df-ca23f7ea1025.png)
+![Marker Logo](https://user-images.githubusercontent.com/5354910/195688881-cb3eca8e-3c73-4317-a933-df0d7b54679a.png)
+
+# Markers
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/procyon-projects/marker)](https://goreportcard.com/report/github.com/procyon-projects/marker)
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/procyon-projects/markers/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/procyon-projects/markers/tree/main)
