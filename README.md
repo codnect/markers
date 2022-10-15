@@ -1,5 +1,5 @@
 
-![Marker Logo](https://user-images.githubusercontent.com/5354910/195688881-cb3eca8e-3c73-4317-a933-df0d7b54679a.png)
+![Marker Logo](https://user-images.githubusercontent.com/5354910/195982826-e4b7f087-fbcf-46c6-ac67-d56e3f617582.png)
 
 # Markers
 
