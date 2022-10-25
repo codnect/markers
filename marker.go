@@ -10,40 +10,56 @@ type Validate interface {
 	Validate() error
 }
 
-type MarkerValues map[string][]any
+type Values map[string][]any
 
-func (markerValues MarkerValues) Count() int {
+func (v Values) Count() int {
+	if len(v) == 0 {
+		return 0
+	}
+
 	count := 0
 
-	for _, markers := range markerValues {
+	for _, markers := range v {
 		count = count + len(markers)
 	}
 
 	return count
 }
 
-func (markerValues MarkerValues) AllMarkers(name string) []any {
-	result := markerValues[name]
-
-	if len(result) == 0 {
-		return nil
+func (v Values) FindByName(name string) ([]any, bool) {
+	if len(v) == 0 {
+		return nil, false
 	}
 
-	return result
-}
-
-func (markerValues MarkerValues) First(name string) any {
-	result := markerValues[name]
+	result := v[name]
 
 	if len(result) == 0 {
-		return nil
+		return nil, false
 	}
 
-	return result[0]
+	return result, true
 }
 
-func (markerValues MarkerValues) CountByName(name string) int {
-	result := markerValues[name]
+func (v Values) First(name string) (any, bool) {
+	if len(v) == 0 {
+		return nil, false
+	}
+
+	result := v[name]
+
+	if len(result) == 0 {
+		return nil, false
+	}
+
+	return result[0], true
+}
+
+func (v Values) CountByName(name string) int {
+	if len(v) == 0 {
+		return 0
+	}
+
+	result := v[name]
 	return len(result)
 }
 

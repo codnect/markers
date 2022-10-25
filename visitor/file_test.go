@@ -18,6 +18,7 @@ type importInfo struct {
 	name       string
 	path       string
 	sideEffect bool
+	file       string
 	position   Position
 }
 
@@ -66,6 +67,10 @@ func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool 
 
 		if expectedImport.path != actualImport.Path() {
 			t.Errorf("import path in file %s shoud be %s, but got %s", file.name, expectedImport.path, actualImport.Path())
+		}
+
+		if expectedImport.file != actualImport.File().Name() {
+			t.Errorf("file name for import %s shoud be %s, but got %s", actualImport.Path(), expectedImport.file, actualImport.File().Name())
 		}
 
 		if actualImport.SideEffect() && !expectedImport.sideEffect {

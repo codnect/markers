@@ -10,7 +10,7 @@ type packageCollector struct {
 
 	unprocessedTypes map[string]map[string]Type
 
-	importTypes map[string]*ImportedType
+	importTypes map[string]Type
 }
 
 func newPackageCollector() *packageCollector {
@@ -20,7 +20,7 @@ func newPackageCollector() *packageCollector {
 		files:            make(map[string]*Files),
 		packages:         make(map[string]*packages.Package),
 		unprocessedTypes: make(map[string]map[string]Type),
-		importTypes:      make(map[string]*ImportedType),
+		importTypes:      make(map[string]Type),
 	}
 }
 
@@ -70,7 +70,7 @@ func (collector *packageCollector) addFile(pkgId string, file *File) {
 	collector.files[pkgId].elements = append(collector.files[pkgId].elements, file)
 }
 
-func (collector *packageCollector) findTypeByImportAndTypeName(importName, typeName string, file *File) *ImportedType {
+func (collector *packageCollector) findTypeByImportAndTypeName(importName, typeName string, file *File) Type {
 	if importedType, ok := collector.importTypes[importName+"#"+typeName]; ok {
 		return importedType
 	}
@@ -88,19 +88,10 @@ func (collector *packageCollector) findTypeByImportAndTypeName(importName, typeN
 	typ, exists := collector.findTypeByPkgIdAndName(packageImport.path, typeName)
 
 	if exists {
-		importedType := &ImportedType{
-			collector.packages[packageImport.path],
-			typ,
-		}
-		collector.importTypes[packageImport.path+"#"+typeName] = importedType
+		collector.importTypes[packageImport.path+"#"+typeName] = typ
 	}
 
-	importedType := &ImportedType{
-		pkg: collector.packages[packageImport.path],
-		typ: typ,
-	}
-	collector.importTypes[packageImport.path+"#"+typeName] = importedType
-	return importedType
+	return typ
 }
 
 func (collector *packageCollector) findTypeByPkgIdAndName(pkgId, typeName string) (Type, bool) {

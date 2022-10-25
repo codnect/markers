@@ -15,7 +15,7 @@ type receiverInfo struct {
 }
 
 type functionInfo struct {
-	markers    markers.MarkerValues
+	markers    markers.Values
 	isVariadic bool
 	name       string
 	fileName   string
@@ -50,6 +50,9 @@ func (f functionInfo) String() string {
 				builder.WriteString(param.name + " ")
 			}
 
+			if param.isPointer {
+				builder.WriteString("*")
+			}
 			builder.WriteString(param.typeName)
 
 			if i != len(f.params)-1 {
@@ -71,6 +74,9 @@ func (f functionInfo) String() string {
 				builder.WriteString(result.name + " ")
 			}
 
+			if result.isPointer {
+				builder.WriteString("*")
+			}
 			builder.WriteString(result.typeName)
 
 			if i != len(f.results)-1 {
@@ -89,7 +95,7 @@ func (f functionInfo) String() string {
 // functions
 var (
 	breadFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Bread",
@@ -122,7 +128,7 @@ var (
 	}
 
 	macaronFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Macaron",
@@ -155,7 +161,7 @@ var (
 	}
 
 	makeACakeFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:function-level": {
 				FunctionLevel{
 					Name: "MakeACake",
@@ -184,7 +190,7 @@ var (
 	}
 
 	biscuitCakeFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:function-level": {
 				FunctionLevel{
 					Name: "BiscuitCake",
@@ -225,7 +231,7 @@ var (
 	}
 
 	funfettiFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Funfetti",
@@ -254,7 +260,7 @@ var (
 	}
 
 	iceCreamFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "IceCream",
@@ -287,7 +293,7 @@ var (
 	}
 
 	cupCakeFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "CupCake",
@@ -320,7 +326,7 @@ var (
 	}
 
 	tartFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Tart",
@@ -344,7 +350,7 @@ var (
 	}
 
 	donutFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Donut",
@@ -368,7 +374,7 @@ var (
 	}
 
 	puddingFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Pudding",
@@ -392,7 +398,7 @@ var (
 	}
 
 	pieFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Pie",
@@ -416,7 +422,7 @@ var (
 	}
 
 	muffinFunction = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "muffin",
@@ -433,8 +439,9 @@ var (
 		params:     []variableInfo{},
 		results: []variableInfo{
 			{
-				name:     "",
-				typeName: "string",
+				name:      "",
+				typeName:  "string",
+				isPointer: true,
 			},
 			{
 				name:     "",
@@ -444,7 +451,7 @@ var (
 	}
 
 	eatMethod = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "Eat",
@@ -473,7 +480,7 @@ var (
 	}
 
 	buyMethod = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "Buy",
@@ -502,7 +509,7 @@ var (
 	}
 
 	fortuneCookieMethod = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "FortuneCookie",
@@ -536,7 +543,7 @@ var (
 	}
 
 	oreoMethod = functionInfo{
-		markers: markers.MarkerValues{
+		markers: markers.Values{
 			"marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "Oreo",
@@ -574,7 +581,7 @@ var (
 	}
 
 	genericFunction = functionInfo{
-		markers:  markers.MarkerValues{},
+		markers:  markers.Values{},
 		name:     "GenericFunction",
 		fileName: "generics.go",
 		position: Position{

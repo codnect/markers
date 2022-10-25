@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"github.com/procyon-projects/marker/processor"
 	"github.com/spf13/cobra"
@@ -183,9 +182,7 @@ func addProcessorCommand(processorName string) error {
 		return err
 	}
 
-	if !markers.IsLower(processorName) {
-		return errors.New("processor name must only contain lower case letters")
-	}
+	processorName = strings.ToLower(processorName)
 
 	yamlPath := filepath.FromSlash(path.Join(wd, "marker.processors.yaml"))
 	_, err = os.Stat(yamlPath)

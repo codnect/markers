@@ -38,8 +38,9 @@ type FunctionLevel struct {
 }
 
 type variableInfo struct {
-	name     string
-	typeName string
+	name      string
+	typeName  string
+	isPointer bool
 }
 
 func TestVisitor_VisitPackage(t *testing.T) {
@@ -73,12 +74,14 @@ func TestVisitor_VisitPackage(t *testing.T) {
 						name:       "",
 						path:       "fmt",
 						sideEffect: false,
+						file:       "dessert.go",
 						position:   Position{Line: 7, Column: 2},
 					},
 					{
 						name:       "_",
 						path:       "strings",
 						sideEffect: true,
+						file:       "dessert.go",
 						position:   Position{Line: 8, Column: 2},
 					},
 				},
@@ -122,6 +125,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 						name:       "",
 						path:       "net/http",
 						sideEffect: false,
+						file:       "string.go",
 						position:   Position{Line: 3, Column: 8},
 					},
 				},
@@ -187,7 +191,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	}
 }
 
-func assertMarkers(t *testing.T, expectedMarkers markers.MarkerValues, actualMarkers markers.MarkerValues, msg string) {
+func assertMarkers(t *testing.T, expectedMarkers markers.Values, actualMarkers markers.Values, msg string) {
 	if actualMarkers.Count() != expectedMarkers.Count() {
 		t.Errorf("the number of the markers of the %s should be %d, but got %d", msg, expectedMarkers.Count(), actualMarkers.Count())
 		return
@@ -199,7 +203,7 @@ func assertMarkers(t *testing.T, expectedMarkers markers.MarkerValues, actualMar
 			continue
 		}
 
-		actualMarkerValues := actualMarkers.AllMarkers(markerName)
+		actualMarkerValues, _ := actualMarkers.FindByName(markerName)
 
 		for index, expectedMarkerValue := range markerValues {
 			actualMarker := actualMarkerValues[index]

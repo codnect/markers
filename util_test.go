@@ -6,19 +6,19 @@ import (
 )
 
 func TestIsLower(t *testing.T) {
-	assert.True(t, IsLower("any"))
-	assert.False(t, IsLower("Any"))
+	assert.True(t, isLower("any"))
+	assert.False(t, isLower("Any"))
 }
 
 func TestIsUpper(t *testing.T) {
-	assert.True(t, IsUpper("ANY"))
-	assert.False(t, IsUpper("Any"))
+	assert.True(t, isUpper("ANY"))
+	assert.False(t, isUpper("Any"))
 }
 
 func TestLowerCamelCase(t *testing.T) {
-	assert.Equal(t, "testAny", LowerCamelCase("TestAny"))
+	assert.Equal(t, "testAny", lowerCamelCase("TestAny"))
 }
 
 func TestUpperCamelCase(t *testing.T) {
-	assert.Equal(t, "TestAny", UpperCamelCase("testAny"))
+	assert.Equal(t, "TestAny", upperCamelCase("testAny"))
 }

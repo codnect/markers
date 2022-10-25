@@ -105,7 +105,7 @@ type Dessert interface {
 
 	// muffin is a method
 	// +marker:interface-method-level:Name=muffin
-	muffin() (string, error)
+	muffin() (*string, error)
 }
 
 // MakeACake is a function

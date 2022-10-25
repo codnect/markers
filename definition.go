@@ -73,7 +73,7 @@ func (definition *Definition) validate() error {
 		return fmt.Errorf("specify target levels for the definition: %v", definition.Name)
 	}
 
-	if !IsLower(definition.Name) {
+	if !isLower(definition.Name) {
 		return fmt.Errorf("marker '%s' should only contain lower case characters", definition.Name)
 	}
 

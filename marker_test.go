@@ -6,17 +6,22 @@ import (
 )
 
 func TestMarkerValues_AllMarkers(t *testing.T) {
-	markerValues := make(MarkerValues)
+	markerValues := make(Values)
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest1")
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest2")
 	markerValues["anyMarker2"] = append(markerValues["anyMarker2"], "anyTest3")
 
-	assert.Equal(t, []interface{}{"anyTest1", "anyTest2"}, markerValues.AllMarkers("anyMarker1"))
-	assert.Equal(t, []interface{}{"anyTest3"}, markerValues.AllMarkers("anyMarker2"))
+	markers, exists := markerValues.FindByName("anyMarker1")
+	assert.True(t, exists)
+	assert.Equal(t, []interface{}{"anyTest1", "anyTest2"}, markers)
+
+	markers, exists = markerValues.FindByName("anyMarker2")
+	assert.True(t, exists)
+	assert.Equal(t, []interface{}{"anyTest3"}, markers)
 }
 
 func TestMarkerValues_Count(t *testing.T) {
-	markerValues := make(MarkerValues)
+	markerValues := make(Values)
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest1")
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest2")
 	markerValues["anyMarker2"] = append(markerValues["anyMarker2"], "anyTest3")
@@ -25,7 +30,7 @@ func TestMarkerValues_Count(t *testing.T) {
 }
 
 func TestMarkerValues_CountByName(t *testing.T) {
-	markerValues := make(MarkerValues)
+	markerValues := make(Values)
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest1")
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest2")
 	markerValues["anyMarker2"] = append(markerValues["anyMarker2"], "anyTest3")
@@ -35,11 +40,16 @@ func TestMarkerValues_CountByName(t *testing.T) {
 }
 
 func TestMarkerValues_First(t *testing.T) {
-	markerValues := make(MarkerValues)
+	markerValues := make(Values)
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest1")
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest2")
 	markerValues["anyMarker2"] = append(markerValues["anyMarker2"], "anyTest3")
 
-	assert.Equal(t, "anyTest1", markerValues.First("anyMarker1"))
-	assert.Equal(t, "anyTest3", markerValues.First("anyMarker2"))
+	marker, exists := markerValues.First("anyMarker1")
+	assert.True(t, exists)
+	assert.Equal(t, "anyTest1", marker)
+
+	marker, exists = markerValues.First("anyMarker2")
+	assert.True(t, exists)
+	assert.Equal(t, "anyTest3", marker)
 }

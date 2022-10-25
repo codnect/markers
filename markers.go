@@ -7,21 +7,21 @@ import (
 
 // Reserved markers
 const (
-	ImportMarkerName              = "import"
-	DeprecatedMarkerName          = "deprecated"
-	OverrideMarkerName            = "override"
-	DefinitionMarkerName          = "marker"
-	DefinitionParameterMarkerName = "marker:parameter"
-	DefinitionEnumMarkerName      = "marker:enum"
+	ImportMarkerName     = "import"
+	DeprecatedMarkerName = "deprecated"
+	OverrideMarkerName   = "override"
+	MarkerName           = "marker"
+	ParameterMarkerName  = "marker:parameter"
+	EnumMarkerName       = "marker:enum"
 )
 
 var reservedMarkerMap = map[string]struct{}{
-	ImportMarkerName:              {},
-	DeprecatedMarkerName:          {},
-	OverrideMarkerName:            {},
-	DefinitionMarkerName:          {},
-	DefinitionParameterMarkerName: {},
-	DefinitionEnumMarkerName:      {},
+	ImportMarkerName:     {},
+	DeprecatedMarkerName: {},
+	OverrideMarkerName:   {},
+	MarkerName:           {},
+	ParameterMarkerName:  {},
+	EnumMarkerName:       {},
 }
 
 func IsReservedMarker(marker string) bool {
@@ -32,13 +32,13 @@ func IsReservedMarker(marker string) bool {
 	return false
 }
 
-type ImportMarker struct {
+type Import struct {
 	Value string `parameter:"Value" required:"true"`
 	Alias string `parameter:"Alias" required:"false"`
 	Pkg   string `parameter:"Pkg" required:"true"`
 }
 
-func (m ImportMarker) Validate() error {
+func (m Import) Validate() error {
 	var errs []error
 
 	if strings.Trim(m.Value, " \t") == "" {
@@ -56,12 +56,12 @@ func (m ImportMarker) Validate() error {
 	return nil
 }
 
-func (m ImportMarker) PkgPath() string {
+func (m Import) PkgPath() string {
 	pkgParts := strings.Split(m.Pkg, "@")
 	return pkgParts[0]
 }
 
-func (m ImportMarker) PkgVersion() string {
+func (m Import) PkgVersion() string {
 	pkgParts := strings.Split(m.Pkg, "@")
 
 	if len(pkgParts) > 1 {
@@ -72,15 +72,15 @@ func (m ImportMarker) PkgVersion() string {
 	return "latest"
 }
 
-type DeprecatedMarker struct {
+type Deprecated struct {
 	Value string `parameter:"Value"`
 }
 
-type OverrideMarker struct {
+type Override struct {
 	Value string `parameter:"Value"`
 }
 
-type DefinitionMarker struct {
+type Marker struct {
 	Value       string   `parameter:"Value" required:"true"`
 	Description string   `parameter:"Description" required:"true"`
 	Repeatable  bool     `parameter:"Repeatable" required:"false"`
@@ -88,7 +88,7 @@ type DefinitionMarker struct {
 	Targets     []string `parameter:"Targets" required:"true" enum:"PACKAGE_LEVEL,STRUCT_TYPE_LEVEL,INTERFACE_TYPE_LEVEL,FIELD_LEVEL,FUNCTION_LEVEL,STRUCT_METHOD_LEVEL,INTERFACE_METHOD_LEVEL"`
 }
 
-type DefinitionParameterMarker struct {
+type Parameter struct {
 	Value       string `parameter:"Value" required:"true"`
 	Description string `parameter:"Description" required:"true"`
 	Required    bool   `parameter:"Required" required:"false"`
@@ -96,7 +96,7 @@ type DefinitionParameterMarker struct {
 	Default     any    `parameter:"Default" required:"false"`
 }
 
-type DefinitionEnumMarker struct {
+type Enum struct {
 	Value string `parameter:"Value" required:"true"`
 	Name  string `parameter:"Name" required:"true"`
 }

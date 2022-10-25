@@ -1,13 +1,10 @@
 package visitor
 
 import (
-	"fmt"
-	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
 	"go/types"
 	"strconv"
-	"strings"
 )
 
 type Type interface {
@@ -42,133 +39,29 @@ func (t *Types) FindByName(name string) (Type, bool) {
 	return nil, false
 }
 
-type Position struct {
-	Line   int
-	Column int
-}
+type TypeSets []Type
 
-func getPosition(pkg *packages.Package, tokenPosition token.Pos) Position {
-	position := pkg.Fset.Position(tokenPosition)
-	return Position{
-		Line:   position.Line,
-		Column: position.Column,
-	}
-}
-
-type ImportedType struct {
-	pkg *packages.Package
-	typ Type
-}
-
-func (i *ImportedType) Package() *packages.Package {
-	return i.pkg
-}
-
-func (i *ImportedType) Underlying() Type {
-	return i.typ
-}
-
-func (i *ImportedType) String() string {
+func (t TypeSets) Name() string {
 	return ""
 }
 
-func (i *ImportedType) Name() string {
-	return fmt.Sprintf("%s.%s", i.pkg.Name, i.typ.Name())
+func (t TypeSets) Len() int {
+	return len(t)
 }
 
-type Variadic struct {
-	elem Type
-}
-
-func (v *Variadic) Name() string {
-	return v.elem.Name()
-}
-
-func (v *Variadic) Elem() Type {
-	return v.elem
-}
-
-func (v *Variadic) Underlying() Type {
-	return v
-}
-
-func (v *Variadic) String() string {
-	return ""
-}
-
-type Pointer struct {
-	base Type
-}
-
-func (p *Pointer) Name() string {
-	return ""
-}
-
-func (p *Pointer) Elem() Type {
-	return p.base
-}
-
-func (p *Pointer) Underlying() Type {
-	return p
-}
-
-func (p *Pointer) String() string {
-	var builder strings.Builder
-	builder.WriteString("*")
-	builder.WriteString(p.base.Name())
-	return builder.String()
-}
-
-type TypeParam struct {
-	name string
-	typ  Type
-}
-
-func (t *TypeParam) Name() string {
-	return t.name
-}
-
-func (t *TypeParam) Type() Type {
-	return t.typ
-}
-
-type TypeParams struct {
-	params []*TypeParam
-}
-
-func (t *TypeParams) Len() int {
-	return len(t.params)
-}
-
-func (t *TypeParams) At(index int) *TypeParam {
-	if index >= 0 && index < len(t.params) {
-		return t.params[index]
+func (t TypeSets) At(index int) Type {
+	if index >= 0 && index < len(t) {
+		return t[index]
 	}
 
 	return nil
 }
 
-type Generic struct {
-	typeParam *TypeParam
+func (t TypeSets) Underlying() Type {
+	return t
 }
 
-func (g *Generic) Name() string {
-	return g.typeParam.name
-}
-
-func (g *Generic) ParamName() string {
-	return g.typeParam.name
-}
-
-func (g *Generic) TypeParam() *TypeParam {
-	return g.typeParam
-}
-
-func (g *Generic) Underlying() Type {
-	return g.typeParam.typ
-}
-
-func (g *Generic) String() string {
+func (t TypeSets) String() string {
 	return ""
 }
 
@@ -185,24 +78,18 @@ func getTypeFromScope(name string, visitor *packageVisitor) Type {
 	if ok {
 		switch typedName.Underlying().(type) {
 		case *types.Struct:
-			structType := &Struct{
-				name:        name,
-				isProcessed: false,
-			}
+			structType := newStruct(nil, nil, nil, pkg, visitor, nil)
+			structType.isProcessed = false
 			visitor.collector.unprocessedTypes[pkg.ID][name] = structType
 			return structType
 		case *types.Interface:
-			interfaceType := &Interface{
-				name:        name,
-				isProcessed: false,
-			}
+			interfaceType := newInterface(nil, nil, nil, pkg, visitor, nil)
+			interfaceType.isProcessed = false
 			visitor.collector.unprocessedTypes[pkg.ID][name] = interfaceType
 			return interfaceType
 		default:
-			customType := &CustomType{
-				name:        name,
-				isProcessed: false,
-			}
+			customType := newCustomType(nil, nil, pkg, visitor, nil)
+			customType.isProcessed = false
 			visitor.collector.unprocessedTypes[pkg.ID][name] = customType
 			return customType
 		}
@@ -222,19 +109,28 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 		switch t := typ.(type) {
 		case *Interface:
 			if !t.isProcessed {
-				file.interfaces.elements = append(file.interfaces.elements, t)
+				if _, exists := file.interfaces.FindByName(t.name); !exists {
+					file.interfaces.elements = append(file.interfaces.elements, t)
+				}
+				t.initialize(typeSpec, nil, file, pkg)
 			}
 			t.markers = visitor.packageMarkers[typeSpec]
 			return t
 		case *Struct:
 			if !t.isProcessed {
-				file.structs.elements = append(file.structs.elements, t)
+				if _, exists := file.structs.FindByName(t.name); !exists {
+					file.structs.elements = append(file.structs.elements, t)
+				}
+				t.initialize(typeSpec, nil, file, pkg)
 			}
 			t.markers = visitor.packageMarkers[typeSpec]
 			return t
 		case *CustomType:
 			if !t.isProcessed {
-				file.customTypes.elements = append(file.customTypes.elements, t)
+				if _, exists := file.customTypes.FindByName(t.name); !exists {
+					file.customTypes.elements = append(file.customTypes.elements, t)
+				}
+				t.initialize(typeSpec, file, pkg)
 			}
 			t.markers = visitor.packageMarkers[typeSpec]
 			return t
@@ -251,7 +147,7 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 	}
 }
 
-func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) Type {
+func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor, ownerType Type, typeParameters *TypeParameters) Type {
 	pkg := visitor.pkg
 	collector := visitor.collector
 
@@ -265,12 +161,10 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) T
 			return typ
 		}
 
-		if typed.Name == "error" {
-			errorType, _ := collector.findTypeByPkgIdAndName("builtin", "error")
-			return errorType
-		} else if typed.Name == "any" {
-			anyType, _ := collector.findTypeByPkgIdAndName("builtin", "any")
-			return anyType
+		typ, ok = collector.findTypeByPkgIdAndName("builtin", typed.Name)
+
+		if ok {
+			return typ
 		}
 
 		typ, ok = collector.findTypeByPkgIdAndName(pkg.ID, typed.Name)
@@ -280,7 +174,26 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) T
 		}
 
 		if typed.Obj == nil {
+			if typeParameters != nil {
+				if typeParameter, exists := typeParameters.FindByName(typed.Name); exists {
+					return typeParameter
+				}
+			}
 			return getTypeFromScope(typed.Name, visitor)
+		}
+
+		if field, isField := typed.Obj.Decl.(*ast.Field); isField {
+			if typeParameters == nil {
+				// TODO return invalid type
+				return nil
+			}
+
+			if typeParameter, exists := typeParameters.FindByName(field.Names[0].Name); exists {
+				return typeParameter
+			}
+
+			// TODO return invalid type
+			return nil
 		}
 
 		return collectTypeFromTypeSpec(typed.Obj.Decl.(*ast.TypeSpec), visitor)
@@ -290,13 +203,13 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) T
 		return collector.findTypeByImportAndTypeName(importName, typeName, file)
 	case *ast.StarExpr:
 		return &Pointer{
-			base: getTypeFromExpression(typed.X, file, visitor),
+			base: getTypeFromExpression(typed.X, file, visitor, ownerType, typeParameters),
 		}
 	case *ast.ArrayType:
 
 		if typed.Len == nil {
 			return &Slice{
-				elem: getTypeFromExpression(typed.Elt, file, visitor),
+				elem: getTypeFromExpression(typed.Elt, file, visitor, ownerType, typeParameters),
 			}
 		} else {
 			basicLit, isBasicLit := typed.Len.(*ast.BasicLit)
@@ -304,19 +217,19 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) T
 			if isBasicLit {
 				length, _ := strconv.ParseInt(basicLit.Value, 10, 64)
 				return &Array{
-					elem: getTypeFromExpression(typed.Elt, file, visitor),
+					elem: getTypeFromExpression(typed.Elt, file, visitor, ownerType, typeParameters),
 					len:  length,
 				}
 			}
 
 			return &Array{
-				elem: getTypeFromExpression(typed.Elt, file, visitor),
+				elem: getTypeFromExpression(typed.Elt, file, visitor, ownerType, typeParameters),
 				len:  -1,
 			}
 		}
 	case *ast.ChanType:
 		chanType := &Chan{
-			elem: getTypeFromExpression(typed.Value, file, visitor),
+			elem: getTypeFromExpression(typed.Value, file, visitor, ownerType, typeParameters),
 		}
 
 		if typed.Dir&ast.SEND == ast.SEND {
@@ -330,19 +243,85 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor) T
 		return chanType
 	case *ast.Ellipsis:
 		return &Variadic{
-			elem: getTypeFromExpression(typed.Elt, file, visitor),
+			elem: getTypeFromExpression(typed.Elt, file, visitor, ownerType, typeParameters),
 		}
 	case *ast.FuncType:
 		return &Function{}
 	case *ast.MapType:
 		return &Map{
-			key:  getTypeFromExpression(typed.Key, file, visitor),
-			elem: getTypeFromExpression(typed.Value, file, visitor),
+			key:  getTypeFromExpression(typed.Key, file, visitor, ownerType, typeParameters),
+			elem: getTypeFromExpression(typed.Value, file, visitor, ownerType, typeParameters),
 		}
 	case *ast.InterfaceType:
 		return newInterface(nil, typed, nil, nil, visitor, nil)
 	case *ast.StructType:
 		return newStruct(nil, typed, nil, nil, visitor, nil)
+	case *ast.IndexExpr:
+		genericType := &GenericType{
+			rawType:   getTypeFromExpression(typed.X, file, visitor, ownerType, typeParameters),
+			arguments: make([]Type, 0),
+		}
+
+		genericType.arguments = append(genericType.arguments, getTypeFromExpression(typed.Index, file, visitor, ownerType, typeParameters))
+		return genericType
+	case *ast.IndexListExpr:
+		genericType := &GenericType{
+			rawType:   getTypeFromExpression(typed.X, file, visitor, ownerType, typeParameters),
+			arguments: make([]Type, 0),
+		}
+
+		for _, argument := range typed.Indices {
+			genericType.arguments = append(genericType.arguments, getTypeFromExpression(argument, file, visitor, ownerType, typeParameters))
+		}
+
+		return genericType
+	case *ast.BinaryExpr:
+		constraints := make(TypeSets, 0)
+
+		firstType := getTypeFromExpression(typed.X, file, visitor, ownerType, typeParameters)
+
+		if typeSets, isTypeSet := firstType.(TypeSets); isTypeSet {
+			for _, typ := range typeSets {
+				if constraint, isConstraint := typ.(*TypeConstraint); isConstraint {
+					constraints = append(constraints, constraint)
+				} else {
+					constraints = append(constraints, &TypeConstraint{typ: typ})
+				}
+			}
+		} else {
+			if constraint, isConstraint := firstType.(*TypeConstraint); isConstraint {
+				constraints = append(constraints, constraint)
+			} else {
+				constraints = append(constraints, &TypeConstraint{typ: firstType})
+			}
+		}
+
+		secondType := getTypeFromExpression(typed.Y, file, visitor, ownerType, typeParameters)
+
+		if typeSets, isTypeSet := secondType.(TypeSets); isTypeSet {
+			for _, typ := range typeSets {
+				if constraint, isConstraint := typ.(*TypeConstraint); isConstraint {
+					constraints = append(constraints, constraint)
+				} else {
+					constraints = append(constraints, &TypeConstraint{typ: typ})
+				}
+			}
+		} else {
+			if constraint, isConstraint := secondType.(*TypeConstraint); isConstraint {
+				constraints = append(constraints, constraint)
+			} else {
+				constraints = append(constraints, &TypeConstraint{typ: secondType})
+			}
+		}
+
+		return constraints
+	case *ast.UnaryExpr:
+		if typed.Op == token.TILDE {
+			return &TypeConstraint{
+				tildeOperator: true,
+				typ:           getTypeFromExpression(typed.X, nil, visitor, ownerType, typeParameters),
+			}
+		}
 	}
 
 	return nil

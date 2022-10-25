@@ -32,7 +32,7 @@ const (
 	AllLevels   = PackageLevel | TypeLevel | MethodLevel | FieldLevel | FunctionLevel
 )
 
-func FindTargetLevelFromNode(node ast.Node) TargetLevel {
+func FindTargetLevel(node ast.Node) TargetLevel {
 	switch typedNode := node.(type) {
 	case *ast.TypeSpec:
 		_, isStructType := typedNode.Type.(*ast.StructType)

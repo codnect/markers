@@ -15,7 +15,7 @@ type Argument struct {
 }
 
 func ExtractArgument(structField reflect.StructField) (Argument, error) {
-	parameterName := UpperCamelCase(structField.Name)
+	parameterName := upperCamelCase(structField.Name)
 	parameterTag, parameterTagExists := structField.Tag.Lookup("parameter")
 
 	if parameterTagExists && parameterTag != "" {

@@ -1,40 +1,28 @@
 package visitor
 
 import (
+	"fmt"
 	"github.com/procyon-projects/marker"
 	"github.com/procyon-projects/marker/packages"
 	"go/ast"
 	"go/token"
 	"go/types"
 	"strings"
+	"sync"
 )
 
-type Constraint struct {
-}
-
-func (c *Constraint) Name() string {
-	return ""
-}
-
-func (c *Constraint) Underlying() Type {
-	return c
-}
-
-func (c *Constraint) String() string {
-	return ""
-}
-
 type Interface struct {
-	name        string
-	isExported  bool
-	isAnonymous bool
-	position    Position
-	markers     markers.MarkerValues
-	embeddeds   []Type
-	constrains  []*Constraint
-	allMethods  []*Function
-	methods     []*Function
-	file        *File
+	name               string
+	isExported         bool
+	isAnonymous        bool
+	position           Position
+	markers            markers.Values
+	embeddedInterfaces []*Interface
+	embeddedTypes      []Type
+	typeParams         *TypeParameters
+	allMethods         []*Function
+	methods            []*Function
+	file               *File
 
 	isProcessed bool
 
@@ -45,30 +33,37 @@ type Interface struct {
 	pkg     *packages.Package
 	visitor *packageVisitor
 
-	constraintsLoaded   bool
-	embeddedTypesLoaded bool
-	methodsLoaded       bool
-	allMethodsLoaded    bool
+	typeParamsOnce         sync.Once
+	embeddedInterfacesOnce sync.Once
+	embeddedTypesOnce      sync.Once
+	methodsOnce            sync.Once
+	allMethodsOnce         sync.Once
 }
 
-func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.MarkerValues) *Interface {
+func newInterface(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.Values) *Interface {
 	i := &Interface{
-		methods:     make([]*Function, 0),
-		allMethods:  make([]*Function, 0),
-		embeddeds:   make([]Type, 0),
-		constrains:  make([]*Constraint, 0),
-		markers:     markers,
-		file:        file,
-		isProcessed: true,
-		specType:    specType,
-		pkg:         pkg,
-		visitor:     visitor,
+		methods:            make([]*Function, 0),
+		allMethods:         make([]*Function, 0),
+		embeddedTypes:      make([]Type, 0),
+		embeddedInterfaces: make([]*Interface, 0),
+		typeParams:         &TypeParameters{},
+		markers:            markers,
+		file:               file,
+		isProcessed:        true,
+		specType:           specType,
+		pkg:                pkg,
+		visitor:            visitor,
 	}
 
-	return i.initialize(specType, interfaceType, pkg)
+	return i.initialize(specType, interfaceType, file, pkg)
 }
 
-func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, pkg *packages.Package) *Interface {
+func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.InterfaceType, file *File, pkg *packages.Package) *Interface {
+	i.isProcessed = true
+	i.specType = specType
+	i.file = file
+	i.pkg = pkg
+
 	if specType != nil {
 		i.name = specType.Name.Name
 		i.isExported = ast.IsExported(specType.Name.Name)
@@ -83,7 +78,9 @@ func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.Interf
 		default:
 		}
 
-		i.file.interfaces.elements = append(i.file.interfaces.elements, i)
+		if _, exists := file.interfaces.FindByName(i.name); !exists {
+			i.file.interfaces.elements = append(i.file.interfaces.elements, i)
+		}
 	} else if interfaceType != nil {
 		if interfaceType.Pos() != token.NoPos {
 			//i.position = getPosition(pkg, interfaceType.Pos())
@@ -94,73 +91,12 @@ func (i *Interface) initialize(specType *ast.TypeSpec, interfaceType *ast.Interf
 	return i
 }
 
-func (i *Interface) getInterfaceMethods() []*Function {
-	methods := make([]*Function, 0)
-
-	markers := i.visitor.allPackageMarkers[i.pkg.ID]
-
-	for _, rawMethod := range i.fieldList {
-		_, ok := rawMethod.Type.(*ast.FuncType)
-
-		if ok {
-			methods = append(methods, newFunction(nil, rawMethod, i.file, i.pkg, i.visitor, markers[rawMethod]))
-		}
+func (i *Interface) Name() string {
+	if i.name == "" && len(i.fieldList) == 0 {
+		return "interface{}"
 	}
 
-	return methods
-}
-
-func (i *Interface) getInterfaceEmbeddedTypes() []Type {
-	embeddedTypes := make([]Type, 0)
-
-	for _, field := range i.fieldList {
-		_, ok := field.Type.(*ast.FuncType)
-
-		if !ok {
-			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.file, i.visitor))
-		}
-	}
-
-	return embeddedTypes
-}
-
-func (i *Interface) loadEmbeddedTypes() {
-	if i.embeddedTypesLoaded {
-		return
-	}
-
-	i.embeddeds = i.getInterfaceEmbeddedTypes()
-	i.embeddedTypesLoaded = true
-}
-
-func (i *Interface) loadMethods() {
-	if i.methodsLoaded {
-		return
-	}
-
-	i.methods = i.getInterfaceMethods()
-	i.allMethods = append(i.allMethods, i.methods...)
-	i.methodsLoaded = true
-}
-
-func (i *Interface) loadAllMethods() {
-	if i.allMethodsLoaded {
-		return
-	}
-
-	i.loadMethods()
-	i.loadEmbeddedTypes()
-
-	for _, embeddedType := range i.embeddeds {
-		interfaceType, ok := embeddedType.(*Interface)
-
-		if ok {
-			interfaceType.loadAllMethods()
-			i.allMethods = append(i.allMethods, interfaceType.allMethods...)
-		}
-	}
-
-	i.allMethodsLoaded = true
+	return i.name
 }
 
 func (i *Interface) IsEmpty() bool {
@@ -183,32 +119,11 @@ func (i *Interface) Underlying() Type {
 	return i
 }
 
-func (i *Interface) String() string {
-	var builder strings.Builder
-	return builder.String()
-}
-
-func (i *Interface) IsConstraint() bool {
-	return false
-}
-
-func (i *Interface) Constraints() []*Constraint {
-	return i.constrains
-}
-
-func (i *Interface) Name() string {
-	if i.name == "" && len(i.fieldList) == 0 {
-		return "interface{}"
-	}
-
-	return i.name
-}
-
 func (i *Interface) IsExported() bool {
 	return i.isExported
 }
 
-func (i *Interface) Markers() markers.MarkerValues {
+func (i *Interface) Markers() markers.Values {
 	return i.markers
 }
 
@@ -224,15 +139,27 @@ func (i *Interface) ExplicitMethods() *Functions {
 	}
 }
 
+func (i *Interface) NumEmbeddedInterfaces() int {
+	i.loadEmbeddedInterfaces()
+	return len(i.methods)
+}
+
+func (i *Interface) EmbeddedInterfaces() *Interfaces {
+	i.loadEmbeddedInterfaces()
+	return &Interfaces{
+		elements: i.embeddedInterfaces,
+	}
+}
+
 func (i *Interface) NumEmbeddedTypes() int {
 	i.loadEmbeddedTypes()
-	return len(i.embeddeds)
+	return len(i.embeddedTypes)
 }
 
 func (i *Interface) EmbeddedTypes() *Types {
 	i.loadEmbeddedTypes()
 	return &Types{
-		i.embeddeds,
+		i.embeddedTypes,
 	}
 }
 
@@ -248,8 +175,185 @@ func (i *Interface) Methods() *Functions {
 	}
 }
 
+func (i *Interface) IsConstraint() bool {
+	i.loadEmbeddedInterfaces()
+
+	// diff is greater than 1 means that there are many non-interface types defined in interface
+	// and this constraint can never be satisfied
+	if len(i.embeddedTypes)-len(i.embeddedInterfaces) > 1 {
+		return false
+	}
+
+	hasConstraintTypes := len(i.embeddedTypes)-len(i.embeddedInterfaces) == 1
+
+	for _, embeddedInterface := range i.embeddedInterfaces {
+		if embeddedInterface.IsConstraint() {
+			if hasConstraintTypes {
+				return false
+			} else {
+				hasConstraintTypes = true
+			}
+		}
+	}
+
+	return hasConstraintTypes
+}
+
+func (i *Interface) TypeParameters() *TypeParameters {
+	i.loadTypeParams()
+	return i.typeParams
+}
+
+func (i *Interface) String() string {
+	if i.name == "" && len(i.fieldList) == 0 {
+		return "interface{}"
+	}
+
+	var builder strings.Builder
+	if i.file != nil && i.file.pkg.Name != "builtin" {
+		builder.WriteString(fmt.Sprintf("%s.%s", i.file.Package().Name, i.name))
+	}
+
+	for index := 0; index < i.TypeParameters().Len(); index++ {
+		typeParam := i.TypeParameters().At(index)
+		builder.WriteString(typeParam.String())
+		if index != i.TypeParameters().Len()-1 {
+			builder.WriteString(",")
+		}
+		builder.WriteString("]")
+	}
+
+	return builder.String()
+}
+
 func (i *Interface) InterfaceType() *types.Interface {
 	return i.interfaceType
+}
+
+func (i *Interface) getInterfaceMethods() []*Function {
+	methods := make([]*Function, 0)
+
+	markers := i.visitor.allPackageMarkers[i.pkg.ID]
+
+	for _, rawMethod := range i.fieldList {
+		_, ok := rawMethod.Type.(*ast.FuncType)
+
+		if ok {
+			methods = append(methods, newFunction(nil, nil, rawMethod, i, i.file, i.pkg, i.visitor, markers[rawMethod]))
+		}
+	}
+
+	return methods
+}
+
+func (i *Interface) getEmbeddedTypes() []Type {
+	embeddedTypes := make([]Type, 0)
+
+	for _, field := range i.fieldList {
+		_, ok := field.Type.(*ast.FuncType)
+
+		if !ok {
+			embeddedTypes = append(embeddedTypes, getTypeFromExpression(field.Type, i.file, i.visitor, nil, i.typeParams))
+		}
+	}
+
+	return embeddedTypes
+}
+
+func (i *Interface) getEmbeddedInterfaces() []*Interface {
+	embeddedInterfaces := make([]*Interface, 0)
+
+	for _, embeddedType := range i.embeddedTypes {
+		if iface, isInterface := embeddedType.(*Interface); isInterface {
+			embeddedInterfaces = append(embeddedInterfaces, iface)
+		}
+	}
+
+	return embeddedInterfaces
+}
+
+func (i *Interface) loadEmbeddedTypes() {
+	i.embeddedTypesOnce.Do(func() {
+		i.loadTypeParams()
+		i.embeddedTypes = i.getEmbeddedTypes()
+	})
+}
+
+func (i *Interface) loadEmbeddedInterfaces() {
+	i.embeddedInterfacesOnce.Do(func() {
+		i.loadEmbeddedTypes()
+		i.embeddedInterfaces = i.getEmbeddedInterfaces()
+	})
+}
+
+func (i *Interface) loadMethods() {
+	i.methodsOnce.Do(func() {
+		i.loadTypeParams()
+		i.methods = i.getInterfaceMethods()
+		i.allMethods = append(i.allMethods, i.methods...)
+	})
+}
+
+func (i *Interface) loadTypeParams() {
+	i.typeParamsOnce.Do(func() {
+		if i.specType == nil || i.specType.TypeParams == nil {
+			return
+		}
+
+		for _, field := range i.specType.TypeParams.List {
+			for _, fieldName := range field.Names {
+				typeParameter := &TypeParameter{
+					name: fieldName.Name,
+					constraints: &TypeConstraints{
+						[]*TypeConstraint{},
+					},
+				}
+				i.typeParams.elements = append(i.typeParams.elements, typeParameter)
+			}
+		}
+
+		for _, field := range i.specType.TypeParams.List {
+			constraints := make([]*TypeConstraint, 0)
+			typ := getTypeFromExpression(field.Type, i.file, i.visitor, nil, i.typeParams)
+
+			if typeSets, isTypeSets := typ.(TypeSets); isTypeSets {
+				for _, item := range typeSets {
+					if constraint, isConstraint := item.(*TypeConstraint); isConstraint {
+						constraints = append(constraints, constraint)
+					} else {
+						constraints = append(constraints, &TypeConstraint{typ: item})
+					}
+				}
+			} else {
+				if constraint, isConstraint := typ.(*TypeConstraint); isConstraint {
+					constraints = append(constraints, constraint)
+				} else {
+					constraints = append(constraints, &TypeConstraint{typ: typ})
+				}
+			}
+
+			for _, fieldName := range field.Names {
+				typeParam, exists := i.typeParams.FindByName(fieldName.Name)
+
+				if exists {
+					typeParam.constraints.elements = append(typeParam.constraints.elements, constraints...)
+				}
+			}
+		}
+
+	})
+}
+
+func (i *Interface) loadAllMethods() {
+	i.allMethodsOnce.Do(func() {
+		i.loadMethods()
+		i.loadEmbeddedTypes()
+
+		for _, embeddedInterface := range i.embeddedInterfaces {
+			embeddedInterface.loadAllMethods()
+			i.allMethods = append(i.allMethods, embeddedInterface.allMethods...)
+		}
+	})
 }
 
 type Interfaces struct {
