@@ -23,6 +23,7 @@ type functionInfo struct {
 	receiver   *receiverInfo
 	params     []variableInfo
 	results    []variableInfo
+	typeParams []variableInfo
 }
 
 func (f functionInfo) String() string {
@@ -31,16 +32,59 @@ func (f functionInfo) String() string {
 
 	if f.receiver != nil {
 		builder.WriteString("(")
-		builder.WriteString(f.receiver.name)
-		builder.WriteString(" ")
+		if f.receiver.name != "" {
+			builder.WriteString(f.receiver.name)
+			builder.WriteString(" ")
+		}
 		if f.receiver.isPointer {
 			builder.WriteString("*")
 		}
 		builder.WriteString(f.receiver.typeName)
+		if len(f.typeParams) != 0 {
+			builder.WriteString("[")
+			for i := 0; i < len(f.typeParams); i++ {
+				param := f.typeParams[i]
+				if param.name != "" {
+					builder.WriteString(param.name)
+				}
+
+				if param.typeName != "" {
+					builder.WriteString(" " + param.typeName)
+				}
+
+				if i != len(f.typeParams)-1 {
+					builder.WriteString(",")
+				}
+			}
+			builder.WriteString("]")
+		}
+
 		builder.WriteString(") ")
 	}
 
-	builder.WriteString(f.name)
+	if f.name != "" {
+		builder.WriteString(f.name)
+	} else {
+		builder.WriteString(" ")
+	}
+
+	if f.receiver == nil && len(f.typeParams) != 0 {
+		builder.WriteString("[")
+		for i := 0; i < len(f.typeParams); i++ {
+			param := f.typeParams[i]
+			if param.name != "" {
+				builder.WriteString(param.name + " ")
+			}
+
+			builder.WriteString(param.typeName)
+
+			if i != len(f.typeParams)-1 {
+				builder.WriteString(",")
+			}
+		}
+		builder.WriteString("]")
+	}
+
 	builder.WriteString("(")
 
 	if len(f.params) != 0 {
@@ -61,7 +105,11 @@ func (f functionInfo) String() string {
 		}
 	}
 
-	builder.WriteString(") ")
+	if len(f.results) == 0 {
+		builder.WriteString(")")
+	} else {
+		builder.WriteString(") ")
+	}
 
 	if len(f.results) > 1 {
 		builder.WriteString("(")
@@ -73,7 +121,6 @@ func (f functionInfo) String() string {
 			if result.name != "" {
 				builder.WriteString(result.name + " ")
 			}
-
 			if result.isPointer {
 				builder.WriteString("*")
 			}
@@ -94,6 +141,211 @@ func (f functionInfo) String() string {
 
 // functions
 var (
+	saveFunction = functionInfo{
+		markers:  markers.Values{},
+		name:     "Save",
+		fileName: "generics.go",
+		position: Position{
+			Line:   14,
+			Column: 6,
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "entity",
+				typeName: "T",
+			},
+		},
+		results: []variableInfo{
+			{
+				typeName: "T",
+			},
+		},
+	}
+	toStringFunction = functionInfo{
+		markers:  markers.Values{},
+		name:     "ToString",
+		fileName: "generics.go",
+		position: Position{
+			Line:   32,
+			Column: 10,
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results:    []variableInfo{},
+	}
+	indexMethod = functionInfo{
+		markers:  markers.Values{},
+		name:     "Index",
+		fileName: "generics.go",
+		position: Position{
+			Line:   22,
+			Column: 1,
+		},
+		isVariadic: false,
+		receiver: &receiverInfo{
+			name:      "c",
+			isPointer: false,
+			typeName:  "Controller",
+		},
+		params: []variableInfo{
+			{
+				name:     "ctx",
+				typeName: "K",
+			},
+			{
+				name:     "h",
+				typeName: "C",
+			},
+		},
+		typeParams: []variableInfo{
+			{
+				name:     "K",
+				typeName: "",
+			},
+			{
+				name:     "C",
+				typeName: "",
+			},
+		},
+	}
+	printCookieMethod = functionInfo{
+		markers:  markers.Values{},
+		name:     "PrintCookie",
+		fileName: "coffee.go",
+		position: Position{
+			Line:   15,
+			Column: 1,
+		},
+		isVariadic: false,
+		receiver: &receiverInfo{
+			name:      "c",
+			isPointer: true,
+			typeName:  "cookie",
+		},
+		params: []variableInfo{
+			{
+				name:     "v",
+				typeName: "interface{}",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "[]string",
+			},
+		},
+	}
+	printHttpHandlerMethod = functionInfo{
+		markers:  markers.Values{},
+		name:     "Print",
+		fileName: "method.go",
+		position: Position{
+			Line:   3,
+			Column: 1,
+		},
+		isVariadic: false,
+		receiver: &receiverInfo{
+			isPointer: false,
+			typeName:  "HttpHandler",
+		},
+		params: []variableInfo{
+			{
+				name:     "ctx",
+				typeName: "C",
+			},
+		},
+		results: []variableInfo{},
+		typeParams: []variableInfo{
+			{
+				name:     "C",
+				typeName: "",
+			},
+		},
+	}
+	printErrorMethod = functionInfo{
+		markers:  markers.Values{},
+		name:     "Print",
+		fileName: "error.go",
+		position: Position{
+			Line:   5,
+			Column: 1,
+		},
+		isVariadic: false,
+		receiver: &receiverInfo{
+			isPointer: false,
+			name:      "e",
+			typeName:  "errorList",
+		},
+		params:     []variableInfo{},
+		results:    []variableInfo{},
+		typeParams: []variableInfo{},
+	}
+	toErrorsMethod = functionInfo{
+		markers: markers.Values{
+			"deprecated": {
+				markers.Deprecated{
+					Value: "any deprecation message",
+				},
+			},
+		},
+		name:     "ToErrors",
+		fileName: "error.go",
+		position: Position{
+			Line:   12,
+			Column: 1,
+		},
+		isVariadic: false,
+		receiver: &receiverInfo{
+			isPointer: false,
+			name:      "e",
+			typeName:  "errorList",
+		},
+		params: []variableInfo{},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "[]error",
+			},
+		},
+		typeParams: []variableInfo{},
+	}
+	genericFunction = functionInfo{
+		markers:  markers.Values{},
+		name:     "GenericFunction",
+		fileName: "generics.go",
+		position: Position{
+			Line:   8,
+			Column: 1,
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "x",
+				typeName: "[]K",
+			},
+		},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "T",
+			},
+		},
+		typeParams: []variableInfo{
+			{
+				name:     "K",
+				typeName: "[]map[T]X",
+			},
+			{
+				name:     "T",
+				typeName: "int|bool",
+			},
+			{
+				name:     "X",
+				typeName: "~string",
+			},
+		},
+	}
 	breadFunction = functionInfo{
 		markers: markers.Values{
 			"marker:interface-method-level": {
@@ -155,7 +407,7 @@ var (
 			},
 			{
 				name:     "",
-				typeName: "fmt.Stringer",
+				typeName: "Stringer",
 			},
 		},
 	}
@@ -579,19 +831,6 @@ var (
 			},
 		},
 	}
-
-	genericFunction = functionInfo{
-		markers:  markers.Values{},
-		name:     "GenericFunction",
-		fileName: "generics.go",
-		position: Position{
-			Line:   3,
-			Column: 1,
-		},
-		isVariadic: false,
-		params:     []variableInfo{},
-		results:    []variableInfo{},
-	}
 )
 
 func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
@@ -627,7 +866,8 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 			t.Errorf("the function %s should not be a variadic function for %s", expectedMethodName, descriptor)
 		}
 
-		typeParam := actualMethod.TypeParams()
+		// TODO Type Params
+		typeParam := actualMethod.TypeParameters()
 		if typeParam != nil {
 			typeParam.Len()
 		}
@@ -637,7 +877,7 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 		assert.Equal(t, expectedMethod.position, actualMethod.Position(), "the position of the function %s for %s should be %w, but got %w",
 			expectedMethodName, descriptor, expectedMethod.position, actualMethod.Position())
 
-		assertFunctionParameters(t, expectedMethod.params, actualMethod.Params(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
+		assertFunctionParameters(t, expectedMethod.params, actualMethod.Parameters(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
 
 		assertFunctionResult(t, expectedMethod.results, actualMethod.Results(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
 
@@ -647,7 +887,7 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 	return true
 }
 
-func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actualParams Variables, msg string) {
+func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actualParams *Parameters, msg string) {
 	if actualParams.Len() != len(expectedParams) {
 		t.Errorf("the number of the %s parameters should be %d, but got %d", msg, len(expectedParams), actualParams.Len())
 		return
@@ -667,7 +907,7 @@ func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actua
 	}
 }
 
-func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualResults Variables, msg string) {
+func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualResults *Results, msg string) {
 	if actualResults.Len() != len(expectedResults) {
 		t.Errorf("the number of the %s results should be %d, but got %d", msg, len(expectedResults), actualResults.Len())
 		return

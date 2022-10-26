@@ -42,9 +42,9 @@ func getConfig(configFilePath string) (*Config, error) {
 	return config, nil
 }
 
-// GetPackageDirectories finds the go module directory and returns
+// PackageDirectories finds the go module directory and returns
 // the package directories.
-func GetPackageDirectories() ([]string, error) {
+func PackageDirectories() ([]string, error) {
 	var err error
 	var modDir string
 	modDir, err = packages.GoModDir()

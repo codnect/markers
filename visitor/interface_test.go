@@ -8,18 +8,51 @@ import (
 )
 
 type interfaceInfo struct {
-	markers         markers.Values
-	name            string
-	fileName        string
-	position        Position
-	explicitMethods map[string]functionInfo
-	methods         map[string]functionInfo
-	embeddedTypes   []string
-	isExported      bool
+	markers            markers.Values
+	name               string
+	fileName           string
+	position           Position
+	explicitMethods    map[string]functionInfo
+	methods            map[string]functionInfo
+	embeddedTypes      []string
+	embeddedInterfaces []string
+	isExported         bool
 }
 
 // interfaces
 var (
+	repositoryInterface = interfaceInfo{
+		name:       "Repository",
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   13,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"Save": saveFunction,
+		},
+		methods: map[string]functionInfo{
+			"Save": saveFunction,
+		},
+	}
+	numberInterface = interfaceInfo{
+		name:       "Number",
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   30,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"ToString": toStringFunction,
+		},
+		methods: map[string]functionInfo{
+			"ToString": toStringFunction,
+		},
+		embeddedTypes:      []string{"Ordered"},
+		embeddedInterfaces: []string{"Ordered"},
+	}
 	bakeryShopInterface = interfaceInfo{
 		markers: markers.Values{
 			"marker:interface-type-level": {
@@ -48,7 +81,8 @@ var (
 			"muffin":   muffinFunction,
 			"Bread":    breadFunction,
 		},
-		embeddedTypes: []string{"Dessert"},
+		embeddedTypes:      []string{"Dessert"},
+		embeddedInterfaces: []string{"Dessert"},
 	}
 
 	dessertInterface = interfaceInfo{
@@ -138,7 +172,8 @@ var (
 			"Pie":      pieFunction,
 			"muffin":   muffinFunction,
 		},
-		embeddedTypes: []string{"newYearsEveCookie", "Dessert"},
+		embeddedTypes:      []string{"newYearsEveCookie", "Dessert"},
+		embeddedInterfaces: []string{"newYearsEveCookie", "Dessert"},
 	}
 )
 
@@ -191,6 +226,10 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			t.Errorf("the number of the explicit methods of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.explicitMethods), actualInterface.NumExplicitMethods())
 		}
 
+		if actualInterface.NumEmbeddedInterfaces() != len(expectedInterface.embeddedInterfaces) {
+			t.Errorf("the number of the embedded interfaces of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.embeddedInterfaces), actualInterface.NumEmbeddedInterfaces())
+		}
+
 		if actualInterface.NumEmbeddedTypes() != len(expectedInterface.embeddedTypes) {
 			t.Errorf("the number of the embedded types of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.embeddedTypes), actualInterface.NumEmbeddedTypes())
 		}
@@ -199,6 +238,11 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 
 		assert.Equal(t, expectedInterface.position, actualInterface.Position(), "the position of the interface %s should be %w, but got %w",
 			expectedInterfaceName, expectedInterface.position, actualInterface.Position())
+
+		// TODO fix
+		actualInterface.IsConstraint()
+		actualInterface.EmbeddedInterfaces()
+		actualInterface.EmbeddedTypes()
 
 		assertInterfaceEmbeddedTypes(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.EmbeddedTypes(), expectedInterface.embeddedTypes)
 		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.Methods(), expectedInterface.methods)

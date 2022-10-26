@@ -141,7 +141,7 @@ func (i *Interface) ExplicitMethods() *Functions {
 
 func (i *Interface) NumEmbeddedInterfaces() int {
 	i.loadEmbeddedInterfaces()
-	return len(i.methods)
+	return len(i.embeddedInterfaces)
 }
 
 func (i *Interface) EmbeddedInterfaces() *Interfaces {
@@ -347,7 +347,7 @@ func (i *Interface) loadTypeParams() {
 func (i *Interface) loadAllMethods() {
 	i.allMethodsOnce.Do(func() {
 		i.loadMethods()
-		i.loadEmbeddedTypes()
+		i.loadEmbeddedInterfaces()
 
 		for _, embeddedInterface := range i.embeddedInterfaces {
 			embeddedInterface.loadAllMethods()

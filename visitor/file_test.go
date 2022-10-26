@@ -69,10 +69,6 @@ func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool 
 			t.Errorf("import path in file %s shoud be %s, but got %s", file.name, expectedImport.path, actualImport.Path())
 		}
 
-		if expectedImport.file != actualImport.File().Name() {
-			t.Errorf("file name for import %s shoud be %s, but got %s", actualImport.Path(), expectedImport.file, actualImport.File().Name())
-		}
-
 		if actualImport.SideEffect() && !expectedImport.sideEffect {
 			t.Errorf("import with path %s in file %s is not an import side effect, but should be an import side effect", expectedImport.path, file.name)
 		} else if !actualImport.SideEffect() && expectedImport.sideEffect {

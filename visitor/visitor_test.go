@@ -63,6 +63,9 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			"coffee.go": {
 				constants:   coffeeConstants,
 				customTypes: coffeeCustomTypes,
+				functions: map[string]functionInfo{
+					"PrintCookie": printCookieMethod,
+				},
 			},
 			"fresh.go": {
 				constants:   freshConstants,
@@ -86,8 +89,12 @@ func TestVisitor_VisitPackage(t *testing.T) {
 					},
 				},
 				functions: map[string]functionInfo{
-					"MakeACake":   makeACakeFunction,
-					"BiscuitCake": biscuitCakeFunction,
+					"MakeACake":     makeACakeFunction,
+					"BiscuitCake":   biscuitCakeFunction,
+					"Eat":           eatMethod,
+					"Buy":           buyMethod,
+					"FortuneCookie": fortuneCookieMethod,
+					"Oreo":          oreoMethod,
 				},
 				interfaces: map[string]interfaceInfo{
 					"BakeryShop":        bakeryShopInterface,
@@ -105,6 +112,10 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			"error.go": {
 				constants:   []constantInfo{},
 				customTypes: errorCustomTypes,
+				functions: map[string]functionInfo{
+					"Print":    printErrorMethod,
+					"ToErrors": toErrorsMethod,
+				},
 			},
 			"permission.go": {
 				constants:   permissionConstants,
@@ -117,6 +128,35 @@ func TestVisitor_VisitPackage(t *testing.T) {
 				constants: []constantInfo{},
 				functions: map[string]functionInfo{
 					"GenericFunction": genericFunction,
+					"Index":           indexMethod,
+				},
+				interfaces: map[string]interfaceInfo{
+					"Repository": repositoryInterface,
+					"Number":     numberInterface,
+				},
+				structs: map[string]structInfo{
+					"Controller":     controllerStruct,
+					"TestController": testControllerStruct,
+				},
+				imports: []importInfo{
+					{
+						name:       "",
+						path:       "context",
+						sideEffect: false,
+						position:   Position{Line: 4, Column: 2},
+					},
+					{
+						name:       "",
+						path:       "golang.org/x/exp/constraints",
+						sideEffect: false,
+						position:   Position{Line: 5, Column: 2},
+					},
+				},
+				customTypes: genericsCustomTypes,
+			},
+			"method.go": {
+				functions: map[string]functionInfo{
+					"Print": printHttpHandlerMethod,
 				},
 			},
 			"string.go": {

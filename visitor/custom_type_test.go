@@ -7,48 +7,63 @@ import (
 )
 
 type customTypeInfo struct {
-	name          string
-	aliasTypeName string
-	isExported    bool
+	name               string
+	underlyingTypeName string
+	isExported         bool
+	methods            map[string]functionInfo
 }
 
 var (
 	errorCustomTypes = map[string]customTypeInfo{
 		"errorList": {
-			name:          "errorList",
-			aliasTypeName: "[]error",
-			isExported:    false,
+			name:               "errorList",
+			underlyingTypeName: "[]error",
+			isExported:         false,
+			methods: map[string]functionInfo{
+				"Print":    printErrorMethod,
+				"ToErrors": toErrorsMethod,
+			},
 		},
 	}
 	permissionCustomTypes = map[string]customTypeInfo{
 		"Permission": {
-			name:          "Permission",
-			aliasTypeName: "int",
-			isExported:    true,
+			name:               "Permission",
+			underlyingTypeName: "int",
+			isExported:         true,
 		},
 		"RequestMethod": {
-			name:          "RequestMethod",
-			aliasTypeName: "string",
-			isExported:    true,
+			name:               "RequestMethod",
+			underlyingTypeName: "string",
+			isExported:         true,
 		},
 		"Chan": {
-			name:          "Chan",
-			aliasTypeName: "int",
-			isExported:    true,
+			name:               "Chan",
+			underlyingTypeName: "int",
+			isExported:         true,
 		},
 	}
 	coffeeCustomTypes = map[string]customTypeInfo{
 		"Coffee": {
-			name:          "Coffee",
-			aliasTypeName: "int",
-			isExported:    true,
+			name:               "Coffee",
+			underlyingTypeName: "int",
+			isExported:         true,
 		},
 	}
 	freshCustomTypes = map[string]customTypeInfo{
 		"Lemonade": {
-			name:          "Lemonade",
-			aliasTypeName: "uint",
-			isExported:    true,
+			name:               "Lemonade",
+			underlyingTypeName: "uint",
+			isExported:         true,
+		},
+	}
+	genericsCustomTypes = map[string]customTypeInfo{
+		"HttpHandler": {
+			name:               "HttpHandler",
+			underlyingTypeName: "func (ctx C)",
+			isExported:         true,
+			methods: map[string]functionInfo{
+				"Print": printHttpHandlerMethod,
+			},
 		},
 	}
 )
@@ -79,20 +94,14 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			continue
 		}
 
-		assert.Equal(t, actualCustomType, actualCustomType.Underlying())
 		assert.Equal(t, fileCustomType, actualCustomType, "CustomTypes.At should return %w, but got %w", fileCustomType, actualCustomType)
 
 		if expectedCustomType.name != actualCustomType.Name() {
 			t.Errorf("custom type name in file %s shoud be %s, but got %s", file.name, expectedCustomTypeName, actualCustomType.Name())
 		}
 
-		if expectedCustomType.aliasTypeName != actualCustomType.AliasType().Name() {
-			t.Errorf("alias type of custom type %s in file %s shoud be %s, but got %s", file.name, expectedCustomType.name, expectedCustomType.aliasTypeName, actualCustomType.AliasType().Name())
-		}
-
-		customTypeStrValue := fmt.Sprintf("type %s %s", expectedCustomType.name, expectedCustomType.aliasTypeName)
-		if customTypeStrValue != actualCustomType.String() {
-			t.Errorf("String() method of custom type %s shoud return %s, but got %s", expectedCustomTypeName, customTypeStrValue, actualCustomType.String())
+		if expectedCustomType.underlyingTypeName != actualCustomType.Underlying().String() {
+			t.Errorf("underlying type of custom type %s in file %s shoud be %s, but got %s", file.name, expectedCustomType.name, expectedCustomType.underlyingTypeName, actualCustomType.Underlying().String())
 		}
 
 		if actualCustomType.IsExported() && !expectedCustomType.isExported {
@@ -101,16 +110,7 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			t.Errorf("custom type with name %s is not exported, but should be exported field", expectedCustomTypeName)
 		}
 
-		/*if expectedConstant.value != actualConstant.Value() {
-			t.Errorf("value of constant %s in file %s shoud be %s, but got %s", actualConstant.Name(), file.name, expectedConstant.value, actualConstant.Value())
-		}
-
-		if expectedConstant.typeName != actualConstant.Type().Name() {
-			t.Errorf("type name of constant %s in file %s shoud be %s, but got %s", actualConstant.Name(), file.name, expectedConstant.typeName, actualConstant.Type().Name())
-		}
-
-		assert.Equal(t, expectedConstant.position, actualConstant.Position(), "the position of constant %s in file %s should be %w, but got %w", expectedConstant.name, actualConstant.File().Name(), expectedConstant.position, actualConstant.Position())
-		*/
+		assertFunctions(t, fmt.Sprintf("custom type %s", actualCustomType.Name()), actualCustomType.Methods(), expectedCustomType.methods)
 		index++
 	}
 

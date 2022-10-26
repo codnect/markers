@@ -107,12 +107,14 @@ type Struct struct {
 
 func newStruct(specType *ast.TypeSpec, structType *ast.StructType, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.Values) *Struct {
 	s := &Struct{
-		markers:     markers,
-		file:        file,
-		fields:      make([]*Field, 0),
-		allFields:   make([]*Field, 0),
-		methods:     make([]*Function, 0),
-		typeParams:  &TypeParameters{},
+		markers:   markers,
+		file:      file,
+		fields:    make([]*Field, 0),
+		allFields: make([]*Field, 0),
+		methods:   make([]*Function, 0),
+		typeParams: &TypeParameters{
+			[]*TypeParameter{},
+		},
 		isProcessed: true,
 		specType:    specType,
 		pkg:         pkg,

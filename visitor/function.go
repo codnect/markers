@@ -154,18 +154,26 @@ type Function struct {
 
 func newFunction(funcDecl *ast.FuncDecl, funcType *ast.FuncType, funcField *ast.Field, ownerType Type, file *File, pkg *packages.Package, visitor *packageVisitor, markers markers.Values) *Function {
 	function := &Function{
-		file:               file,
-		typeParams:         &TypeParameters{},
-		receiverTypeParams: &TypeParameters{},
-		params:             &Parameters{},
-		results:            &Results{},
-		markers:            markers,
-		funcDecl:           funcDecl,
-		funcField:          funcField,
-		funcType:           funcType,
-		pkg:                pkg,
-		visitor:            visitor,
-		ownerType:          ownerType,
+		file: file,
+		typeParams: &TypeParameters{
+			[]*TypeParameter{},
+		},
+		receiverTypeParams: &TypeParameters{
+			[]*TypeParameter{},
+		},
+		params: &Parameters{
+			[]*Parameter{},
+		},
+		results: &Results{
+			[]*Result{},
+		},
+		markers:   markers,
+		funcDecl:  funcDecl,
+		funcField: funcField,
+		funcType:  funcType,
+		pkg:       pkg,
+		visitor:   visitor,
+		ownerType: ownerType,
 	}
 
 	if funcDecl != nil {
@@ -255,6 +263,7 @@ func (f *Function) receiverType(receiverExpr ast.Expr) Type {
 		customType := candidateType.(*CustomType)
 		f.ownerType = customType
 		customType.methods = append(customType.methods, f)
+		f.file.functions.elements = append(f.file.functions.elements, f)
 	}
 
 	return candidateType
@@ -371,13 +380,12 @@ func (f *Function) String() string {
 
 	if f.receiver != nil {
 		builder.WriteString("(")
-
 		if f.receiver.Name() != "" {
 			builder.WriteString(f.receiver.Name())
 			builder.WriteString(" ")
 		}
 
-		builder.WriteString(f.receiver.Type().String())
+		builder.WriteString(f.receiver.Type().Name())
 
 		if f.TypeParameters().Len() != 0 {
 			builder.WriteString("[")
@@ -405,7 +413,7 @@ func (f *Function) String() string {
 		builder.WriteString("[")
 		for i := 0; i < f.TypeParameters().Len(); i++ {
 			typeParam := f.TypeParameters().At(i)
-			builder.WriteString(typeParam.Name())
+			builder.WriteString(typeParam.String())
 
 			if i != f.TypeParameters().Len()-1 {
 				builder.WriteString(",")
@@ -427,7 +435,7 @@ func (f *Function) String() string {
 		}
 	}
 
-	if f.Results().Len() != 0 {
+	if f.Results().Len() == 0 {
 		builder.WriteString(")")
 	} else {
 		builder.WriteString(") ")
@@ -506,7 +514,7 @@ func (f *Function) loadTypeParams() {
 
 		}
 
-		if f.funcType.TypeParams == nil {
+		if f.funcType == nil || f.funcType.TypeParams == nil {
 			return
 		}
 
@@ -557,7 +565,7 @@ func (f *Function) loadParams() {
 	f.paramsOnce.Do(func() {
 		f.loadTypeParams()
 
-		if f.funcType.Params != nil {
+		if f.funcType != nil && f.funcType.Params != nil {
 			f.params.elements = append(f.params.elements, f.getParameters(f.funcType.Params.List)...)
 		}
 

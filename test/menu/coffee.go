@@ -11,3 +11,7 @@ const (
 	Latte
 	TurkishCoffee
 )
+
+func (c *cookie) PrintCookie(v interface{}) []string {
+	return nil
+}

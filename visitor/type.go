@@ -246,7 +246,7 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor, o
 			elem: getTypeFromExpression(typed.Elt, file, visitor, ownerType, typeParameters),
 		}
 	case *ast.FuncType:
-		return &Function{}
+		return newFunction(nil, typed, nil, ownerType, file, nil, visitor, nil)
 	case *ast.MapType:
 		return &Map{
 			key:  getTypeFromExpression(typed.Key, file, visitor, ownerType, typeParameters),

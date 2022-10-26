@@ -31,6 +31,62 @@ type structInfo struct {
 
 // structs
 var (
+	controllerStruct = structInfo{
+		markers:    markers.Values{},
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   17,
+			Column: 6,
+		},
+		methods: map[string]functionInfo{
+			"Index": indexMethod,
+		},
+		allMethods: map[string]functionInfo{
+			"Index": indexMethod,
+		},
+		fields: map[string]fieldInfo{
+			"AnyField1": {
+				isExported:      true,
+				isEmbeddedField: false,
+				typeName:        "string",
+			},
+			"AnyField2": {
+				isExported:      true,
+				isEmbeddedField: false,
+				typeName:        "int",
+			},
+		},
+		embeddedFields:    map[string]fieldInfo{},
+		numFields:         2,
+		totalFields:       2,
+		numEmbeddedFields: 0,
+	}
+	testControllerStruct = structInfo{
+		markers:    markers.Values{},
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   26,
+			Column: 6,
+		},
+		methods: map[string]functionInfo{},
+		allMethods: map[string]functionInfo{
+			"Index": indexMethod,
+		},
+		fields: map[string]fieldInfo{},
+		embeddedFields: map[string]fieldInfo{
+			"Controller": {
+				isExported:      true,
+				isEmbeddedField: true,
+				typeName:        "Controller",
+			},
+		},
+		numFields:         1,
+		totalFields:       2,
+		numEmbeddedFields: 1,
+	}
+
 	friedCookieStruct = structInfo{
 		markers: markers.Values{
 			"marker:struct-type-level": {
@@ -54,6 +110,7 @@ var (
 			"Buy":           buyMethod,
 			"Oreo":          oreoMethod,
 			"FortuneCookie": fortuneCookieMethod,
+			"PrintCookie":   printCookieMethod,
 		},
 		fields: map[string]fieldInfo{
 			"cookie": {
@@ -99,10 +156,12 @@ var (
 		methods: map[string]functionInfo{
 			"FortuneCookie": fortuneCookieMethod,
 			"Oreo":          oreoMethod,
+			"PrintCookie":   printCookieMethod,
 		},
 		allMethods: map[string]functionInfo{
 			"FortuneCookie": fortuneCookieMethod,
 			"Oreo":          oreoMethod,
+			"PrintCookie":   printCookieMethod,
 		},
 		fields: map[string]fieldInfo{
 			"ChocolateChip": {
@@ -126,7 +185,7 @@ var (
 func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool {
 
 	if len(structs) != file.Structs().Len() {
-		t.Errorf("the number of the functions should be %d, but got %d", len(structs), file.Structs().Len())
+		t.Errorf("the number of the structs should be %d, but got %d", len(structs), file.Structs().Len())
 		return false
 	}
 
@@ -157,9 +216,9 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 			t.Errorf("struct with name %s is not exported, but should be exported", actualStruct.Name())
 		}
 
-		if actualStruct.NumMethods() == 0 && !actualStruct.IsEmpty() {
+		if actualStruct.NumFields() == 0 && !actualStruct.IsEmpty() {
 			t.Errorf("the struct %s should be empty", actualStruct.Name())
-		} else if actualStruct.NumMethods() != 0 && actualStruct.IsEmpty() {
+		} else if actualStruct.NumFields() != 0 && actualStruct.IsEmpty() {
 			t.Errorf("the struct %s should not be empty", actualStruct.Name())
 		}
 

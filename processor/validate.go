@@ -49,7 +49,7 @@ var validateCmd = &cobra.Command{
 
 		var dirs []string
 
-		dirs, err = GetPackageDirectories()
+		dirs, err = PackageDirectories()
 
 		if err != nil {
 			return errors.New("go.module not found")
