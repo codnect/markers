@@ -1,5 +1,7 @@
 package visitor
 
+import "fmt"
+
 type Variadic struct {
 	elem Type
 }
@@ -17,5 +19,5 @@ func (v *Variadic) Underlying() Type {
 }
 
 func (v *Variadic) String() string {
-	return ""
+	return fmt.Sprintf("...%s", v.elem.Name())
 }

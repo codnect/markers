@@ -350,7 +350,7 @@ func (f *Function) getResults(fieldList []*ast.Field) []*Result {
 func (f *Function) getParameters(fieldList []*ast.Field) []*Parameter {
 	variables := make([]*Parameter, 0)
 
-	for _, field := range fieldList {
+	for index, field := range fieldList {
 		typ := getTypeFromExpression(field.Type, f.file, f.visitor, nil, f.typeParams)
 
 		if field.Names == nil {
@@ -366,6 +366,13 @@ func (f *Function) getParameters(fieldList []*ast.Field) []*Parameter {
 			})
 		}
 
+		if index == len(fieldList)-1 {
+			f.variadic = true
+		}
+	}
+
+	if len(variables) != 0 {
+		_, f.variadic = variables[len(variables)-1].Type().(*Variadic)
 	}
 
 	return variables
@@ -427,7 +434,20 @@ func (f *Function) String() string {
 	if f.Parameters().Len() != 0 {
 		for i := 0; i < f.Parameters().Len(); i++ {
 			param := f.Parameters().At(i)
-			builder.WriteString(param.String())
+			builder.WriteString(param.Name())
+
+			if i == f.params.Len()-1 && f.IsVariadic() {
+				if param.name != "" {
+					builder.WriteString(" ")
+				}
+				builder.WriteString("...")
+				builder.WriteString(param.Type().Name())
+			} else {
+				if param.name != "" {
+					builder.WriteString(" ")
+				}
+				builder.WriteString(param.Type().Name())
+			}
 
 			if i != f.Parameters().Len()-1 {
 				builder.WriteString(",")
@@ -568,11 +588,6 @@ func (f *Function) loadParams() {
 		if f.funcType != nil && f.funcType.Params != nil {
 			f.params.elements = append(f.params.elements, f.getParameters(f.funcType.Params.List)...)
 		}
-
-		if f.params.Len() != 0 {
-			_, f.variadic = f.params.At(f.params.Len() - 1).Type().(*Variadic)
-		}
-
 	})
 }
 

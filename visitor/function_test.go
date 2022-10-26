@@ -94,6 +94,10 @@ func (f functionInfo) String() string {
 				builder.WriteString(param.name + " ")
 			}
 
+			if i == len(f.params)-1 && f.isVariadic {
+				builder.WriteString("...")
+			}
+
 			if param.isPointer {
 				builder.WriteString("*")
 			}
