@@ -131,8 +131,9 @@ func TestVisitor_VisitPackage(t *testing.T) {
 					"Index":           indexMethod,
 				},
 				interfaces: map[string]interfaceInfo{
-					"Repository": repositoryInterface,
-					"Number":     numberInterface,
+					"Repository":     repositoryInterface,
+					"Number":         numberInterface,
+					"EventPublisher": eventPublisherInterface,
 				},
 				structs: map[string]structInfo{
 					"Controller":     controllerStruct,

@@ -1,5 +1,5 @@
 package any
 
-func (HttpHandler[C]) Print(ctx C) {
+func (HttpHandler[C, K]) Print(ctx C) {
 
 }

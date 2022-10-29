@@ -213,6 +213,22 @@ var (
 			},
 		},
 	}
+	publishMethod = functionInfo{
+		markers:  markers.Values{},
+		name:     "Publish",
+		fileName: "generics.go",
+		position: Position{
+			Line:   38,
+			Column: 9,
+		},
+		isVariadic: false,
+		params: []variableInfo{
+			{
+				name:     "e",
+				typeName: "E",
+			},
+		},
+	}
 	printCookieMethod = functionInfo{
 		markers:  markers.Values{},
 		name:     "PrintCookie",
@@ -263,6 +279,10 @@ var (
 		typeParams: []variableInfo{
 			{
 				name:     "C",
+				typeName: "",
+			},
+			{
+				name:     "K",
 				typeName: "",
 			},
 		},

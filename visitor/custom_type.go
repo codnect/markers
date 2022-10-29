@@ -106,6 +106,8 @@ func (c *CustomType) String() string {
 
 	if c.file != nil && c.file.pkg.Name != "builtin" {
 		builder.WriteString(fmt.Sprintf("%s.%s", c.file.Package().Name, c.name))
+	} else if c.name != "" {
+		builder.WriteString(c.name)
 	}
 
 	if c.TypeParameters().Len() != 0 {
@@ -119,9 +121,9 @@ func (c *CustomType) String() string {
 				builder.WriteString(",")
 			}
 
-			builder.WriteString("]")
 		}
 
+		builder.WriteString("]")
 	}
 
 	return builder.String()

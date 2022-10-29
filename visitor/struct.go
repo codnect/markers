@@ -170,14 +170,22 @@ func (s *Struct) String() string {
 	var builder strings.Builder
 	if s.file != nil && s.file.pkg.Name != "builtin" {
 		builder.WriteString(fmt.Sprintf("%s.%s", s.file.Package().Name, s.name))
+	} else if s.name != "" {
+		builder.WriteString(s.name)
 	}
 
-	for index := 0; index < s.TypeParameters().Len(); index++ {
-		typeParam := s.TypeParameters().At(index)
-		builder.WriteString(typeParam.String())
-		if index != s.TypeParameters().Len()-1 {
-			builder.WriteString(",")
+	if s.TypeParameters().Len() != 0 {
+		builder.WriteString("[")
+
+		for index := 0; index < s.TypeParameters().Len(); index++ {
+			typeParam := s.TypeParameters().At(index)
+			builder.WriteString(typeParam.String())
+
+			if index != s.TypeParameters().Len()-1 {
+				builder.WriteString(",")
+			}
 		}
+
 		builder.WriteString("]")
 	}
 

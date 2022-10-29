@@ -212,14 +212,22 @@ func (i *Interface) String() string {
 	var builder strings.Builder
 	if i.file != nil && i.file.pkg.Name != "builtin" {
 		builder.WriteString(fmt.Sprintf("%s.%s", i.file.Package().Name, i.name))
+	} else if i.name != "" {
+		builder.WriteString(i.name)
 	}
 
-	for index := 0; index < i.TypeParameters().Len(); index++ {
-		typeParam := i.TypeParameters().At(index)
-		builder.WriteString(typeParam.String())
-		if index != i.TypeParameters().Len()-1 {
-			builder.WriteString(",")
+	if i.TypeParameters().Len() != 0 {
+		builder.WriteString("[")
+
+		for index := 0; index < i.TypeParameters().Len(); index++ {
+			typeParam := i.TypeParameters().At(index)
+			builder.WriteString(typeParam.String())
+
+			if index != i.TypeParameters().Len()-1 {
+				builder.WriteString(",")
+			}
 		}
+
 		builder.WriteString("]")
 	}
 

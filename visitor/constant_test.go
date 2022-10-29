@@ -6,10 +6,11 @@ import (
 )
 
 type constantInfo struct {
-	name     string
-	position Position
-	value    any
-	typeName string
+	name       string
+	position   Position
+	value      any
+	typeName   string
+	isExported bool
 }
 
 var (
@@ -20,8 +21,9 @@ var (
 				Line:   9,
 				Column: 2,
 			},
-			value:    -1,
-			typeName: "Coffee",
+			value:      -1,
+			typeName:   "Coffee",
+			isExported: true,
 		},
 		{
 			name: "Americano",
@@ -29,8 +31,9 @@ var (
 				Line:   10,
 				Column: 2,
 			},
-			value:    -2,
-			typeName: "Coffee",
+			value:      -2,
+			typeName:   "Coffee",
+			isExported: true,
 		},
 		{
 			name: "Latte",
@@ -38,8 +41,9 @@ var (
 				Line:   11,
 				Column: 2,
 			},
-			value:    -3,
-			typeName: "Coffee",
+			value:      -3,
+			typeName:   "Coffee",
+			isExported: true,
 		},
 		{
 			name: "TurkishCoffee",
@@ -47,8 +51,9 @@ var (
 				Line:   12,
 				Column: 2,
 			},
-			value:    -4,
-			typeName: "Coffee",
+			value:      -4,
+			typeName:   "Coffee",
+			isExported: true,
 		},
 	}
 	freshConstants = []constantInfo{
@@ -58,8 +63,9 @@ var (
 				Line:   9,
 				Column: 2,
 			},
-			value:    0,
-			typeName: "Lemonade",
+			value:      0,
+			typeName:   "Lemonade",
+			isExported: true,
 		},
 		{
 			name: "BlueberryLemonade",
@@ -67,8 +73,9 @@ var (
 				Line:   10,
 				Column: 2,
 			},
-			value:    1,
-			typeName: "Lemonade",
+			value:      1,
+			typeName:   "Lemonade",
+			isExported: true,
 		},
 		{
 			name: "WatermelonLemonade",
@@ -76,8 +83,9 @@ var (
 				Line:   11,
 				Column: 2,
 			},
-			value:    2,
-			typeName: "Lemonade",
+			value:      2,
+			typeName:   "Lemonade",
+			isExported: true,
 		},
 		{
 			name: "MangoLemonade",
@@ -85,8 +93,9 @@ var (
 				Line:   12,
 				Column: 2,
 			},
-			value:    3,
-			typeName: "Lemonade",
+			value:      3,
+			typeName:   "Lemonade",
+			isExported: true,
 		},
 		{
 			name: "StrawberryLemonade",
@@ -94,8 +103,9 @@ var (
 				Line:   13,
 				Column: 2,
 			},
-			value:    4,
-			typeName: "Lemonade",
+			value:      4,
+			typeName:   "Lemonade",
+			isExported: true,
 		},
 	}
 	stringConstants = []constantInfo{
@@ -105,8 +115,9 @@ var (
 				Line:   5,
 				Column: 7,
 			},
-			value:    "AnyString",
-			typeName: "string",
+			value:      "AnyString",
+			typeName:   "string",
+			isExported: true,
 		},
 		{
 			name: "methods",
@@ -114,8 +125,9 @@ var (
 				Line:   6,
 				Column: 7,
 			},
-			value:    "GETPUT",
-			typeName: "string",
+			value:      "GETPUT",
+			typeName:   "string",
+			isExported: false,
 		},
 	}
 	permissionConstants = []constantInfo{
@@ -125,8 +137,9 @@ var (
 				Line:   9,
 				Column: 2,
 			},
-			value:    1,
-			typeName: "Permission",
+			value:      1,
+			typeName:   "Permission",
+			isExported: true,
 		},
 		{
 			name: "Write",
@@ -134,8 +147,9 @@ var (
 				Line:   10,
 				Column: 2,
 			},
-			value:    2,
-			typeName: "Permission",
+			value:      2,
+			typeName:   "Permission",
+			isExported: true,
 		},
 		{
 			name: "ReadWrite",
@@ -143,8 +157,9 @@ var (
 				Line:   11,
 				Column: 2,
 			},
-			value:    3,
-			typeName: "Permission",
+			value:      3,
+			typeName:   "Permission",
+			isExported: true,
 		},
 		{
 			name: "RequestGet",
@@ -152,8 +167,9 @@ var (
 				Line:   17,
 				Column: 2,
 			},
-			value:    "GET",
-			typeName: "RequestMethod",
+			value:      "GET",
+			typeName:   "RequestMethod",
+			isExported: true,
 		},
 		{
 			name: "RequestPost",
@@ -161,8 +177,9 @@ var (
 				Line:   18,
 				Column: 2,
 			},
-			value:    "POST",
-			typeName: "RequestMethod",
+			value:      "POST",
+			typeName:   "RequestMethod",
+			isExported: true,
 		},
 		{
 			name: "RequestPatch",
@@ -170,8 +187,9 @@ var (
 				Line:   19,
 				Column: 2,
 			},
-			value:    "PATCH",
-			typeName: "RequestMethod",
+			value:      "PATCH",
+			typeName:   "RequestMethod",
+			isExported: true,
 		},
 		{
 			name: "RequestDelete",
@@ -179,8 +197,9 @@ var (
 				Line:   20,
 				Column: 2,
 			},
-			value:    "DELETE",
-			typeName: "RequestMethod",
+			value:      "DELETE",
+			typeName:   "RequestMethod",
+			isExported: true,
 		},
 		{
 			name: "SendDir",
@@ -188,8 +207,9 @@ var (
 				Line:   26,
 				Column: 2,
 			},
-			value:    2,
-			typeName: "Chan",
+			value:      2,
+			typeName:   "Chan",
+			isExported: true,
 		},
 		{
 			name: "ReceiveDir",
@@ -197,8 +217,9 @@ var (
 				Line:   27,
 				Column: 2,
 			},
-			value:    1,
-			typeName: "Chan",
+			value:      1,
+			typeName:   "Chan",
+			isExported: true,
 		},
 		{
 			name: "BothDir",
@@ -206,8 +227,9 @@ var (
 				Line:   28,
 				Column: 2,
 			},
-			value:    3,
-			typeName: "Chan",
+			value:      3,
+			typeName:   "Chan",
+			isExported: true,
 		},
 	}
 
@@ -218,17 +240,19 @@ var (
 				Line:   3,
 				Column: 7,
 			},
-			value:    -4,
-			typeName: "untyped int",
+			value:      -4,
+			typeName:   "untyped int",
+			isExported: true,
 		},
 		{
-			name: "FloatMathOperation",
+			name: "floatMathOperation",
 			position: Position{
 				Line:   4,
 				Column: 7,
 			},
-			value:    5.4,
-			typeName: "untyped int",
+			value:      5.4,
+			typeName:   "untyped int",
+			isExported: false,
 		},
 		{
 			name: "ModOperation",
@@ -236,17 +260,19 @@ var (
 				Line:   5,
 				Column: 7,
 			},
-			value:    1,
-			typeName: "untyped int",
+			value:      1,
+			typeName:   "untyped int",
+			isExported: true,
 		},
 		{
-			name: "EqualOperation",
+			name: "equalOperation",
 			position: Position{
 				Line:   6,
 				Column: 7,
 			},
-			value:    true,
-			typeName: "bool",
+			value:      true,
+			typeName:   "bool",
+			isExported: false,
 		},
 		{
 			name: "NotEqualOperation",
@@ -254,8 +280,9 @@ var (
 				Line:   7,
 				Column: 7,
 			},
-			value:    false,
-			typeName: "bool",
+			value:      false,
+			typeName:   "bool",
+			isExported: true,
 		},
 		{
 			name: "GreaterThan",
@@ -263,8 +290,9 @@ var (
 				Line:   8,
 				Column: 7,
 			},
-			value:    true,
-			typeName: "bool",
+			value:      true,
+			typeName:   "bool",
+			isExported: true,
 		},
 		{
 			name: "GreaterThanOrEqual",
@@ -272,8 +300,9 @@ var (
 				Line:   9,
 				Column: 7,
 			},
-			value:    true,
-			typeName: "bool",
+			value:      true,
+			typeName:   "bool",
+			isExported: true,
 		},
 		{
 			name: "LessThan",
@@ -281,8 +310,9 @@ var (
 				Line:   10,
 				Column: 7,
 			},
-			value:    true,
-			typeName: "bool",
+			value:      true,
+			typeName:   "bool",
+			isExported: true,
 		},
 		{
 			name: "LessThanOrEqual",
@@ -290,8 +320,9 @@ var (
 				Line:   11,
 				Column: 7,
 			},
-			value:    true,
-			typeName: "bool",
+			value:      true,
+			typeName:   "bool",
+			isExported: true,
 		},
 		{
 			name: "XorOperation",
@@ -299,8 +330,9 @@ var (
 				Line:   12,
 				Column: 7,
 			},
-			value:    6,
-			typeName: "untyped int",
+			value:      6,
+			typeName:   "untyped int",
+			isExported: true,
 		},
 		{
 			name: "AndNotOperation",
@@ -308,8 +340,9 @@ var (
 				Line:   13,
 				Column: 7,
 			},
-			value:    4,
-			typeName: "untyped int",
+			value:      4,
+			typeName:   "untyped int",
+			isExported: true,
 		},
 		{
 			name: "AndOperation",
@@ -317,17 +350,19 @@ var (
 				Line:   14,
 				Column: 7,
 			},
-			value:    0,
-			typeName: "untyped int",
+			value:      0,
+			typeName:   "untyped int",
+			isExported: true,
 		},
 		{
-			name: "OrOperation",
+			name: "orOperation",
 			position: Position{
 				Line:   15,
 				Column: 7,
 			},
-			value:    6,
-			typeName: "untyped int",
+			value:      6,
+			typeName:   "untyped int",
+			isExported: false,
 		},
 	}
 )
@@ -344,7 +379,7 @@ func assertConstants(t *testing.T, file *File, constants []constantInfo) bool {
 
 		actualConstant, exists := file.Constants().FindByName(expectedConstant.name)
 		if !exists || actualConstant == nil {
-			t.Errorf("constant with name %s in file %s  is not found", file.name, expectedConstant.name)
+			t.Errorf("constant with name %s in file %s is not found", expectedConstant.name, file.name)
 			continue
 		}
 
@@ -360,6 +395,12 @@ func assertConstants(t *testing.T, file *File, constants []constantInfo) bool {
 
 		if expectedConstant.typeName != actualConstant.Type().Name() {
 			t.Errorf("type name of constant %s in file %s shoud be %s, but got %s", actualConstant.Name(), file.name, expectedConstant.typeName, actualConstant.Type().Name())
+		}
+
+		if actualConstant.IsExported() && !expectedConstant.isExported {
+			t.Errorf("constant with name %s in file %s is exported, but should be unexported field", expectedConstant.name, file.name)
+		} else if !actualConstant.IsExported() && expectedConstant.isExported {
+			t.Errorf("constant with name %s in file %s is not exported, but should be exported field", expectedConstant.name, file.name)
 		}
 
 		assert.Equal(t, expectedConstant.position, actualConstant.Position(), "the position of constant %s in file %s should be %w, but got %w", expectedConstant.name, actualConstant.File().Name(), expectedConstant.position, actualConstant.Position())

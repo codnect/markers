@@ -27,14 +27,16 @@ type structInfo struct {
 	totalFields       int
 	numEmbeddedFields int
 	implements        map[string]struct{}
+	stringValue       string
 }
 
 // structs
 var (
 	controllerStruct = structInfo{
-		markers:    markers.Values{},
-		fileName:   "generics.go",
-		isExported: true,
+		markers:     markers.Values{},
+		stringValue: "any.Controller[C context.Context,T any]",
+		fileName:    "generics.go",
+		isExported:  true,
 		position: Position{
 			Line:   17,
 			Column: 6,
@@ -63,9 +65,10 @@ var (
 		numEmbeddedFields: 0,
 	}
 	testControllerStruct = structInfo{
-		markers:    markers.Values{},
-		fileName:   "generics.go",
-		isExported: true,
+		markers:     markers.Values{},
+		stringValue: "any.TestController",
+		fileName:    "generics.go",
+		isExported:  true,
 		position: Position{
 			Line:   26,
 			Column: 6,
@@ -95,8 +98,9 @@ var (
 				},
 			},
 		},
-		fileName:   "dessert.go",
-		isExported: true,
+		stringValue: "menu.FriedCookie",
+		fileName:    "dessert.go",
+		isExported:  true,
 		position: Position{
 			Line:   30,
 			Column: 6,
@@ -147,8 +151,9 @@ var (
 				},
 			},
 		},
-		fileName:   "dessert.go",
-		isExported: false,
+		stringValue: "menu.cookie",
+		fileName:    "dessert.go",
+		isExported:  false,
 		position: Position{
 			Line:   56,
 			Column: 6,
@@ -240,6 +245,10 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 
 		if actualStruct.NumEmbeddedFields() != expectedStruct.numEmbeddedFields {
 			t.Errorf("the number of the embededed fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.numEmbeddedFields, actualStruct.NumFields())
+		}
+
+		if expectedStruct.stringValue != actualStruct.String() {
+			t.Errorf("Output returning from String() method for struct type with name %s does not equal to %s, but got %s", expectedStructName, expectedStruct.stringValue, actualStruct.String())
 		}
 
 		assert.Equal(t, actualStruct, actualStruct.Underlying())

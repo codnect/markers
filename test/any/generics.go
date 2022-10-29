@@ -32,4 +32,8 @@ type Number interface {
 	ToString()
 }
 
-type HttpHandler[C context.Context] func(ctx C)
+type HttpHandler[C context.Context, K string | int] func(ctx C) K
+
+type EventPublisher[E any] interface {
+	Publish(e E)
+}

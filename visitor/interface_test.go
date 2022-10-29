@@ -17,6 +17,7 @@ type interfaceInfo struct {
 	embeddedTypes      []string
 	embeddedInterfaces []string
 	isExported         bool
+	stringValue        string
 }
 
 // interfaces
@@ -35,6 +36,7 @@ var (
 		methods: map[string]functionInfo{
 			"Save": saveFunction,
 		},
+		stringValue: "any.Repository[T any,ID any]",
 	}
 	numberInterface = interfaceInfo{
 		name:       "Number",
@@ -52,6 +54,23 @@ var (
 		},
 		embeddedTypes:      []string{"Ordered"},
 		embeddedInterfaces: []string{"Ordered"},
+		stringValue:        "any.Number",
+	}
+	eventPublisherInterface = interfaceInfo{
+		name:       "EventPublisher",
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   37,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"Publish": publishMethod,
+		},
+		methods: map[string]functionInfo{
+			"Publish": publishMethod,
+		},
+		stringValue: "any.EventPublisher[E any]",
 	}
 	bakeryShopInterface = interfaceInfo{
 		markers: markers.Values{
@@ -83,6 +102,7 @@ var (
 		},
 		embeddedTypes:      []string{"Dessert"},
 		embeddedInterfaces: []string{"Dessert"},
+		stringValue:        "menu.BakeryShop",
 	}
 
 	dessertInterface = interfaceInfo{
@@ -118,6 +138,7 @@ var (
 			"Pie":      pieFunction,
 			"muffin":   muffinFunction,
 		},
+		stringValue: "menu.Dessert",
 	}
 
 	newYearsEveCookieInterface = interfaceInfo{
@@ -141,6 +162,7 @@ var (
 		explicitMethods: map[string]functionInfo{
 			"Funfetti": funfettiFunction,
 		},
+		stringValue: "menu.newYearsEveCookie",
 	}
 
 	sweetShopInterface = interfaceInfo{
@@ -174,6 +196,7 @@ var (
 		},
 		embeddedTypes:      []string{"newYearsEveCookie", "Dessert"},
 		embeddedInterfaces: []string{"newYearsEveCookie", "Dessert"},
+		stringValue:        "menu.SweetShop",
 	}
 )
 
@@ -243,6 +266,10 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 		actualInterface.IsConstraint()
 		actualInterface.EmbeddedInterfaces()
 		actualInterface.EmbeddedTypes()
+
+		if expectedInterface.stringValue != actualInterface.String() {
+			t.Errorf("Output returning from String() method for interface type with name %s does not equal to %s, but got %s", expectedInterfaceName, expectedInterface.stringValue, actualInterface.String())
+		}
 
 		assertInterfaceEmbeddedTypes(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.EmbeddedTypes(), expectedInterface.embeddedTypes)
 		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.Methods(), expectedInterface.methods)

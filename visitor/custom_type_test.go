@@ -11,6 +11,7 @@ type customTypeInfo struct {
 	underlyingTypeName string
 	isExported         bool
 	methods            map[string]functionInfo
+	stringValue        string
 }
 
 var (
@@ -23,6 +24,7 @@ var (
 				"Print":    printErrorMethod,
 				"ToErrors": toErrorsMethod,
 			},
+			stringValue: "any.errorList",
 		},
 	}
 	permissionCustomTypes = map[string]customTypeInfo{
@@ -30,16 +32,19 @@ var (
 			name:               "Permission",
 			underlyingTypeName: "int",
 			isExported:         true,
+			stringValue:        "any.Permission",
 		},
 		"RequestMethod": {
 			name:               "RequestMethod",
 			underlyingTypeName: "string",
 			isExported:         true,
+			stringValue:        "any.RequestMethod",
 		},
 		"Chan": {
 			name:               "Chan",
 			underlyingTypeName: "int",
 			isExported:         true,
+			stringValue:        "any.Chan",
 		},
 	}
 	coffeeCustomTypes = map[string]customTypeInfo{
@@ -47,6 +52,7 @@ var (
 			name:               "Coffee",
 			underlyingTypeName: "int",
 			isExported:         true,
+			stringValue:        "menu.Coffee",
 		},
 	}
 	freshCustomTypes = map[string]customTypeInfo{
@@ -54,16 +60,18 @@ var (
 			name:               "Lemonade",
 			underlyingTypeName: "uint",
 			isExported:         true,
+			stringValue:        "menu.Lemonade",
 		},
 	}
 	genericsCustomTypes = map[string]customTypeInfo{
 		"HttpHandler": {
 			name:               "HttpHandler",
-			underlyingTypeName: "func (ctx C)",
+			underlyingTypeName: "func (ctx C) K",
 			isExported:         true,
 			methods: map[string]functionInfo{
 				"Print": printHttpHandlerMethod,
 			},
+			stringValue: "any.HttpHandler[C context.Context,K string|int]",
 		},
 	}
 )
@@ -108,6 +116,10 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			t.Errorf("custom type with name %s is exported, but should be unexported field", expectedCustomTypeName)
 		} else if !actualCustomType.IsExported() && expectedCustomType.isExported {
 			t.Errorf("custom type with name %s is not exported, but should be exported field", expectedCustomTypeName)
+		}
+
+		if expectedCustomType.stringValue != actualCustomType.String() {
+			t.Errorf("Output returning from String() method for custom type with name %s does not equal to %s, but got %s", expectedCustomTypeName, expectedCustomType.stringValue, actualCustomType.String())
 		}
 
 		assertFunctions(t, fmt.Sprintf("custom type %s", actualCustomType.Name()), actualCustomType.Methods(), expectedCustomType.methods)
