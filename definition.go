@@ -69,6 +69,10 @@ func MakeDefinition(name, pkg string, level TargetLevel, output any) (*Definitio
 }
 
 func (definition *Definition) validate() error {
+	if definition.Name == "" {
+		return fmt.Errorf("marker name cannot be empty")
+	}
+
 	if definition.TargetLevel == 0 {
 		return fmt.Errorf("specify target levels for the definition: %v", definition.Name)
 	}
@@ -105,7 +109,7 @@ func (definition *Definition) extract() error {
 			continue
 		}
 
-		argumentInfo, err := ExtractArgument(field)
+		argumentInfo, err := extractArgument(field)
 
 		if err != nil {
 			return err

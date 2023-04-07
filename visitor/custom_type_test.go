@@ -122,6 +122,10 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			t.Errorf("Output returning from String() method for custom type with name %s does not equal to %s, but got %s", expectedCustomTypeName, expectedCustomType.stringValue, actualCustomType.String())
 		}
 
+		if actualCustomType.NumMethods() != len(expectedCustomType.methods) {
+			t.Errorf("the number of the methods of the custom type %s should be %d, but got %d", expectedCustomTypeName, len(expectedCustomType.methods), actualCustomType.NumMethods())
+		}
+
 		assertFunctions(t, fmt.Sprintf("custom type %s", actualCustomType.Name()), actualCustomType.Methods(), expectedCustomType.methods)
 		index++
 	}

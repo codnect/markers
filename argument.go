@@ -14,7 +14,7 @@ type Argument struct {
 	Default    any
 }
 
-func ExtractArgument(structField reflect.StructField) (Argument, error) {
+func extractArgument(structField reflect.StructField) (Argument, error) {
 	parameterName := upperCamelCase(structField.Name)
 	parameterTag, parameterTagExists := structField.Tag.Lookup("parameter")
 

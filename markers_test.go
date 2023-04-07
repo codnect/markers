@@ -48,3 +48,11 @@ func TestImportMarker_Validate_IfPkgIsMissing(t *testing.T) {
 	}
 	assert.Error(t, importMarker.Validate())
 }
+
+func TestImportMarker_ValidateShouldReturnNilIfValidationIsOkay(t *testing.T) {
+	importMarker := &Import{
+		Value: "anyValue",
+		Pkg:   "anyPkg",
+	}
+	assert.Nil(t, importMarker.Validate())
+}

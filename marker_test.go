@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestMarkerValues_AllMarkers(t *testing.T) {
+func TestMarkerValues_FindByName(t *testing.T) {
 	markerValues := make(Values)
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest1")
 	markerValues["anyMarker1"] = append(markerValues["anyMarker1"], "anyTest2")
@@ -18,6 +18,10 @@ func TestMarkerValues_AllMarkers(t *testing.T) {
 	markers, exists = markerValues.FindByName("anyMarker2")
 	assert.True(t, exists)
 	assert.Equal(t, []interface{}{"anyTest3"}, markers)
+
+	markers, exists = markerValues.FindByName("anyMarker3")
+	assert.False(t, exists)
+	assert.Nil(t, markers)
 }
 
 func TestMarkerValues_Count(t *testing.T) {
