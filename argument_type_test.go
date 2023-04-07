@@ -226,6 +226,33 @@ func TestArgumentTypeInfo_ParseBoolean(t *testing.T) {
 	assert.False(t, boolValue)
 }
 
+func TestArgumentTypeInfo_ParseBooleanShouldReturnErrorIfScannedTokenIsNotBooleanValue(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(true))
+	assert.Nil(t, err)
+	assert.Equal(t, BoolType, typeInfo.ActualType)
+
+	boolValue := false
+
+	scanner := NewScanner("test")
+	scanner.Peek()
+
+	err = typeInfo.parseBoolean(scanner, reflect.ValueOf(&boolValue))
+	assert.NotNil(t, err)
+	assert.Equal(t, "expected true or false, got \"test\"", err.Error())
+}
+
+func TestArgumentTypeInfo_ParseBooleanShouldReturnErrorIfScannerIsNil(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(true))
+	assert.Nil(t, err)
+	assert.Equal(t, BoolType, typeInfo.ActualType)
+
+	boolValue := false
+
+	err = typeInfo.parseBoolean(nil, reflect.ValueOf(&boolValue))
+	assert.NotNil(t, err)
+	assert.Equal(t, "scanner cannot be nil", err.Error())
+}
+
 func TestArgumentTypeInfo_ParseInteger(t *testing.T) {
 	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(0))
 	assert.Nil(t, err)
@@ -300,6 +327,33 @@ func TestArgumentTypeInfo_ParseInteger(t *testing.T) {
 	assert.Equal(t, uint(70519), unsignedIntegerValue)
 }
 
+func TestArgumentTypeInfo_parseIntegerShouldReturnErrorIfScannedTokenIsNotIntegerValue(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(2))
+	assert.Nil(t, err)
+	assert.Equal(t, SignedIntegerType, typeInfo.ActualType)
+
+	signedIntegerValue := 0
+
+	scanner := NewScanner("test")
+	scanner.Peek()
+
+	err = typeInfo.parseInteger(scanner, reflect.ValueOf(&signedIntegerValue))
+	assert.NotNil(t, err)
+	assert.Equal(t, "expected integer, got \"test\"", err.Error())
+}
+
+func TestArgumentTypeInfo_parseIntegerShouldReturnErrorIfScannerIsNil(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(5))
+	assert.Nil(t, err)
+	assert.Equal(t, SignedIntegerType, typeInfo.ActualType)
+
+	signedIntegerValue := 0
+
+	err = typeInfo.parseInteger(nil, reflect.ValueOf(&signedIntegerValue))
+	assert.NotNil(t, err)
+	assert.Equal(t, "scanner cannot be nil", err.Error())
+}
+
 func TestArgumentTypeInfo_ParseMap(t *testing.T) {
 	m := make(map[string]any)
 	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(&m))
@@ -336,6 +390,16 @@ func TestArgumentTypeInfo_ParseMap(t *testing.T) {
 	assert.Equal(t, "anyValue2", m["anyKey4"])
 }
 
+func TestArgumentTypeInfo_parseMapShouldReturnErrorIfScannerIsNil(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(map[string]any{}))
+	assert.Nil(t, err)
+	assert.Equal(t, MapType, typeInfo.ActualType)
+
+	err = typeInfo.parseMap(nil, reflect.ValueOf(""))
+	assert.NotNil(t, err)
+	assert.Equal(t, "scanner cannot be nil", err.Error())
+}
+
 func TestArgumentTypeInfo_ParseSlice(t *testing.T) {
 	s := make([]int, 0)
 	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf(&s))
@@ -370,6 +434,16 @@ func TestArgumentTypeInfo_ParseSlice(t *testing.T) {
 	err = typeInfo.Parse(scanner, reflect.ValueOf(&s))
 	assert.Nil(t, err)
 	assert.Equal(t, []int{1, 2, 3, 4, 5}, s)
+}
+
+func TestArgumentTypeInfo_parseSliceShouldReturnErrorIfScannerIsNil(t *testing.T) {
+	typeInfo, err := ArgumentTypeInfoFromType(reflect.TypeOf([]string{}))
+	assert.Nil(t, err)
+	assert.Equal(t, SliceType, typeInfo.ActualType)
+
+	err = typeInfo.parseSlice(nil, reflect.ValueOf(""))
+	assert.NotNil(t, err)
+	assert.Equal(t, "scanner cannot be nil", err.Error())
 }
 
 func TestArgumentTypeInfo_TypeInference(t *testing.T) {

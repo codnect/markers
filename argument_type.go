@@ -223,7 +223,7 @@ func (typeInfo ArgumentTypeInfo) parseInteger(scanner *Scanner, out reflect.Valu
 	}
 
 	if !scanner.Expect(IntegerValue, "Integer") {
-		return nil
+		return fmt.Errorf("expected integer, got %q", scanner.Token())
 	}
 
 	text := scanner.Token()
