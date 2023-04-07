@@ -1,8 +1,8 @@
 package visitor
 
 import (
-	"github.com/procyon-projects/marker"
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers"
+	"github.com/procyon-projects/markers/packages"
 	"go/ast"
 	"path/filepath"
 )

@@ -2,7 +2,7 @@ package processor
 
 import (
 	"encoding/json"
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers/packages"
 	"os"
 	"path"
 	"path/filepath"

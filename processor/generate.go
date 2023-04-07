@@ -3,8 +3,8 @@ package processor
 import (
 	"errors"
 	"fmt"
-	"github.com/procyon-projects/marker"
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers"
+	"github.com/procyon-projects/markers/packages"
 	"github.com/spf13/cobra"
 	"path"
 )

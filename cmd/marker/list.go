@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"github.com/procyon-projects/marker/packages"
-	"github.com/procyon-projects/marker/processor"
+	"github.com/procyon-projects/markers/packages"
+	"github.com/procyon-projects/markers/processor"
 	"github.com/spf13/cobra"
 	"log"
 )

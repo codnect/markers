@@ -20,7 +20,7 @@ To Install Marker CLI quickly, follow the installation instructions.
 
 1. You first need Go installed (version 1.18+ is required), then you can use the below Go command to install Marker CLI.
 
-    `$ go get -u github.com/procyon-projects/marker/...`
+    `$ go get -u github.com/procyon-projects/markers/...`
 2. Verify that you've installed Marker CLI by typing the following command.
 
    `$ marker version`

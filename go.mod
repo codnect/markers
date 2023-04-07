@@ -1,4 +1,4 @@
-module github.com/procyon-projects/marker
+module github.com/procyon-projects/markers
 
 go 1.18
 
@@ -14,6 +14,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/procyon-projects/marker v0.2.8-dev // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.4.0 // indirect
 	golang.org/x/mod v0.6.0 // indirect

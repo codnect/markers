@@ -2,8 +2,8 @@ package visitor
 
 import (
 	"fmt"
-	"github.com/procyon-projects/marker"
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers"
+	"github.com/procyon-projects/markers/packages"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

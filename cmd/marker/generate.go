@@ -1,19 +1,27 @@
 package main
 
 import (
-	"github.com/procyon-projects/marker/packages"
-	"github.com/procyon-projects/marker/processor"
-	"github.com/procyon-projects/marker/visitor"
+	"github.com/procyon-projects/markers/packages"
+	"github.com/procyon-projects/markers/processor"
+	"github.com/procyon-projects/markers/visitor"
 	"os"
 	"os/exec"
 )
 
 func Generate(ctx *processor.Context) {
-	pkg, _ := ctx.LoadResult().Lookup("github.com/procyon-projects/marker/test/package1")
+	pkg, _ := ctx.LoadResult().Lookup("github.com/procyon-projects/markers/test/package1")
 	err := visitor.EachFile(ctx.Collector(), []*packages.Package{pkg}, func(file *visitor.File, err error) error {
 		if file.NumImportMarkers() == 0 {
 			return nil
 		}
+
+		/*
+			f := file.Functions().At(0)
+			markers, ok := f.Markers().FindByName("shelf:entity")
+
+			if ok {
+
+			}*/
 
 		return err
 	})

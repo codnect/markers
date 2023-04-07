@@ -3,7 +3,7 @@ package packages
 import (
 	"errors"
 	"fmt"
-	"github.com/procyon-projects/marker/internal/cmd"
+	"github.com/procyon-projects/markers/internal/cmd"
 	"go/token"
 	"golang.org/x/tools/go/packages"
 	"os/exec"

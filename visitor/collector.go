@@ -1,6 +1,6 @@
 package visitor
 
-import "github.com/procyon-projects/marker/packages"
+import "github.com/procyon-projects/markers/packages"
 
 type packageCollector struct {
 	hasSeen      map[string]bool

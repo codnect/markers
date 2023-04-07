@@ -1,7 +1,7 @@
 package visitor
 
 import (
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers/packages"
 	"go/ast"
 	"go/token"
 	"reflect"
