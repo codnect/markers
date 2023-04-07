@@ -1,6 +1,7 @@
 package visitor
 
 import (
+	"errors"
 	"fmt"
 	"github.com/procyon-projects/markers"
 	"github.com/procyon-projects/markers/packages"
@@ -49,6 +50,21 @@ func (v variableInfo) String() string {
 	}
 
 	return v.typeName
+}
+
+func TestEachFile_ShouldReturnErrorIfCollectorIsNil(t *testing.T) {
+	err := EachFile(nil, nil, nil)
+	assert.Equal(t, "collector cannot be nil", err.Error())
+}
+
+func TestEachFile_ShouldReturnErrorIfPkgsIsNil(t *testing.T) {
+	err := EachFile(&markers.Collector{}, nil, nil)
+	assert.Equal(t, "packages cannot be nil", err.Error())
+}
+
+func TestEachFile_ShouldReturnErrorIfTraversedPkgIsNil(t *testing.T) {
+	err := EachFile(&markers.Collector{}, []*packages.Package{nil}, nil)
+	assert.Equal(t, markers.ErrorList{errors.New("pkg(package) cannot be nil")}, err.(markers.ErrorList))
 }
 
 func TestVisitor_VisitPackage(t *testing.T) {

@@ -951,3 +951,8 @@ func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualRe
 	}
 
 }
+
+func TestFunctions_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	functions := &Functions{}
+	assert.Nil(t, functions.At(0))
+}

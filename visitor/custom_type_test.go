@@ -132,3 +132,8 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 
 	return true
 }
+
+func TestCustomTypes_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	customTypes := &CustomTypes{}
+	assert.Nil(t, customTypes.At(0))
+}

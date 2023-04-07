@@ -34,7 +34,7 @@ type structInfo struct {
 var (
 	controllerStruct = structInfo{
 		markers:     markers.Values{},
-		stringValue: "any.Controller[C context.Context,T any]",
+		stringValue: "any.Controller[C context.Context,T any|int]",
 		fileName:    "generics.go",
 		isExported:  true,
 		position: Position{

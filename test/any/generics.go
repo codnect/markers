@@ -10,11 +10,11 @@ func GenericFunction[K []map[T]X, T int | bool, X ~string](x []K) T {
 	return value
 }
 
-type Repository[T, ID any] interface {
+type Repository[T any, ID any | string] interface {
 	Save(entity T) T
 }
 
-type Controller[C context.Context, T any] struct {
+type Controller[C context.Context, T any | int] struct {
 	AnyField1 string
 	AnyField2 int
 }

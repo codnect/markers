@@ -36,7 +36,7 @@ var (
 		methods: map[string]functionInfo{
 			"Save": saveFunction,
 		},
-		stringValue: "any.Repository[T any,ID any]",
+		stringValue: "any.Repository[T any,ID any|string]",
 	}
 	numberInterface = interfaceInfo{
 		name:       "Number",
@@ -308,4 +308,9 @@ func assertInterfaceEmbeddedTypes(t *testing.T, interfaceName string, actualEmbe
 	}
 
 	return true
+}
+
+func TestInterfaces_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	interfaces := &Interfaces{}
+	assert.Nil(t, interfaces.At(0))
 }

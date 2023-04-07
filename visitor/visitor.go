@@ -94,7 +94,12 @@ func EachFile(collector *markers.Collector, pkgs []*packages.Package, callback F
 		markerValues, err := collector.Collect(pkg)
 
 		if err != nil {
-			errs = append(errs, err.(markers.ErrorList)...)
+			switch typedErr := err.(type) {
+			case markers.ErrorList:
+				errs = append(errs, err.(markers.ErrorList)...)
+			default:
+				errs = append(errs, typedErr)
+			}
 			continue
 		}
 

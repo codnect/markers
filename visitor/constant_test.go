@@ -408,3 +408,8 @@ func assertConstants(t *testing.T, file *File, constants []constantInfo) bool {
 
 	return true
 }
+
+func TestConstants_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	constants := &Constants{}
+	assert.Nil(t, constants.At(0))
+}
