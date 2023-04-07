@@ -43,6 +43,14 @@ type variableInfo struct {
 	isPointer bool
 }
 
+func (v variableInfo) String() string {
+	if v.isPointer {
+		return fmt.Sprintf("*%s", v.typeName)
+	}
+
+	return v.typeName
+}
+
 func TestVisitor_VisitPackage(t *testing.T) {
 	markerList := []struct {
 		Name   string
@@ -143,12 +151,14 @@ func TestVisitor_VisitPackage(t *testing.T) {
 					{
 						name:       "",
 						path:       "context",
+						file:       "generics.go",
 						sideEffect: false,
 						position:   Position{Line: 4, Column: 2},
 					},
 					{
 						name:       "",
 						path:       "golang.org/x/exp/constraints",
+						file:       "generics.go",
 						sideEffect: false,
 						position:   Position{Line: 5, Column: 2},
 					},

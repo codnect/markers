@@ -925,7 +925,7 @@ func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actua
 			t.Errorf("at index %d, the parameter name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.name, actualFunctionParam.name)
 		}
 
-		if expectedFunctionParam.typeName != actualFunctionParam.Type().Name() {
+		if expectedFunctionParam.String() != actualFunctionParam.Type().Name() {
 			t.Errorf("at index %d, the parameter type name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.typeName, actualFunctionParam.Type().Name())
 		}
 	}
@@ -943,6 +943,10 @@ func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualRe
 
 		if expectedFunctionParam.name != actualFunctionParam.Name() {
 			t.Errorf("at index %d, the parameter result of the %s should be %s, but got %s", index, msg, expectedFunctionParam.name, actualFunctionParam.name)
+		}
+
+		if expectedFunctionParam.String() != actualFunctionParam.Type().Name() {
+			t.Errorf("at index %d, the parameter result type of the %s should be %s, but got %s", index, msg, expectedFunctionParam.typeName, actualFunctionParam.Type().Name())
 		}
 	}
 
