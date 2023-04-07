@@ -59,7 +59,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	}
 
 	testCasePkgs := map[string]map[string]testFile{
-		"github.com/procyon-projects/marker/test/menu": {
+		"github.com/procyon-projects/markers/test/menu": {
 			"coffee.go": {
 				constants:   coffeeConstants,
 				customTypes: coffeeCustomTypes,
@@ -108,7 +108,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 				},
 			},
 		},
-		"github.com/procyon-projects/marker/test/any": {
+		"github.com/procyon-projects/markers/test/any": {
 			"error.go": {
 				constants:   []constantInfo{},
 				customTypes: errorCustomTypes,
@@ -179,7 +179,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	registry := markers.NewRegistry()
 
 	for _, m := range markerList {
-		err := registry.Register(m.Name, "github.com/procyon-projects/marker", m.Level, m.Output)
+		err := registry.Register(m.Name, "github.com/procyon-projects/markers", m.Level, m.Output)
 		if err != nil {
 			t.Errorf("marker %s could not be registered", m.Name)
 			return
