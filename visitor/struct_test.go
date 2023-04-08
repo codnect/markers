@@ -301,3 +301,8 @@ func assertStructFields(t *testing.T, structName string, actualFields *Fields, e
 
 	return true
 }
+
+func TestStructs_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	structs := &Structs{}
+	assert.Nil(t, structs.At(0))
+}

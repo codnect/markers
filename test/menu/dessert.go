@@ -85,7 +85,7 @@ type Dessert interface {
 
 	// CupCake is a method
 	// +marker:interface-method-level:Name=CupCake
-	CupCake(a []int, b bool) float32
+	CupCake([]int, bool) float32
 
 	// Tart is a method
 	// +marker:interface-method-level:Name=Tart

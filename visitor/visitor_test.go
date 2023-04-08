@@ -134,12 +134,15 @@ func TestVisitor_VisitPackage(t *testing.T) {
 		},
 		"github.com/procyon-projects/markers/test/any": {
 			"error.go": {
-				constants:   []constantInfo{},
-				customTypes: errorCustomTypes,
+				constants: []constantInfo{},
 				functions: map[string]functionInfo{
 					"Print":    printErrorMethod,
 					"ToErrors": toErrorsMethod,
 				},
+			},
+			"other.go": {
+				constants:   []constantInfo{},
+				customTypes: errorCustomTypes,
 			},
 			"permission.go": {
 				constants:   permissionConstants,

@@ -54,6 +54,12 @@ var (
 			isExported:         true,
 			stringValue:        "menu.Coffee",
 		},
+		"CustomBakeryShop": {
+			name:               "CustomBakeryShop",
+			underlyingTypeName: "BakeryShop",
+			isExported:         true,
+			stringValue:        "menu.CustomBakeryShop",
+		},
 	}
 	freshCustomTypes = map[string]customTypeInfo{
 		"Lemonade": {
@@ -66,12 +72,12 @@ var (
 	genericsCustomTypes = map[string]customTypeInfo{
 		"HttpHandler": {
 			name:               "HttpHandler",
-			underlyingTypeName: "func (ctx C) K",
+			underlyingTypeName: "func (ctx C,value V) K",
 			isExported:         true,
 			methods: map[string]functionInfo{
 				"Print": printHttpHandlerMethod,
 			},
-			stringValue: "any.HttpHandler[C context.Context,K string|int]",
+			stringValue: "any.HttpHandler[C context.Context,K string|int,V constraints.Ordered|constraints.Complex]",
 		},
 	}
 )
@@ -108,8 +114,8 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			t.Errorf("custom type name in file %s shoud be %s, but got %s", file.name, expectedCustomTypeName, actualCustomType.Name())
 		}
 
-		if expectedCustomType.underlyingTypeName != actualCustomType.Underlying().String() {
-			t.Errorf("underlying type of custom type %s in file %s shoud be %s, but got %s", file.name, expectedCustomType.name, expectedCustomType.underlyingTypeName, actualCustomType.Underlying().String())
+		if expectedCustomType.underlyingTypeName != actualCustomType.Underlying().Name() {
+			t.Errorf("underlying type of custom type %s in file %s shoud be %s, but got %s", file.name, expectedCustomType.name, expectedCustomType.underlyingTypeName, actualCustomType.Underlying().Name())
 		}
 
 		if actualCustomType.IsExported() && !expectedCustomType.isExported {

@@ -69,13 +69,17 @@ func getTypeFromScope(name string, visitor *packageVisitor) Type {
 	pkg := visitor.pkg
 	typ := pkg.Types.Scope().Lookup(name)
 
-	typedName, ok := typ.Type().(*types.Named)
+	typedName, isNamedType := typ.Type().(*types.Named)
 
 	if _, ok := visitor.collector.unprocessedTypes[pkg.ID]; !ok {
 		visitor.collector.unprocessedTypes[pkg.ID] = make(map[string]Type)
 	}
 
-	if ok {
+	if unprocessedType, ok := visitor.collector.unprocessedTypes[pkg.ID][name]; ok {
+		return unprocessedType
+	}
+
+	if isNamedType {
 		switch typedName.Underlying().(type) {
 		case *types.Struct:
 			structType := newStruct(nil, nil, nil, pkg, visitor, nil)

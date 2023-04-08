@@ -10,7 +10,7 @@ func GenericFunction[K []map[T]X, T int | bool, X ~string](x []K) T {
 	return value
 }
 
-type Repository[T any, ID any | string] interface {
+type Repository[T any, ID any | string | constraints.Ordered] interface {
 	Save(entity T) T
 }
 
@@ -32,7 +32,7 @@ type Number interface {
 	ToString()
 }
 
-type HttpHandler[C context.Context, K string | int] func(ctx C) K
+type HttpHandler[C context.Context, K string | int, V constraints.Ordered | constraints.Complex] func(ctx C, value V) K
 
 type EventPublisher[E any] interface {
 	Publish(e E)

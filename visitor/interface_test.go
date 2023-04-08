@@ -36,7 +36,7 @@ var (
 		methods: map[string]functionInfo{
 			"Save": saveFunction,
 		},
-		stringValue: "any.Repository[T any,ID any|string]",
+		stringValue: "any.Repository[T any,ID any|string|constraints.Ordered]",
 	}
 	numberInterface = interfaceInfo{
 		name:       "Number",

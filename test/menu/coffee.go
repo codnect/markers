@@ -15,3 +15,5 @@ const (
 func (c *cookie) PrintCookie(v interface{}) []string {
 	return nil
 }
+
+type CustomBakeryShop BakeryShop

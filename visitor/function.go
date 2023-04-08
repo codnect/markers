@@ -223,8 +223,8 @@ func (f *Function) receiverType(receiverExpr ast.Expr) Type {
 	case *ast.Ident:
 		if typedReceiver.Obj == nil {
 			receiverTypeName = typedReceiver.Name
-			unprocessedype := getTypeFromScope(receiverTypeName, f.visitor)
-			_, isStructMethod = unprocessedype.(*Struct)
+			unprocessedType := getTypeFromScope(receiverTypeName, f.visitor)
+			_, isStructMethod = unprocessedType.(*Struct)
 		} else {
 			receiverTypeSpec = typedReceiver.Obj.Decl.(*ast.TypeSpec)
 			receiverTypeName = receiverTypeSpec.Name.Name
@@ -270,6 +270,10 @@ func (f *Function) receiverType(receiverExpr ast.Expr) Type {
 }
 
 func (f *Function) Name() string {
+	if f.name == "" {
+		return f.String()
+	}
+
 	return f.name
 }
 

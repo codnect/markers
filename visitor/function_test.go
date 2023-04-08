@@ -274,6 +274,10 @@ var (
 				name:     "ctx",
 				typeName: "C",
 			},
+			{
+				name:     "value",
+				typeName: "V",
+			},
 		},
 		results: []variableInfo{},
 		typeParams: []variableInfo{
@@ -285,6 +289,10 @@ var (
 				name:     "K",
 				typeName: "",
 			},
+			{
+				name:     "V",
+				typeName: "",
+			},
 		},
 	}
 	printErrorMethod = functionInfo{
@@ -292,7 +300,7 @@ var (
 		name:     "Print",
 		fileName: "error.go",
 		position: Position{
-			Line:   5,
+			Line:   3,
 			Column: 1,
 		},
 		isVariadic: false,
@@ -316,7 +324,7 @@ var (
 		name:     "ToErrors",
 		fileName: "error.go",
 		position: Position{
-			Line:   12,
+			Line:   10,
 			Column: 1,
 		},
 		isVariadic: false,
@@ -585,11 +593,11 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "a",
+				name:     "",
 				typeName: "[]int",
 			},
 			{
-				name:     "b",
+				name:     "",
 				typeName: "bool",
 			},
 		},
@@ -928,6 +936,17 @@ func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actua
 		if expectedFunctionParam.String() != actualFunctionParam.Type().Name() {
 			t.Errorf("at index %d, the parameter type name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.typeName, actualFunctionParam.Type().Name())
 		}
+
+		var expectedFunctionParamString string
+		if expectedFunctionParam.name == "" {
+			expectedFunctionParamString = expectedFunctionParam.typeName
+		} else {
+			expectedFunctionParamString = fmt.Sprintf("%s %s", expectedFunctionParam.name, expectedFunctionParam.typeName)
+		}
+
+		if expectedFunctionParamString != actualFunctionParam.String() {
+			t.Errorf("at index %d parameter, the String() method should return %s, but got %s", index, expectedFunctionParamString, actualFunctionParam.String())
+		}
 	}
 }
 
@@ -955,4 +974,35 @@ func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualRe
 func TestFunctions_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
 	functions := &Functions{}
 	assert.Nil(t, functions.At(0))
+}
+
+func TestParameters_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	parameters := &Parameters{}
+	assert.Nil(t, parameters.At(0))
+}
+
+func TestResults_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	results := &Results{}
+	assert.Nil(t, results.At(0))
+}
+
+func TestParameters_FindByNameShouldReturnFalseIfParameterNameDoesNotExist(t *testing.T) {
+	parameters := &Parameters{}
+	parameter, ok := parameters.FindByName("anyName")
+	assert.Nil(t, parameter)
+	assert.False(t, ok)
+}
+
+func TestResults_FindByNameShouldReturnFalseIfResultNameDoesNotExist(t *testing.T) {
+	results := &Results{}
+	result, ok := results.FindByName("anyName")
+	assert.Nil(t, result)
+	assert.False(t, ok)
+}
+
+func TestFunctions_FindByNameShouldReturnFalseIfFunctionNameDoesNotExist(t *testing.T) {
+	functions := &Functions{}
+	function, ok := functions.FindByName("anyName")
+	assert.Nil(t, function)
+	assert.False(t, ok)
 }
