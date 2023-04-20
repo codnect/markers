@@ -1,4 +1,4 @@
-// +import=marker, Pkg=github.com/procyon-projects/markers
+// +import=marker, Pkg=github.com/procyon-projects/markers, Alias=test
 // +marker:package-level:Name=permission.go
 
 package any

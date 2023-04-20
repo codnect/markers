@@ -85,17 +85,32 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	testCasePkgs := map[string]map[string]testFile{
 		"github.com/procyon-projects/markers/test/menu": {
 			"coffee.go": {
+				path:        "github.com/procyon-projects/markers/test/menu/coffee.go",
 				constants:   coffeeConstants,
 				customTypes: coffeeCustomTypes,
 				functions: map[string]functionInfo{
 					"PrintCookie": printCookieMethod,
 				},
+				importMarkers: []importMarkerInfo{
+					{
+						pkg:   "github.com/procyon-projects/markers",
+						value: "marker",
+					},
+				},
 			},
 			"fresh.go": {
+				path:        "github.com/procyon-projects/markers/test/menu/fresh.go",
 				constants:   freshConstants,
 				customTypes: freshCustomTypes,
+				importMarkers: []importMarkerInfo{
+					{
+						pkg:   "github.com/procyon-projects/markers",
+						value: "marker",
+					},
+				},
 			},
 			"dessert.go": {
+				path: "github.com/procyon-projects/markers/test/menu/dessert.go",
 				imports: []importInfo{
 					{
 						name:       "",
@@ -130,6 +145,12 @@ func TestVisitor_VisitPackage(t *testing.T) {
 					"FriedCookie": friedCookieStruct,
 					"cookie":      cookieStruct,
 				},
+				importMarkers: []importMarkerInfo{
+					{
+						pkg:   "github.com/procyon-projects/markers",
+						value: "marker",
+					},
+				},
 			},
 		},
 		"github.com/procyon-projects/markers/test/any": {
@@ -147,6 +168,13 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			"permission.go": {
 				constants:   permissionConstants,
 				customTypes: permissionCustomTypes,
+				importMarkers: []importMarkerInfo{
+					{
+						pkg:   "github.com/procyon-projects/markers",
+						value: "marker",
+						alias: "test",
+					},
+				},
 			},
 			"math.go": {
 				constants: mathConstants,
@@ -229,7 +257,11 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			return nil
 		}
 
-		if !assertImports(t, file, testCase.imports) {
+		if testCase.path != file.Path() {
+			t.Errorf("file path %s shoud be %s, but got %s", file.name, testCase.path, file.Path())
+		}
+
+		if !assertImports(t, file, testCase.imports, testCase.importMarkers, testCase.fileMarkers) {
 			return nil
 		}
 

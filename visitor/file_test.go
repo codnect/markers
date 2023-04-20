@@ -6,12 +6,15 @@ import (
 )
 
 type testFile struct {
-	constants   []constantInfo
-	interfaces  map[string]interfaceInfo
-	structs     map[string]structInfo
-	functions   map[string]functionInfo
-	imports     []importInfo
-	customTypes map[string]customTypeInfo
+	path          string
+	constants     []constantInfo
+	interfaces    map[string]interfaceInfo
+	structs       map[string]structInfo
+	functions     map[string]functionInfo
+	imports       []importInfo
+	customTypes   map[string]customTypeInfo
+	importMarkers []importMarkerInfo
+	fileMarkers   []fileMarkerInfo
 }
 
 type importInfo struct {
@@ -21,6 +24,14 @@ type importInfo struct {
 	file       string
 	position   Position
 }
+
+type importMarkerInfo struct {
+	value string
+	pkg   string
+	alias string
+}
+
+type fileMarkerInfo any
 
 func sideEffects(imports []importInfo) []importInfo {
 	result := make([]importInfo, 0)
@@ -33,7 +44,7 @@ func sideEffects(imports []importInfo) []importInfo {
 	return result
 }
 
-func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool {
+func assertImports(t *testing.T, file *File, expectedImports []importInfo, expectedImportMarkers []importMarkerInfo, fileMarkers []fileMarkerInfo) bool {
 	if file.Imports().Len() != len(expectedImports) {
 		t.Errorf("the number of the imports in file %s should be %d, but got %d", file.name, len(expectedImports), file.Imports().Len())
 	}
@@ -82,5 +93,33 @@ func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool 
 		assert.Equal(t, expectedImport.position, actualImport.Position(), "position for import with path %s in file %s should be %w, but got %w", expectedImport.name, "", expectedImport.position, fileImport.Position())
 	}
 
+	if file.Markers().Count() != len(fileMarkers) {
+		t.Errorf("the number of the file markers in file %s should be %d, but got %d", file.name, len(fileMarkers), file.Markers().Count())
+	}
+
+	assertImportMarkers(t, file, expectedImportMarkers)
+
 	return true
+}
+
+func assertImportMarkers(t *testing.T, file *File, expectedImportMarkers []importMarkerInfo) {
+
+	if file.NumImportMarkers() != len(expectedImportMarkers) {
+		t.Errorf("the number of the import markers in file %s should be %d, but got %d", file.name, len(expectedImportMarkers), len(file.ImportMarkers()))
+	}
+
+	for index, importMarker := range file.ImportMarkers() {
+		expectedImportMarker := expectedImportMarkers[index]
+		if importMarker.Pkg != expectedImportMarker.pkg {
+			t.Errorf("the Pkg attribute of the import marker in file %s shoud be %s, but got %s", file.name, expectedImportMarker.pkg, importMarker.Pkg)
+		}
+
+		if importMarker.Value != expectedImportMarker.value {
+			t.Errorf("the Value attribute of the import marker in file %s shoud be %s, but got %s", file.name, expectedImportMarker.value, importMarker.Value)
+		}
+
+		if importMarker.Alias != expectedImportMarker.alias {
+			t.Errorf("the Alias attribute of the import marker in file %s shoud be %s, but got %s", file.name, expectedImportMarker.alias, importMarker.Alias)
+		}
+	}
 }
