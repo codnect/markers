@@ -1,5 +1,6 @@
 // +import=marker, Pkg=github.com/procyon-projects/markers
-// +marker:package-level:Name=coffee.go
+// +import=test-marker, Pkg=github.com/procyon-projects/test-markers
+// +test-marker:package-level:Name=coffee.go
 
 package menu
 

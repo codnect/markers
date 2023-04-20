@@ -6,6 +6,9 @@ import (
 	"github.com/procyon-projects/markers"
 	"github.com/procyon-projects/markers/packages"
 	"github.com/stretchr/testify/assert"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -68,24 +71,29 @@ func TestEachFile_ShouldReturnErrorIfTraversedPkgIsNil(t *testing.T) {
 }
 
 func TestVisitor_VisitPackage(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	path := filepath.Dir(file)
+	lastSlashIndex := strings.LastIndex(path, "/")
+	path = path[:lastSlashIndex]
+
 	markerList := []struct {
 		Name   string
 		Level  markers.TargetLevel
 		Output interface{}
 	}{
-		{Name: "marker:package-level", Level: markers.PackageLevel, Output: &PackageLevel{}},
-		{Name: "marker:interface-type-level", Level: markers.InterfaceTypeLevel, Output: &InterfaceTypeLevel{}},
-		{Name: "marker:interface-method-level", Level: markers.InterfaceMethodLevel, Output: &InterfaceMethodLevel{}},
-		{Name: "marker:function-level", Level: markers.FunctionLevel, Output: &FunctionLevel{}},
-		{Name: "marker:struct-type-level", Level: markers.StructTypeLevel, Output: &StructTypeLevel{}},
-		{Name: "marker:struct-method-level", Level: markers.StructMethodLevel, Output: &StructMethodLevel{}},
-		{Name: "marker:struct-field-level", Level: markers.FieldLevel, Output: &StructFieldLevel{}},
+		{Name: "test-marker:package-level", Level: markers.PackageLevel, Output: &PackageLevel{}},
+		{Name: "test-marker:interface-type-level", Level: markers.InterfaceTypeLevel, Output: &InterfaceTypeLevel{}},
+		{Name: "test-marker:interface-method-level", Level: markers.InterfaceMethodLevel, Output: &InterfaceMethodLevel{}},
+		{Name: "test-marker:function-level", Level: markers.FunctionLevel, Output: &FunctionLevel{}},
+		{Name: "test-marker:struct-type-level", Level: markers.StructTypeLevel, Output: &StructTypeLevel{}},
+		{Name: "test-marker:struct-method-level", Level: markers.StructMethodLevel, Output: &StructMethodLevel{}},
+		{Name: "test-marker:struct-field-level", Level: markers.FieldLevel, Output: &StructFieldLevel{}},
 	}
 
 	testCasePkgs := map[string]map[string]testFile{
 		"github.com/procyon-projects/markers/test/menu": {
 			"coffee.go": {
-				path:        "github.com/procyon-projects/markers/test/menu/coffee.go",
+				path:        fmt.Sprintf("%s/test/menu/coffee.go", path),
 				constants:   coffeeConstants,
 				customTypes: coffeeCustomTypes,
 				functions: map[string]functionInfo{
@@ -96,10 +104,19 @@ func TestVisitor_VisitPackage(t *testing.T) {
 						pkg:   "github.com/procyon-projects/markers",
 						value: "marker",
 					},
+					{
+						pkg:   "github.com/procyon-projects/test-markers",
+						value: "test-marker",
+					},
+				},
+				fileMarkers: []fileMarkerInfo{
+					PackageLevel{
+						Name: "coffee.go",
+					},
 				},
 			},
 			"fresh.go": {
-				path:        "github.com/procyon-projects/markers/test/menu/fresh.go",
+				path:        fmt.Sprintf("%s/test/menu/fresh.go", path),
 				constants:   freshConstants,
 				customTypes: freshCustomTypes,
 				importMarkers: []importMarkerInfo{
@@ -107,24 +124,33 @@ func TestVisitor_VisitPackage(t *testing.T) {
 						pkg:   "github.com/procyon-projects/markers",
 						value: "marker",
 					},
+					{
+						pkg:   "github.com/procyon-projects/test-markers",
+						value: "test-marker",
+					},
+				},
+				fileMarkers: []fileMarkerInfo{
+					PackageLevel{
+						Name: "fresh.go",
+					},
 				},
 			},
 			"dessert.go": {
-				path: "github.com/procyon-projects/markers/test/menu/dessert.go",
+				path: fmt.Sprintf("%s/test/menu/dessert.go", path),
 				imports: []importInfo{
 					{
 						name:       "",
 						path:       "fmt",
 						sideEffect: false,
 						file:       "dessert.go",
-						position:   Position{Line: 7, Column: 2},
+						position:   Position{Line: 8, Column: 2},
 					},
 					{
 						name:       "_",
 						path:       "strings",
 						sideEffect: true,
 						file:       "dessert.go",
-						position:   Position{Line: 8, Column: 2},
+						position:   Position{Line: 9, Column: 2},
 					},
 				},
 				functions: map[string]functionInfo{
@@ -150,11 +176,21 @@ func TestVisitor_VisitPackage(t *testing.T) {
 						pkg:   "github.com/procyon-projects/markers",
 						value: "marker",
 					},
+					{
+						pkg:   "github.com/procyon-projects/test-markers",
+						value: "test-marker",
+					},
+				},
+				fileMarkers: []fileMarkerInfo{
+					PackageLevel{
+						Name: "dessert.go",
+					},
 				},
 			},
 		},
 		"github.com/procyon-projects/markers/test/any": {
 			"error.go": {
+				path:      fmt.Sprintf("%s/test/any/error.go", path),
 				constants: []constantInfo{},
 				functions: map[string]functionInfo{
 					"Print":    printErrorMethod,
@@ -162,10 +198,12 @@ func TestVisitor_VisitPackage(t *testing.T) {
 				},
 			},
 			"other.go": {
+				path:        fmt.Sprintf("%s/test/any/other.go", path),
 				constants:   []constantInfo{},
 				customTypes: errorCustomTypes,
 			},
 			"permission.go": {
+				path:        fmt.Sprintf("%s/test/any/permission.go", path),
 				constants:   permissionConstants,
 				customTypes: permissionCustomTypes,
 				importMarkers: []importMarkerInfo{
@@ -174,12 +212,23 @@ func TestVisitor_VisitPackage(t *testing.T) {
 						value: "marker",
 						alias: "test",
 					},
+					{
+						pkg:   "github.com/procyon-projects/test-markers",
+						value: "test-marker",
+					},
+				},
+				fileMarkers: []fileMarkerInfo{
+					PackageLevel{
+						Name: "permission.go",
+					},
 				},
 			},
 			"math.go": {
+				path:      fmt.Sprintf("%s/test/any/math.go", path),
 				constants: mathConstants,
 			},
 			"generics.go": {
+				path:      fmt.Sprintf("%s/test/any/generics.go", path),
 				constants: []constantInfo{},
 				functions: map[string]functionInfo{
 					"GenericFunction": genericFunction,
@@ -213,11 +262,13 @@ func TestVisitor_VisitPackage(t *testing.T) {
 				customTypes: genericsCustomTypes,
 			},
 			"method.go": {
+				path: fmt.Sprintf("%s/test/any/method.go", path),
 				functions: map[string]functionInfo{
 					"Print": printHttpHandlerMethod,
 				},
 			},
 			"string.go": {
+				path: fmt.Sprintf("%s/test/any/string.go", path),
 				imports: []importInfo{
 					{
 						name:       "",
@@ -236,7 +287,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 	registry := markers.NewRegistry()
 
 	for _, m := range markerList {
-		err := registry.Register(m.Name, "github.com/procyon-projects/markers", m.Level, m.Output)
+		err := registry.Register(m.Name, "github.com/procyon-projects/test-markers", m.Level, m.Output)
 		if err != nil {
 			t.Errorf("marker %s could not be registered", m.Name)
 			return

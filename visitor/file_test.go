@@ -93,19 +93,31 @@ func assertImports(t *testing.T, file *File, expectedImports []importInfo, expec
 		assert.Equal(t, expectedImport.position, actualImport.Position(), "position for import with path %s in file %s should be %w, but got %w", expectedImport.name, "", expectedImport.position, fileImport.Position())
 	}
 
-	if file.Markers().Count() != len(fileMarkers) {
-		t.Errorf("the number of the file markers in file %s should be %d, but got %d", file.name, len(fileMarkers), file.Markers().Count())
-	}
-
+	assertFileMarkers(t, file, fileMarkers)
 	assertImportMarkers(t, file, expectedImportMarkers)
 
 	return true
+}
+
+func assertFileMarkers(t *testing.T, file *File, expectedFileMarkers []fileMarkerInfo) {
+
+	if file.Markers().Count() != len(expectedFileMarkers) {
+		t.Errorf("the number of the file markers in file %s should be %d, but got %d", file.name, len(expectedFileMarkers), file.Markers().Count())
+	}
+
+	index := 0
+	for _, actualMarker := range file.Markers() {
+		expectedMarker := expectedFileMarkers[index].(PackageLevel)
+		assert.Equal(t, expectedMarker, actualMarker[0])
+		index++
+	}
 }
 
 func assertImportMarkers(t *testing.T, file *File, expectedImportMarkers []importMarkerInfo) {
 
 	if file.NumImportMarkers() != len(expectedImportMarkers) {
 		t.Errorf("the number of the import markers in file %s should be %d, but got %d", file.name, len(expectedImportMarkers), len(file.ImportMarkers()))
+		return
 	}
 
 	for index, importMarker := range file.ImportMarkers() {
@@ -122,4 +134,24 @@ func assertImportMarkers(t *testing.T, file *File, expectedImportMarkers []impor
 			t.Errorf("the Alias attribute of the import marker in file %s shoud be %s, but got %s", file.name, expectedImportMarker.alias, importMarker.Alias)
 		}
 	}
+}
+
+func TestFiles_FindByNameShouldReturnFileIfItExists(t *testing.T) {
+	files := &Files{
+		elements: []*File{
+			{
+				name: "test",
+			},
+		},
+	}
+
+	file, ok := files.FindByName("test")
+	assert.True(t, ok)
+	assert.NotNil(t, file)
+	assert.Equal(t, "test", file.name)
+}
+
+func TestFiles_AtShouldReturnNilIfIndexIsOutOfBound(t *testing.T) {
+	files := &Files{}
+	assert.Nil(t, files.At(-1))
 }

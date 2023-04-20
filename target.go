@@ -57,7 +57,7 @@ func FindTargetLevel(node ast.Node) TargetLevel {
 		} else {
 			return FunctionLevel
 		}
-	case *ast.Package:
+	case *ast.Package, *ast.File:
 		return PackageLevel
 	}
 

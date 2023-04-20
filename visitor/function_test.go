@@ -234,7 +234,7 @@ var (
 		name:     "PrintCookie",
 		fileName: "coffee.go",
 		position: Position{
-			Line:   15,
+			Line:   16,
 			Column: 1,
 		},
 		isVariadic: false,
@@ -380,7 +380,7 @@ var (
 	}
 	breadFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Bread",
 				},
@@ -389,7 +389,7 @@ var (
 		name:     "Bread",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   16,
+			Line:   17,
 			Column: 7,
 		},
 		isVariadic: false,
@@ -413,7 +413,7 @@ var (
 
 	macaronFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Macaron",
 				},
@@ -422,7 +422,7 @@ var (
 		name:     "Macaron",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   133,
+			Line:   134,
 			Column: 9,
 		},
 		isVariadic: false,
@@ -446,7 +446,7 @@ var (
 
 	makeACakeFunction = functionInfo{
 		markers: markers.Values{
-			"marker:function-level": {
+			"test-marker:function-level": {
 				FunctionLevel{
 					Name: "MakeACake",
 				},
@@ -455,7 +455,7 @@ var (
 		name:     "MakeACake",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   113,
+			Line:   114,
 			Column: 1,
 		},
 		isVariadic: false,
@@ -475,7 +475,7 @@ var (
 
 	biscuitCakeFunction = functionInfo{
 		markers: markers.Values{
-			"marker:function-level": {
+			"test-marker:function-level": {
 				FunctionLevel{
 					Name: "BiscuitCake",
 				},
@@ -484,7 +484,7 @@ var (
 		name:     "BiscuitCake",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   119,
+			Line:   120,
 			Column: 1,
 		},
 		isVariadic: true,
@@ -516,7 +516,7 @@ var (
 
 	funfettiFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Funfetti",
 				},
@@ -525,7 +525,7 @@ var (
 		name:     "Funfetti",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   51,
+			Line:   52,
 			Column: 10,
 		},
 		isVariadic: false,
@@ -545,7 +545,7 @@ var (
 
 	iceCreamFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "IceCream",
 				},
@@ -554,7 +554,7 @@ var (
 		name:     "IceCream",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   84,
+			Line:   85,
 			Column: 10,
 		},
 		isVariadic: true,
@@ -578,7 +578,7 @@ var (
 
 	cupCakeFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "CupCake",
 				},
@@ -587,7 +587,7 @@ var (
 		name:     "CupCake",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   88,
+			Line:   89,
 			Column: 9,
 		},
 		isVariadic: false,
@@ -611,7 +611,7 @@ var (
 
 	tartFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Tart",
 				},
@@ -620,7 +620,7 @@ var (
 		name:     "Tart",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   92,
+			Line:   93,
 			Column: 6,
 		},
 		isVariadic: false,
@@ -635,7 +635,7 @@ var (
 
 	donutFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Donut",
 				},
@@ -644,7 +644,7 @@ var (
 		name:     "Donut",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   96,
+			Line:   97,
 			Column: 7,
 		},
 		isVariadic: false,
@@ -659,7 +659,7 @@ var (
 
 	puddingFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Pudding",
 				},
@@ -668,7 +668,7 @@ var (
 		name:     "Pudding",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   100,
+			Line:   101,
 			Column: 9,
 		},
 		isVariadic: false,
@@ -683,7 +683,7 @@ var (
 
 	pieFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "Pie",
 				},
@@ -692,7 +692,7 @@ var (
 		name:     "Pie",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   104,
+			Line:   105,
 			Column: 5,
 		},
 		isVariadic: false,
@@ -707,7 +707,7 @@ var (
 
 	muffinFunction = functionInfo{
 		markers: markers.Values{
-			"marker:interface-method-level": {
+			"test-marker:interface-method-level": {
 				InterfaceMethodLevel{
 					Name: "muffin",
 				},
@@ -716,7 +716,7 @@ var (
 		name:     "muffin",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   108,
+			Line:   109,
 			Column: 8,
 		},
 		isVariadic: false,
@@ -736,7 +736,7 @@ var (
 
 	eatMethod = functionInfo{
 		markers: markers.Values{
-			"marker:struct-method-level": {
+			"test-marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "Eat",
 				},
@@ -745,7 +745,7 @@ var (
 		name:     "Eat",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   24,
+			Line:   25,
 			Column: 1,
 		},
 		receiver: &receiverInfo{
@@ -765,7 +765,7 @@ var (
 
 	buyMethod = functionInfo{
 		markers: markers.Values{
-			"marker:struct-method-level": {
+			"test-marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "Buy",
 				},
@@ -774,7 +774,7 @@ var (
 		name:     "Buy",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   42,
+			Line:   43,
 			Column: 1,
 		},
 		receiver: &receiverInfo{
@@ -794,7 +794,7 @@ var (
 
 	fortuneCookieMethod = functionInfo{
 		markers: markers.Values{
-			"marker:struct-method-level": {
+			"test-marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "FortuneCookie",
 				},
@@ -803,7 +803,7 @@ var (
 		name:     "FortuneCookie",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   67,
+			Line:   68,
 			Column: 1,
 		},
 		receiver: &receiverInfo{
@@ -828,7 +828,7 @@ var (
 
 	oreoMethod = functionInfo{
 		markers: markers.Values{
-			"marker:struct-method-level": {
+			"test-marker:struct-method-level": {
 				StructMethodLevel{
 					Name: "Oreo",
 				},
@@ -837,7 +837,7 @@ var (
 		name:     "Oreo",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   73,
+			Line:   74,
 			Column: 1,
 		},
 		receiver: &receiverInfo{
@@ -898,7 +898,7 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 			t.Errorf("the function %s should not be a variadic function for %s", expectedMethodName, descriptor)
 		}
 
-		// TODO Type Params
+		// TODO: Type Params
 		typeParam := actualMethod.TypeParameters()
 		if typeParam != nil {
 			typeParam.Len()

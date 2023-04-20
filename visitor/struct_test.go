@@ -92,7 +92,7 @@ var (
 
 	friedCookieStruct = structInfo{
 		markers: markers.Values{
-			"marker:struct-type-level": {
+			"test-marker:struct-type-level": {
 				StructTypeLevel{
 					Name: "FriedCookie",
 				},
@@ -102,7 +102,7 @@ var (
 		fileName:    "dessert.go",
 		isExported:  true,
 		position: Position{
-			Line:   30,
+			Line:   31,
 			Column: 6,
 		},
 		methods: map[string]functionInfo{
@@ -142,7 +142,7 @@ var (
 
 	cookieStruct = structInfo{
 		markers: markers.Values{
-			"marker:struct-type-level": {
+			"test-marker:struct-type-level": {
 				StructTypeLevel{
 					Name: "cookie",
 					Any: map[string]interface{}{
@@ -155,7 +155,7 @@ var (
 		fileName:    "dessert.go",
 		isExported:  false,
 		position: Position{
-			Line:   56,
+			Line:   57,
 			Column: 6,
 		},
 		methods: map[string]functionInfo{

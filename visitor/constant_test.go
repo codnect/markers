@@ -18,7 +18,7 @@ var (
 		{
 			name: "Cappuccino",
 			position: Position{
-				Line:   9,
+				Line:   10,
 				Column: 2,
 			},
 			value:      -1,
@@ -28,7 +28,7 @@ var (
 		{
 			name: "Americano",
 			position: Position{
-				Line:   10,
+				Line:   11,
 				Column: 2,
 			},
 			value:      -2,
@@ -38,7 +38,7 @@ var (
 		{
 			name: "Latte",
 			position: Position{
-				Line:   11,
+				Line:   12,
 				Column: 2,
 			},
 			value:      -3,
@@ -48,7 +48,7 @@ var (
 		{
 			name: "TurkishCoffee",
 			position: Position{
-				Line:   12,
+				Line:   13,
 				Column: 2,
 			},
 			value:      -4,
@@ -60,7 +60,7 @@ var (
 		{
 			name: "ClassicLemonade",
 			position: Position{
-				Line:   9,
+				Line:   10,
 				Column: 2,
 			},
 			value:      0,
@@ -70,7 +70,7 @@ var (
 		{
 			name: "BlueberryLemonade",
 			position: Position{
-				Line:   10,
+				Line:   11,
 				Column: 2,
 			},
 			value:      1,
@@ -80,7 +80,7 @@ var (
 		{
 			name: "WatermelonLemonade",
 			position: Position{
-				Line:   11,
+				Line:   12,
 				Column: 2,
 			},
 			value:      2,
@@ -90,7 +90,7 @@ var (
 		{
 			name: "MangoLemonade",
 			position: Position{
-				Line:   12,
+				Line:   13,
 				Column: 2,
 			},
 			value:      3,
@@ -100,7 +100,7 @@ var (
 		{
 			name: "StrawberryLemonade",
 			position: Position{
-				Line:   13,
+				Line:   14,
 				Column: 2,
 			},
 			value:      4,
@@ -134,7 +134,7 @@ var (
 		{
 			name: "Read",
 			position: Position{
-				Line:   9,
+				Line:   10,
 				Column: 2,
 			},
 			value:      1,
@@ -144,7 +144,7 @@ var (
 		{
 			name: "Write",
 			position: Position{
-				Line:   10,
+				Line:   11,
 				Column: 2,
 			},
 			value:      2,
@@ -154,7 +154,7 @@ var (
 		{
 			name: "ReadWrite",
 			position: Position{
-				Line:   11,
+				Line:   12,
 				Column: 2,
 			},
 			value:      3,
@@ -164,7 +164,7 @@ var (
 		{
 			name: "RequestGet",
 			position: Position{
-				Line:   17,
+				Line:   18,
 				Column: 2,
 			},
 			value:      "GET",
@@ -174,7 +174,7 @@ var (
 		{
 			name: "RequestPost",
 			position: Position{
-				Line:   18,
+				Line:   19,
 				Column: 2,
 			},
 			value:      "POST",
@@ -184,7 +184,7 @@ var (
 		{
 			name: "RequestPatch",
 			position: Position{
-				Line:   19,
+				Line:   20,
 				Column: 2,
 			},
 			value:      "PATCH",
@@ -194,7 +194,7 @@ var (
 		{
 			name: "RequestDelete",
 			position: Position{
-				Line:   20,
+				Line:   21,
 				Column: 2,
 			},
 			value:      "DELETE",
@@ -204,7 +204,7 @@ var (
 		{
 			name: "SendDir",
 			position: Position{
-				Line:   26,
+				Line:   27,
 				Column: 2,
 			},
 			value:      2,
@@ -214,7 +214,7 @@ var (
 		{
 			name: "ReceiveDir",
 			position: Position{
-				Line:   27,
+				Line:   28,
 				Column: 2,
 			},
 			value:      1,
@@ -224,7 +224,7 @@ var (
 		{
 			name: "BothDir",
 			position: Position{
-				Line:   28,
+				Line:   29,
 				Column: 2,
 			},
 			value:      3,

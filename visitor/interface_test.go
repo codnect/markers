@@ -74,7 +74,7 @@ var (
 	}
 	bakeryShopInterface = interfaceInfo{
 		markers: markers.Values{
-			"marker:interface-type-level": {
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "BakeryShop",
 				},
@@ -84,7 +84,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   13,
+			Line:   14,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -107,7 +107,7 @@ var (
 
 	dessertInterface = interfaceInfo{
 		markers: markers.Values{
-			"marker:interface-type-level": {
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "Dessert",
 				},
@@ -117,7 +117,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   79,
+			Line:   80,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -143,7 +143,7 @@ var (
 
 	newYearsEveCookieInterface = interfaceInfo{
 		markers: markers.Values{
-			"marker:interface-type-level": {
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "newYearsEveCookie",
 				},
@@ -153,7 +153,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: false,
 		position: Position{
-			Line:   48,
+			Line:   49,
 			Column: 6,
 		},
 		methods: map[string]functionInfo{
@@ -167,7 +167,7 @@ var (
 
 	sweetShopInterface = interfaceInfo{
 		markers: markers.Values{
-			"marker:interface-type-level": {
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "SweetShop",
 				},
@@ -177,7 +177,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   125,
+			Line:   126,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
