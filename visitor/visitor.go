@@ -113,7 +113,7 @@ func EachFile(collector *markers.Collector, pkgs []*packages.Package, callback F
 	pkgCollector := newPackageCollector()
 
 	for _, pkg := range pkgs {
-		if !pkgCollector.isVisited(pkg.ID) || !pkgCollector.isProcessed(pkg.ID) {
+		if !pkgCollector.isVisited(pkg.ID) {
 			visitPackage(pkg, pkgCollector, packageMarkers)
 		}
 	}

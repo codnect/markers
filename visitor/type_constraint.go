@@ -20,7 +20,7 @@ func (c *TypeConstraint) Underlying() Type {
 }
 
 func (c *TypeConstraint) Satisfy(t Type) bool {
-	// TODO implement this method
+	//TODO: implement this method
 	return false
 }
 

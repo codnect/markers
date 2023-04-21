@@ -166,6 +166,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 					"Dessert":           dessertInterface,
 					"newYearsEveCookie": newYearsEveCookieInterface,
 					"SweetShop":         sweetShopInterface,
+					"Meal":              mealInterface,
 				},
 				structs: map[string]structInfo{
 					"FriedCookie": friedCookieStruct,

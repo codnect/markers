@@ -14,17 +14,17 @@ type Repository[T any, ID any | string | constraints.Ordered] interface {
 	Save(entity T) T
 }
 
-type Controller[C context.Context, T any | int] struct {
+type Controller[C context.Context, T any | int, Y ~int] struct {
 	AnyField1 string
 	AnyField2 int
 }
 
-func (c Controller[K, C]) Index(ctx K, h C) {
+func (c Controller[K, C, Y]) Index(ctx K, h C) {
 
 }
 
 type TestController struct {
-	Controller[context.Context, int16]
+	Controller[context.Context, int16, int]
 }
 
 type Number interface {

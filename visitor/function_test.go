@@ -211,6 +211,10 @@ var (
 				name:     "C",
 				typeName: "",
 			},
+			{
+				name:     "Y",
+				typeName: "",
+			},
 		},
 	}
 	publishMethod = functionInfo{
@@ -422,7 +426,7 @@ var (
 		name:     "Macaron",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   134,
+			Line:   138,
 			Column: 9,
 		},
 		isVariadic: false,
@@ -455,7 +459,7 @@ var (
 		name:     "MakeACake",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   114,
+			Line:   118,
 			Column: 1,
 		},
 		isVariadic: false,
@@ -484,7 +488,7 @@ var (
 		name:     "BiscuitCake",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   120,
+			Line:   124,
 			Column: 1,
 		},
 		isVariadic: true,
@@ -525,7 +529,7 @@ var (
 		name:     "Funfetti",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   52,
+			Line:   56,
 			Column: 10,
 		},
 		isVariadic: false,
@@ -554,7 +558,7 @@ var (
 		name:     "IceCream",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   85,
+			Line:   89,
 			Column: 10,
 		},
 		isVariadic: true,
@@ -587,7 +591,7 @@ var (
 		name:     "CupCake",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   89,
+			Line:   93,
 			Column: 9,
 		},
 		isVariadic: false,
@@ -620,7 +624,7 @@ var (
 		name:     "Tart",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   93,
+			Line:   97,
 			Column: 6,
 		},
 		isVariadic: false,
@@ -644,7 +648,7 @@ var (
 		name:     "Donut",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   97,
+			Line:   101,
 			Column: 7,
 		},
 		isVariadic: false,
@@ -668,7 +672,7 @@ var (
 		name:     "Pudding",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   101,
+			Line:   105,
 			Column: 9,
 		},
 		isVariadic: false,
@@ -692,7 +696,7 @@ var (
 		name:     "Pie",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   105,
+			Line:   109,
 			Column: 5,
 		},
 		isVariadic: false,
@@ -716,7 +720,7 @@ var (
 		name:     "muffin",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   109,
+			Line:   113,
 			Column: 8,
 		},
 		isVariadic: false,
@@ -774,7 +778,7 @@ var (
 		name:     "Buy",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   43,
+			Line:   47,
 			Column: 1,
 		},
 		receiver: &receiverInfo{
@@ -803,7 +807,7 @@ var (
 		name:     "FortuneCookie",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   68,
+			Line:   72,
 			Column: 1,
 		},
 		receiver: &receiverInfo{
@@ -837,7 +841,7 @@ var (
 		name:     "Oreo",
 		fileName: "dessert.go",
 		position: Position{
-			Line:   74,
+			Line:   78,
 			Column: 1,
 		},
 		receiver: &receiverInfo{
@@ -860,6 +864,24 @@ var (
 			{
 				name:     "",
 				typeName: "error",
+			},
+		},
+	}
+
+	mealEatMethod = functionInfo{
+		markers:  markers.Values{},
+		name:     "Eat",
+		fileName: "dessert.go",
+		position: Position{
+			Line:   147,
+			Column: 5,
+		},
+		isVariadic: false,
+		params:     []variableInfo{},
+		results: []variableInfo{
+			{
+				name:     "",
+				typeName: "bool",
 			},
 		},
 	}
@@ -908,6 +930,12 @@ func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, 
 
 		assert.Equal(t, expectedMethod.position, actualMethod.Position(), "the position of the function %s for %s should be %w, but got %w",
 			expectedMethodName, descriptor, expectedMethod.position, actualMethod.Position())
+
+		if expectedMethod.receiver != nil && actualMethod.Receiver() == nil {
+			t.Errorf("the function %s should have a recevier named %s", actualMethod.Name(), expectedMethod.receiver.name)
+		} else if expectedMethod.receiver == nil && actualMethod.Receiver() != nil {
+			t.Errorf("the function %s should not have a recevier named %s", actualMethod.Name(), actualMethod.Name())
+		}
 
 		assertFunctionParameters(t, expectedMethod.params, actualMethod.Parameters(), fmt.Sprintf("function %s (%s)", expectedMethodName, descriptor))
 

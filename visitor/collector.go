@@ -3,10 +3,9 @@ package visitor
 import "github.com/procyon-projects/markers/packages"
 
 type packageCollector struct {
-	hasSeen      map[string]bool
-	hasProcessed map[string]bool
-	files        map[string]*Files
-	packages     map[string]*packages.Package
+	hasSeen  map[string]bool
+	files    map[string]*Files
+	packages map[string]*packages.Package
 
 	unprocessedTypes map[string]map[string]Type
 
@@ -16,7 +15,6 @@ type packageCollector struct {
 func newPackageCollector() *packageCollector {
 	return &packageCollector{
 		hasSeen:          make(map[string]bool),
-		hasProcessed:     make(map[string]bool),
 		files:            make(map[string]*Files),
 		packages:         make(map[string]*packages.Package),
 		unprocessedTypes: make(map[string]map[string]Type),
@@ -24,16 +22,8 @@ func newPackageCollector() *packageCollector {
 	}
 }
 
-func (collector *packageCollector) getPackage(pkgId string) *packages.Package {
-	return collector.packages[pkgId]
-}
-
 func (collector *packageCollector) markAsSeen(pkgId string) {
 	collector.hasSeen[pkgId] = true
-}
-
-func (collector *packageCollector) markAsProcessed(pkgId string) {
-	collector.hasProcessed[pkgId] = true
 }
 
 func (collector *packageCollector) isVisited(pkgId string) bool {
@@ -44,16 +34,6 @@ func (collector *packageCollector) isVisited(pkgId string) bool {
 	}
 
 	return visited
-}
-
-func (collector *packageCollector) isProcessed(pkgId string) bool {
-	processed, ok := collector.hasProcessed[pkgId]
-
-	if !ok {
-		return false
-	}
-
-	return processed
 }
 
 func (collector *packageCollector) addFile(pkgId string, file *File) {

@@ -36,6 +36,10 @@ type FriedCookie struct {
 	// ChocolateChip is a field
 	// +test-marker:struct-field-level:Name=CookieDough
 	cookieDough any
+	// This is an anonymous struct
+	anonymousStruct struct{}
+	// This is an empty interface
+	emptyInterface interface{}
 }
 
 // Buy is a method
@@ -136,4 +140,9 @@ type SweetShop interface {
 	// Dessert is an embedded interface
 	// +test-marker:interface-method-level:Name=Dessert
 	Dessert
+}
+
+// Meal is an interface
+type Meal interface {
+	Eat() bool
 }

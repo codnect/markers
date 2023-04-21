@@ -2,6 +2,7 @@ package visitor
 
 import (
 	"fmt"
+	"github.com/procyon-projects/markers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -12,6 +13,7 @@ type customTypeInfo struct {
 	isExported         bool
 	methods            map[string]functionInfo
 	stringValue        string
+	markers            markers.Values
 }
 
 var (
@@ -133,6 +135,8 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 		}
 
 		assertFunctions(t, fmt.Sprintf("custom type %s", actualCustomType.Name()), actualCustomType.Methods(), expectedCustomType.methods)
+		assertMarkers(t, expectedCustomType.markers, actualCustomType.Markers(), fmt.Sprintf("type %s %s", expectedCustomTypeName, expectedCustomType.name))
+
 		index++
 	}
 

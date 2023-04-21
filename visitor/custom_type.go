@@ -97,10 +97,6 @@ func (c *CustomType) Markers() markers.Values {
 	return c.markers
 }
 
-func (c *CustomType) SpecType() *ast.TypeSpec {
-	return c.specType
-}
-
 func (c *CustomType) String() string {
 	var builder strings.Builder
 
@@ -155,8 +151,6 @@ func (c *CustomType) loadTypeParams() {
 				for _, item := range typeSets {
 					if constraint, isConstraint := item.(*TypeConstraint); isConstraint {
 						constraints = append(constraints, constraint)
-					} else {
-						constraints = append(constraints, &TypeConstraint{typ: item})
 					}
 				}
 			} else {

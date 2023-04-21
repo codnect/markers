@@ -358,8 +358,7 @@ func (s *Struct) getFieldsFromFieldList() []*Field {
 			field := &Field{
 				name:       name,
 				isExported: ast.IsExported(name),
-				// TODO set position
-				position:   Position{},
+				position:   getPosition(s.pkg, rawField.Pos()),
 				markers:    markers[rawField],
 				file:       s.file,
 				tags:       tags,
@@ -506,8 +505,6 @@ func (s *Struct) loadTypeParams() {
 				for _, item := range typeSets {
 					if constraint, isConstraint := item.(*TypeConstraint); isConstraint {
 						constraints = append(constraints, constraint)
-					} else {
-						constraints = append(constraints, &TypeConstraint{typ: item})
 					}
 				}
 			} else {

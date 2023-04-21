@@ -117,7 +117,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   80,
+			Line:   84,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -153,7 +153,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: false,
 		position: Position{
-			Line:   49,
+			Line:   53,
 			Column: 6,
 		},
 		methods: map[string]functionInfo{
@@ -177,7 +177,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   126,
+			Line:   130,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -198,12 +198,29 @@ var (
 		embeddedInterfaces: []string{"newYearsEveCookie", "Dessert"},
 		stringValue:        "menu.SweetShop",
 	}
+	mealInterface = interfaceInfo{
+		markers:    markers.Values{},
+		name:       "Meal",
+		fileName:   "dessert.go",
+		isExported: true,
+		position: Position{
+			Line:   146,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"Eat": mealEatMethod,
+		},
+		methods: map[string]functionInfo{
+			"Eat": mealEatMethod,
+		},
+		stringValue: "menu.Meal",
+	}
 )
 
 func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceInfo) bool {
 
 	if len(interfaces) != file.Interfaces().Len() {
-		t.Errorf("the number of the interface should be %d, but got %d", len(interfaces), file.Interfaces().Len())
+		t.Errorf("the number of the interface in file %s should be %d, but got %d", file.Name(), len(interfaces), file.Interfaces().Len())
 		return false
 	}
 

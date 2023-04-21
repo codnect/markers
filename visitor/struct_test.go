@@ -12,6 +12,7 @@ type fieldInfo struct {
 	typeName        string
 	isExported      bool
 	isEmbeddedField bool
+	markers         markers.Values
 }
 
 type structInfo struct {
@@ -26,15 +27,16 @@ type structInfo struct {
 	numFields         int
 	totalFields       int
 	numEmbeddedFields int
-	implements        map[string]struct{}
 	stringValue       string
+	isAnonymous       bool
+	interfaces        []string
 }
 
 // structs
 var (
 	controllerStruct = structInfo{
 		markers:     markers.Values{},
-		stringValue: "any.Controller[C context.Context,T any|int]",
+		stringValue: "any.Controller[C context.Context,T any|int,Y ~int]",
 		fileName:    "generics.go",
 		isExported:  true,
 		position: Position{
@@ -77,7 +79,13 @@ var (
 		allMethods: map[string]functionInfo{
 			"Index": indexMethod,
 		},
-		fields: map[string]fieldInfo{},
+		fields: map[string]fieldInfo{
+			"Controller": {
+				isExported:      true,
+				isEmbeddedField: true,
+				typeName:        "Controller",
+			},
+		},
 		embeddedFields: map[string]fieldInfo{
 			"Controller": {
 				isExported:      true,
@@ -126,6 +134,23 @@ var (
 				isExported:      false,
 				isEmbeddedField: false,
 				typeName:        "any",
+				markers: markers.Values{
+					"test-marker:struct-field-level": {
+						StructFieldLevel{
+							Name: "CookieDough",
+						},
+					},
+				},
+			},
+			"anonymousStruct": {
+				isExported:      false,
+				isEmbeddedField: false,
+				typeName:        "struct{}",
+			},
+			"emptyInterface": {
+				isExported:      false,
+				isEmbeddedField: false,
+				typeName:        "interface{}",
 			},
 		},
 		embeddedFields: map[string]fieldInfo{
@@ -135,8 +160,9 @@ var (
 				typeName:        "cookie",
 			},
 		},
-		numFields:         2,
-		totalFields:       3,
+		interfaces:        []string{"Meal"},
+		numFields:         4,
+		totalFields:       5,
 		numEmbeddedFields: 1,
 	}
 
@@ -155,7 +181,7 @@ var (
 		fileName:    "dessert.go",
 		isExported:  false,
 		position: Position{
-			Line:   57,
+			Line:   61,
 			Column: 6,
 		},
 		methods: map[string]functionInfo{
@@ -173,11 +199,25 @@ var (
 				isExported:      true,
 				isEmbeddedField: false,
 				typeName:        "string",
+				markers: markers.Values{
+					"test-marker:struct-field-level": {
+						StructFieldLevel{
+							Name: "ChocolateChip",
+						},
+					},
+				},
 			},
 			"tripleChocolateCookie": {
 				isExported:      false,
 				isEmbeddedField: false,
 				typeName:        "map[string]error",
+				markers: markers.Values{
+					"test-marker:struct-field-level": {
+						StructFieldLevel{
+							Name: "tripleChocolateCookie",
+						},
+					},
+				},
 			},
 		},
 		embeddedFields:    map[string]fieldInfo{},
@@ -221,6 +261,12 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 			t.Errorf("struct with name %s is not exported, but should be exported", actualStruct.Name())
 		}
 
+		if actualStruct.IsAnonymous() && !expectedStruct.isAnonymous {
+			t.Errorf("struct with name %s is anonymous, but should be anonymous", actualStruct.Name())
+		} else if !actualStruct.IsAnonymous() && expectedStruct.isAnonymous {
+			t.Errorf("struct with name %s is not anonymous, but should be anonymous", actualStruct.Name())
+		}
+
 		if actualStruct.NumFields() == 0 && !actualStruct.IsEmpty() {
 			t.Errorf("the struct %s should be empty", actualStruct.Name())
 		} else if actualStruct.NumFields() != 0 && actualStruct.IsEmpty() {
@@ -240,7 +286,7 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 		}
 
 		if actualStruct.NumFieldsInHierarchy() != expectedStruct.totalFields {
-			t.Errorf("the number of the all fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.totalFields, actualStruct.NumFields())
+			t.Errorf("the number of the all fields of the struct %s should be %d, but got %d", expectedStructName, expectedStruct.totalFields, actualStruct.NumFieldsInHierarchy())
 		}
 
 		if actualStruct.NumEmbeddedFields() != expectedStruct.numEmbeddedFields {
@@ -262,6 +308,19 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 		assertStructFields(t, actualStruct.Name(), actualStruct.Fields(), expectedStruct.fields)
 		assertMarkers(t, expectedStruct.markers, actualStruct.Markers(), fmt.Sprintf("struct %s", expectedStructName))
 
+		for _, interfaceName := range expectedStruct.interfaces {
+			iface, exists := file.Interfaces().FindByName(interfaceName)
+
+			if !exists {
+				t.Errorf("the interface %s should exists in file %s and the struct %s should implement it", interfaceName, file.Name(), actualStruct.Name())
+				continue
+			}
+
+			if !actualStruct.Implements(iface) {
+				t.Errorf(" the struct %s should implement the interface %s", actualStruct.Name(), interfaceName)
+				continue
+			}
+		}
 		index++
 	}
 
@@ -269,6 +328,10 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 }
 
 func assertStructFields(t *testing.T, structName string, actualFields *Fields, expectedFields map[string]fieldInfo) bool {
+	if actualFields.Len() != len(expectedFields) {
+		t.Errorf("the number of the fields of struct %s should be %d, but got %d", structName, len(expectedFields), actualFields.Len())
+		return false
+	}
 
 	for expectedFieldName, expectedField := range expectedFields {
 		actualField, ok := actualFields.FindByName(expectedFieldName)
@@ -297,6 +360,8 @@ func assertStructFields(t *testing.T, structName string, actualFields *Fields, e
 		} else if !actualField.IsEmbedded() && expectedField.isEmbeddedField {
 			t.Errorf("field with name %s for struct %s is not embedded, but should be embedded field", expectedFieldName, structName)
 		}
+
+		assertMarkers(t, expectedField.markers, actualField.Markers(), fmt.Sprintf("field %s in struct %s", expectedFieldName, structName))
 	}
 
 	return true

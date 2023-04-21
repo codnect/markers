@@ -135,6 +135,7 @@ func collectTypeFromTypeSpec(typeSpec *ast.TypeSpec, visitor *packageVisitor) Ty
 					file.customTypes.elements = append(file.customTypes.elements, t)
 				}
 				t.initialize(typeSpec, file, pkg)
+
 			}
 			t.markers = visitor.packageMarkers[typeSpec]
 			return t
@@ -188,7 +189,7 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor, o
 
 		if field, isField := typed.Obj.Decl.(*ast.Field); isField {
 			if typeParameters == nil {
-				// TODO return invalid type
+				//TODO: return invalid type
 				return nil
 			}
 
@@ -196,7 +197,7 @@ func getTypeFromExpression(expr ast.Expr, file *File, visitor *packageVisitor, o
 				return typeParameter
 			}
 
-			// TODO return invalid type
+			//TODO: return invalid type
 			return nil
 		}
 

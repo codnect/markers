@@ -562,8 +562,6 @@ func (f *Function) loadTypeParams() {
 				for _, item := range typeSets {
 					if constraint, isConstraint := item.(*TypeConstraint); isConstraint {
 						constraints = append(constraints, constraint)
-					} else {
-						constraints = append(constraints, &TypeConstraint{typ: item})
 					}
 				}
 			} else {
