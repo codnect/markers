@@ -10,6 +10,7 @@ import (
 type fieldInfo struct {
 	name            string
 	typeName        string
+	stringValue     string
 	isExported      bool
 	isEmbeddedField bool
 	markers         markers.Values
@@ -54,11 +55,13 @@ var (
 				isExported:      true,
 				isEmbeddedField: false,
 				typeName:        "string",
+				stringValue:     "string",
 			},
 			"AnyField2": {
 				isExported:      true,
 				isEmbeddedField: false,
 				typeName:        "int",
+				stringValue:     "int",
 			},
 		},
 		embeddedFields:    map[string]fieldInfo{},
@@ -84,6 +87,7 @@ var (
 				isExported:      true,
 				isEmbeddedField: true,
 				typeName:        "Controller",
+				stringValue:     "Controller[context.Context,int16,int]",
 			},
 		},
 		embeddedFields: map[string]fieldInfo{
@@ -91,6 +95,7 @@ var (
 				isExported:      true,
 				isEmbeddedField: true,
 				typeName:        "Controller",
+				stringValue:     "Controller[context.Context,int16,int]",
 			},
 		},
 		numFields:         1,
@@ -129,11 +134,13 @@ var (
 				isExported:      false,
 				isEmbeddedField: true,
 				typeName:        "cookie",
+				stringValue:     "menu.cookie",
 			},
 			"cookieDough": {
 				isExported:      false,
 				isEmbeddedField: false,
 				typeName:        "any",
+				stringValue:     "any",
 				markers: markers.Values{
 					"test-marker:struct-field-level": {
 						StructFieldLevel{
@@ -146,11 +153,13 @@ var (
 				isExported:      false,
 				isEmbeddedField: false,
 				typeName:        "struct{}",
+				stringValue:     "struct{}",
 			},
 			"emptyInterface": {
 				isExported:      false,
 				isEmbeddedField: false,
 				typeName:        "interface{}",
+				stringValue:     "interface{}",
 			},
 		},
 		embeddedFields: map[string]fieldInfo{
@@ -158,6 +167,7 @@ var (
 				isExported:      false,
 				isEmbeddedField: true,
 				typeName:        "cookie",
+				stringValue:     "menu.cookie",
 			},
 		},
 		interfaces:        []string{"Meal"},
@@ -199,6 +209,7 @@ var (
 				isExported:      true,
 				isEmbeddedField: false,
 				typeName:        "string",
+				stringValue:     "string",
 				markers: markers.Values{
 					"test-marker:struct-field-level": {
 						StructFieldLevel{
@@ -211,6 +222,7 @@ var (
 				isExported:      false,
 				isEmbeddedField: false,
 				typeName:        "map[string]error",
+				stringValue:     "map[string]error",
 				markers: markers.Values{
 					"test-marker:struct-field-level": {
 						StructFieldLevel{
@@ -346,7 +358,11 @@ func assertStructFields(t *testing.T, structName string, actualFields *Fields, e
 		}
 
 		if actualField.Type().Name() != expectedField.typeName {
-			t.Errorf("type of field with name %s for struct %s shoud be %s, but got %s", actualField.Name(), structName, expectedField.typeName, actualField.Type().Name())
+			t.Errorf("type of field with name %s for struct %s shoud be '%s', but got %s", actualField.Name(), structName, expectedField.typeName, actualField.Type().Name())
+		}
+
+		if actualField.Type().String() != expectedField.stringValue {
+			t.Errorf("String() result shoud be '%s' for the field with name %s in struct %s, but got %s", expectedField.stringValue, actualField.Name(), structName, actualField.Type().String())
 		}
 
 		if actualField.IsExported() && !expectedField.isExported {

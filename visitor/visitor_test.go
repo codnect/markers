@@ -190,6 +190,13 @@ func TestVisitor_VisitPackage(t *testing.T) {
 			},
 		},
 		"github.com/procyon-projects/markers/test/any": {
+			"custom.go": {
+				path:      fmt.Sprintf("%s/test/any/custom.go", path),
+				constants: []constantInfo{},
+				functions: map[string]functionInfo{
+					"CustomMethod": customHttpHandlerMethod,
+				},
+			},
 			"error.go": {
 				path:      fmt.Sprintf("%s/test/any/error.go", path),
 				constants: []constantInfo{},

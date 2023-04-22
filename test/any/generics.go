@@ -32,8 +32,8 @@ type Number interface {
 	ToString()
 }
 
-type HttpHandler[C context.Context, K string | int, V constraints.Ordered | constraints.Complex] func(ctx C, value V) K
+type HttpHandler[C context.Context, K string | int, V constraints.Ordered | constraints.Complex, M ~string] func(ctx C, value V) K
 
-type EventPublisher[E any] interface {
+type EventPublisher[E any, ID ~int] interface {
 	Publish(e E)
 }

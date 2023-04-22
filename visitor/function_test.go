@@ -297,6 +297,10 @@ var (
 				name:     "V",
 				typeName: "",
 			},
+			{
+				name:     "M",
+				typeName: "",
+			},
 		},
 	}
 	printErrorMethod = functionInfo{
@@ -885,6 +889,50 @@ var (
 			},
 		},
 	}
+
+	customHttpHandlerMethod = functionInfo{
+		markers:  markers.Values{},
+		name:     "CustomMethod",
+		fileName: "custom.go",
+		position: Position{
+			Line:   3,
+			Column: 1,
+		},
+		isVariadic: false,
+		receiver: &receiverInfo{
+			isPointer: false,
+			typeName:  "HttpHandler",
+		},
+		params: []variableInfo{
+			{
+				name:     "ctx",
+				typeName: "Z",
+			},
+			{
+				name:     "value",
+				typeName: "V",
+			},
+		},
+		results: []variableInfo{},
+		typeParams: []variableInfo{
+			{
+				name:     "Z",
+				typeName: "",
+			},
+			{
+				name:     "K",
+				typeName: "",
+			},
+			{
+				name:     "V",
+				typeName: "",
+			},
+			{
+				name:     "M",
+				typeName: "",
+			},
+		},
+	}
 )
 
 func assertFunctions(t *testing.T, descriptor string, actualMethods *Functions, expectedMethods map[string]functionInfo) bool {
@@ -1021,6 +1069,20 @@ func TestParameters_FindByNameShouldReturnFalseIfParameterNameDoesNotExist(t *te
 	assert.False(t, ok)
 }
 
+func TestParameters_FindByNameShouldReturnIfParameterWithGivenNameExist(t *testing.T) {
+	parameters := &Parameters{
+		elements: []*Parameter{
+			{
+				name: "anyName",
+			},
+		},
+	}
+	parameter, ok := parameters.FindByName("anyName")
+	assert.NotNil(t, parameter)
+	assert.True(t, ok)
+	assert.Equal(t, "anyName", parameter.Name())
+}
+
 func TestResults_FindByNameShouldReturnFalseIfResultNameDoesNotExist(t *testing.T) {
 	results := &Results{}
 	result, ok := results.FindByName("anyName")
@@ -1028,9 +1090,50 @@ func TestResults_FindByNameShouldReturnFalseIfResultNameDoesNotExist(t *testing.
 	assert.False(t, ok)
 }
 
+func TestResults_FindByNameShouldReturnIfResultWithGivenNameExist(t *testing.T) {
+	results := &Results{
+		elements: []*Result{
+			{
+				name: "anyName",
+			},
+		},
+	}
+	result, ok := results.FindByName("anyName")
+	assert.NotNil(t, result)
+	assert.True(t, ok)
+	assert.Equal(t, "anyName", result.Name())
+}
+
 func TestFunctions_FindByNameShouldReturnFalseIfFunctionNameDoesNotExist(t *testing.T) {
 	functions := &Functions{}
 	function, ok := functions.FindByName("anyName")
 	assert.Nil(t, function)
 	assert.False(t, ok)
+}
+
+func TestFunctions_AtShouldReturnIfFunctionWithGivenIndexExist(t *testing.T) {
+	functions := &Functions{
+		elements: []*Function{
+			{
+				name: "anyName",
+			},
+		},
+	}
+	function := functions.At(0)
+	assert.NotNil(t, function)
+	assert.Equal(t, "anyName", function.Name())
+}
+
+func TestFunctions_FindByNameShouldReturnIfFunctionWithGivenNameExist(t *testing.T) {
+	functions := &Functions{
+		elements: []*Function{
+			{
+				name: "anyName",
+			},
+		},
+	}
+	function, ok := functions.FindByName("anyName")
+	assert.NotNil(t, function)
+	assert.True(t, ok)
+	assert.Equal(t, "anyName", function.Name())
 }

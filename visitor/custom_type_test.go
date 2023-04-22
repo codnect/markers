@@ -77,9 +77,10 @@ var (
 			underlyingTypeName: "func (ctx C,value V) K",
 			isExported:         true,
 			methods: map[string]functionInfo{
-				"Print": printHttpHandlerMethod,
+				"Print":        printHttpHandlerMethod,
+				"CustomMethod": customHttpHandlerMethod,
 			},
-			stringValue: "any.HttpHandler[C context.Context,K string|int,V constraints.Ordered|constraints.Complex]",
+			stringValue: "any.HttpHandler[C context.Context,K string|int,V constraints.Ordered|constraints.Complex,M ~string]",
 		},
 	}
 )

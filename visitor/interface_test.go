@@ -70,7 +70,7 @@ var (
 		methods: map[string]functionInfo{
 			"Publish": publishMethod,
 		},
-		stringValue: "any.EventPublisher[E any]",
+		stringValue: "any.EventPublisher[E any,ID ~int]",
 	}
 	bakeryShopInterface = interfaceInfo{
 		markers: markers.Values{
@@ -279,7 +279,7 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 		assert.Equal(t, expectedInterface.position, actualInterface.Position(), "the position of the interface %s should be %w, but got %w",
 			expectedInterfaceName, expectedInterface.position, actualInterface.Position())
 
-		// TODO fix
+		//TODO: fix
 		actualInterface.IsConstraint()
 		actualInterface.EmbeddedInterfaces()
 		actualInterface.EmbeddedTypes()
