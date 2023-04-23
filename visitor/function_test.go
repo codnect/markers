@@ -76,6 +76,11 @@ func (f functionInfo) String() string {
 				builder.WriteString(param.name + " ")
 			}
 
+			if param.importPackage != "" {
+				builder.WriteString(param.importPackage)
+				builder.WriteByte('.')
+			}
+
 			builder.WriteString(param.typeName)
 
 			if i != len(f.typeParams)-1 {
@@ -101,6 +106,12 @@ func (f functionInfo) String() string {
 			if param.isPointer {
 				builder.WriteString("*")
 			}
+
+			if param.importPackage != "" {
+				builder.WriteString(param.importPackage)
+				builder.WriteByte('.')
+			}
+
 			builder.WriteString(param.typeName)
 
 			if i != len(f.params)-1 {
@@ -128,6 +139,12 @@ func (f functionInfo) String() string {
 			if result.isPointer {
 				builder.WriteString("*")
 			}
+
+			if result.importPackage != "" {
+				builder.WriteString(result.importPackage)
+				builder.WriteByte('.')
+			}
+
 			builder.WriteString(result.typeName)
 
 			if i != len(f.results)-1 {
@@ -156,8 +173,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "entity",
-				typeName: "T",
+				name:        "entity",
+				typeName:    "T",
+				stringValue: "entity T",
 			},
 		},
 		results: []variableInfo{
@@ -171,7 +189,7 @@ var (
 		name:     "ToString",
 		fileName: "generics.go",
 		position: Position{
-			Line:   32,
+			Line:   33,
 			Column: 10,
 		},
 		isVariadic: false,
@@ -194,12 +212,14 @@ var (
 		},
 		params: []variableInfo{
 			{
-				name:     "ctx",
-				typeName: "K",
+				name:        "ctx",
+				typeName:    "K",
+				stringValue: "ctx K",
 			},
 			{
-				name:     "h",
-				typeName: "C",
+				name:        "h",
+				typeName:    "C",
+				stringValue: "h C",
 			},
 		},
 		typeParams: []variableInfo{
@@ -222,14 +242,15 @@ var (
 		name:     "Publish",
 		fileName: "generics.go",
 		position: Position{
-			Line:   38,
+			Line:   39,
 			Column: 9,
 		},
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "e",
-				typeName: "E",
+				name:        "e",
+				typeName:    "E",
+				stringValue: "e E",
 			},
 		},
 	}
@@ -249,8 +270,9 @@ var (
 		},
 		params: []variableInfo{
 			{
-				name:     "v",
-				typeName: "interface{}",
+				name:        "v",
+				typeName:    "interface{}",
+				stringValue: "v interface{}",
 			},
 		},
 		results: []variableInfo{
@@ -275,12 +297,14 @@ var (
 		},
 		params: []variableInfo{
 			{
-				name:     "ctx",
-				typeName: "C",
+				name:        "ctx",
+				typeName:    "C",
+				stringValue: "ctx C",
 			},
 			{
-				name:     "value",
-				typeName: "V",
+				name:        "value",
+				typeName:    "V",
+				stringValue: "value V",
 			},
 		},
 		results: []variableInfo{},
@@ -361,8 +385,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "x",
-				typeName: "[]K",
+				name:        "x",
+				typeName:    "[]K",
+				stringValue: "x []K",
 			},
 		},
 		results: []variableInfo{
@@ -403,12 +428,14 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "i",
-				typeName: "float64",
+				name:        "i",
+				typeName:    "float64",
+				stringValue: "i float64",
 			},
 			{
-				name:     "k",
-				typeName: "float64",
+				name:        "k",
+				typeName:    "float64",
+				stringValue: "k float64",
 			},
 		},
 		results: []variableInfo{
@@ -436,8 +463,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "c",
-				typeName: "complex128",
+				name:        "c",
+				typeName:    "complex128",
+				stringValue: "c complex128",
 			},
 		},
 		results: []variableInfo{
@@ -446,8 +474,9 @@ var (
 				typeName: "chan string",
 			},
 			{
-				name:     "",
-				typeName: "Stringer",
+				name:          "",
+				importPackage: "fmt",
+				typeName:      "Stringer",
 			},
 		},
 	}
@@ -469,8 +498,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "s",
-				typeName: "interface{}",
+				name:        "s",
+				typeName:    "interface{}",
+				stringValue: "s interface{}",
 			},
 		},
 		results: []variableInfo{
@@ -498,16 +528,19 @@ var (
 		isVariadic: true,
 		params: []variableInfo{
 			{
-				name:     "s",
-				typeName: "string",
+				name:        "s",
+				typeName:    "string",
+				stringValue: "s string",
 			},
 			{
-				name:     "arr",
-				typeName: "[]int",
+				name:        "arr",
+				typeName:    "[]int",
+				stringValue: "arr []int",
 			},
 			{
-				name:     "v",
-				typeName: "int16",
+				name:        "v",
+				typeName:    "int16",
+				stringValue: "v ...int16",
 			},
 		},
 		results: []variableInfo{
@@ -539,8 +572,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "v",
-				typeName: "rune",
+				name:        "v",
+				typeName:    "rune",
+				stringValue: "v rune",
 			},
 		},
 		results: []variableInfo{
@@ -568,12 +602,14 @@ var (
 		isVariadic: true,
 		params: []variableInfo{
 			{
-				name:     "s",
-				typeName: "string",
+				name:        "s",
+				typeName:    "string",
+				stringValue: "s string",
 			},
 			{
-				name:     "v",
-				typeName: "bool",
+				name:        "v",
+				typeName:    "bool",
+				stringValue: "v ...bool",
 			},
 		},
 		results: []variableInfo{
@@ -601,12 +637,14 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "",
-				typeName: "[]int",
+				name:        "",
+				typeName:    "[]int",
+				stringValue: "[]int",
 			},
 			{
-				name:     "",
-				typeName: "bool",
+				name:        "",
+				typeName:    "bool",
+				stringValue: "bool",
 			},
 		},
 		results: []variableInfo{
@@ -634,8 +672,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "s",
-				typeName: "interface{}",
+				name:        "s",
+				typeName:    "interface{}",
+				stringValue: "s interface{}",
 			},
 		},
 		results: []variableInfo{},
@@ -793,8 +832,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "i",
-				typeName: "int",
+				name:        "i",
+				typeName:    "int",
+				stringValue: "i int",
 			},
 		},
 		results: []variableInfo{},
@@ -822,8 +862,9 @@ var (
 		isVariadic: false,
 		params: []variableInfo{
 			{
-				name:     "v",
-				typeName: "interface{}",
+				name:        "v",
+				typeName:    "interface{}",
+				stringValue: "v interface{}",
 			},
 		},
 		results: []variableInfo{
@@ -856,12 +897,14 @@ var (
 		isVariadic: true,
 		params: []variableInfo{
 			{
-				name:     "a",
-				typeName: "[]interface{}",
+				name:        "a",
+				typeName:    "[]interface{}",
+				stringValue: "a []interface{}",
 			},
 			{
-				name:     "v",
-				typeName: "string",
+				name:        "v",
+				typeName:    "string",
+				stringValue: "v ...string",
 			},
 		},
 		results: []variableInfo{
@@ -895,7 +938,7 @@ var (
 		name:     "CustomMethod",
 		fileName: "custom.go",
 		position: Position{
-			Line:   3,
+			Line:   5,
 			Column: 1,
 		},
 		isVariadic: false,
@@ -905,15 +948,30 @@ var (
 		},
 		params: []variableInfo{
 			{
-				name:     "ctx",
-				typeName: "Z",
+				name:        "ctx",
+				typeName:    "Z",
+				stringValue: "ctx Z",
 			},
 			{
-				name:     "value",
-				typeName: "V",
+				name:        "value",
+				typeName:    "V",
+				stringValue: "value V",
+			},
+			{
+				name:          "req",
+				importPackage: "http",
+				typeName:      "Request",
+				stringValue:   "req http.Request",
 			},
 		},
-		results: []variableInfo{},
+		results: []variableInfo{
+			{
+				name:          "",
+				importPackage: "http",
+				typeName:      "Response",
+				stringValue:   "http.Response",
+			},
+		},
 		typeParams: []variableInfo{
 			{
 				name:     "Z",
@@ -1009,19 +1067,12 @@ func assertFunctionParameters(t *testing.T, expectedParams []variableInfo, actua
 			t.Errorf("at index %d, the parameter name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.name, actualFunctionParam.name)
 		}
 
-		if expectedFunctionParam.String() != actualFunctionParam.Type().Name() {
+		if expectedFunctionParam.TypeName() != actualFunctionParam.Type().Name() {
 			t.Errorf("at index %d, the parameter type name of the %s should be %s, but got %s", index, msg, expectedFunctionParam.typeName, actualFunctionParam.Type().Name())
 		}
 
-		var expectedFunctionParamString string
-		if expectedFunctionParam.name == "" {
-			expectedFunctionParamString = expectedFunctionParam.typeName
-		} else {
-			expectedFunctionParamString = fmt.Sprintf("%s %s", expectedFunctionParam.name, expectedFunctionParam.typeName)
-		}
-
-		if expectedFunctionParamString != actualFunctionParam.String() {
-			t.Errorf("at index %d parameter, the String() method should return %s, but got %s", index, expectedFunctionParamString, actualFunctionParam.String())
+		if expectedFunctionParam.stringValue != actualFunctionParam.String() {
+			t.Errorf("at index %d parameter, the String() method of the %s should return '%s', but got '%s'", index, msg, expectedFunctionParam.stringValue, actualFunctionParam.String())
 		}
 	}
 }
@@ -1040,7 +1091,7 @@ func assertFunctionResult(t *testing.T, expectedResults []variableInfo, actualRe
 			t.Errorf("at index %d, the parameter result of the %s should be %s, but got %s", index, msg, expectedFunctionParam.name, actualFunctionParam.name)
 		}
 
-		if expectedFunctionParam.String() != actualFunctionParam.Type().Name() {
+		if expectedFunctionParam.TypeName() != actualFunctionParam.Type().Name() {
 			t.Errorf("at index %d, the parameter result type of the %s should be %s, but got %s", index, msg, expectedFunctionParam.typeName, actualFunctionParam.Type().Name())
 		}
 	}

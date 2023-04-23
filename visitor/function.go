@@ -23,11 +23,21 @@ func (p *Parameter) Type() Type {
 }
 
 func (p *Parameter) String() string {
+	_, isTypeParameter := p.Type().(*TypeParameter)
+
 	if p.name == "" {
-		return p.typ.Name()
+		if isTypeParameter {
+			return p.typ.Name()
+		}
+
+		return p.typ.String()
 	}
 
-	return fmt.Sprintf("%s %s", p.name, p.typ.Name())
+	if isTypeParameter {
+		return fmt.Sprintf("%s %s", p.name, p.typ.Name())
+	}
+
+	return fmt.Sprintf("%s %s", p.name, p.typ.String())
 }
 
 type Parameters struct {
@@ -70,11 +80,21 @@ func (r *Result) Type() Type {
 }
 
 func (r *Result) String() string {
+	_, isTypeParameter := r.Type().(*TypeParameter)
+
 	if r.name == "" {
-		return r.typ.Name()
+		if isTypeParameter {
+			return r.typ.Name()
+		}
+
+		return r.typ.String()
 	}
 
-	return fmt.Sprintf("%s %s", r.name, r.typ.Name())
+	if isTypeParameter {
+		return fmt.Sprintf("%s %s", r.name, r.typ.Name())
+	}
+
+	return fmt.Sprintf("%s %s", r.name, r.typ.String())
 }
 
 type Results struct {
@@ -438,20 +458,7 @@ func (f *Function) String() string {
 	if f.Parameters().Len() != 0 {
 		for i := 0; i < f.Parameters().Len(); i++ {
 			param := f.Parameters().At(i)
-			builder.WriteString(param.Name())
-
-			if i == f.params.Len()-1 && f.IsVariadic() {
-				if param.name != "" {
-					builder.WriteString(" ")
-				}
-				builder.WriteString("...")
-				builder.WriteString(param.Type().Name())
-			} else {
-				if param.name != "" {
-					builder.WriteString(" ")
-				}
-				builder.WriteString(param.Type().Name())
-			}
+			builder.WriteString(param.String())
 
 			if i != f.Parameters().Len()-1 {
 				builder.WriteString(",")

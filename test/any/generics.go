@@ -10,7 +10,7 @@ func GenericFunction[K []map[T]X, T int | bool, X ~string](x []K) T {
 	return value
 }
 
-type Repository[T any, ID any | string | constraints.Ordered] interface {
+type Repository[T any, ID any | string | constraints.Ordered | int | float32] interface {
 	Save(entity T) T
 }
 
@@ -24,6 +24,7 @@ func (c Controller[K, C, Y]) Index(ctx K, h C) {
 }
 
 type TestController struct {
+	BaseController[int]
 	Controller[context.Context, int16, int]
 }
 
@@ -36,4 +37,7 @@ type HttpHandler[C context.Context, K string | int, V constraints.Ordered | cons
 
 type EventPublisher[E any, ID ~int] interface {
 	Publish(e E)
+}
+
+type BaseController[M any] struct {
 }

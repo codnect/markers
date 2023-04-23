@@ -42,12 +42,14 @@ type FunctionLevel struct {
 }
 
 type variableInfo struct {
-	name      string
-	typeName  string
-	isPointer bool
+	name          string
+	typeName      string
+	stringValue   string
+	importPackage string
+	isPointer     bool
 }
 
-func (v variableInfo) String() string {
+func (v variableInfo) TypeName() string {
 	if v.isPointer {
 		return fmt.Sprintf("*%s", v.typeName)
 	}
@@ -196,6 +198,15 @@ func TestVisitor_VisitPackage(t *testing.T) {
 				functions: map[string]functionInfo{
 					"CustomMethod": customHttpHandlerMethod,
 				},
+				imports: []importInfo{
+					{
+						name:       "",
+						path:       "net/http",
+						sideEffect: false,
+						file:       "custom.go",
+						position:   Position{Line: 3, Column: 8},
+					},
+				},
 			},
 			"error.go": {
 				path:      fmt.Sprintf("%s/test/any/error.go", path),
@@ -250,6 +261,7 @@ func TestVisitor_VisitPackage(t *testing.T) {
 				structs: map[string]structInfo{
 					"Controller":     controllerStruct,
 					"TestController": testControllerStruct,
+					"BaseController": baseControllerStruct,
 				},
 				imports: []importInfo{
 					{

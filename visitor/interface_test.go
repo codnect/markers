@@ -36,14 +36,14 @@ var (
 		methods: map[string]functionInfo{
 			"Save": saveFunction,
 		},
-		stringValue: "any.Repository[T any,ID any|string|constraints.Ordered]",
+		stringValue: "any.Repository[T any,ID any|string|constraints.Ordered|int|float32]",
 	}
 	numberInterface = interfaceInfo{
 		name:       "Number",
 		fileName:   "generics.go",
 		isExported: true,
 		position: Position{
-			Line:   30,
+			Line:   31,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -61,7 +61,7 @@ var (
 		fileName:   "generics.go",
 		isExported: true,
 		position: Position{
-			Line:   37,
+			Line:   38,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{

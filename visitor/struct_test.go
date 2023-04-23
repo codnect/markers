@@ -17,20 +17,21 @@ type fieldInfo struct {
 }
 
 type structInfo struct {
-	fileName          string
-	isExported        bool
-	position          Position
-	markers           markers.Values
-	methods           map[string]functionInfo
-	allMethods        map[string]functionInfo
-	fields            map[string]fieldInfo
-	embeddedFields    map[string]fieldInfo
-	numFields         int
-	totalFields       int
-	numEmbeddedFields int
-	stringValue       string
-	isAnonymous       bool
-	interfaces        []string
+	fileName               string
+	isExported             bool
+	position               Position
+	markers                markers.Values
+	methods                map[string]functionInfo
+	allMethods             map[string]functionInfo
+	fields                 map[string]fieldInfo
+	embeddedFields         map[string]fieldInfo
+	numFields              int
+	totalFields            int
+	numEmbeddedFields      int
+	stringValue            string
+	isAnonymous            bool
+	implementsInterfaces   []string
+	noImplementsInterfaces []string
 }
 
 // structs
@@ -89,6 +90,12 @@ var (
 				typeName:        "Controller",
 				stringValue:     "Controller[context.Context,int16,int]",
 			},
+			"BaseController": {
+				isExported:      true,
+				isEmbeddedField: true,
+				typeName:        "BaseController",
+				stringValue:     "BaseController[int]",
+			},
 		},
 		embeddedFields: map[string]fieldInfo{
 			"Controller": {
@@ -97,10 +104,16 @@ var (
 				typeName:        "Controller",
 				stringValue:     "Controller[context.Context,int16,int]",
 			},
+			"BaseController": {
+				isExported:      true,
+				isEmbeddedField: true,
+				typeName:        "BaseController",
+				stringValue:     "BaseController[int]",
+			},
 		},
-		numFields:         1,
+		numFields:         2,
 		totalFields:       2,
-		numEmbeddedFields: 1,
+		numEmbeddedFields: 2,
 	}
 
 	friedCookieStruct = structInfo{
@@ -170,10 +183,11 @@ var (
 				stringValue:     "menu.cookie",
 			},
 		},
-		interfaces:        []string{"Meal"},
-		numFields:         4,
-		totalFields:       5,
-		numEmbeddedFields: 1,
+		implementsInterfaces:   []string{"Meal"},
+		noImplementsInterfaces: []string{"Dessert"},
+		numFields:              4,
+		totalFields:            5,
+		numEmbeddedFields:      1,
 	}
 
 	cookieStruct = structInfo{
@@ -237,12 +251,29 @@ var (
 		totalFields:       2,
 		numEmbeddedFields: 0,
 	}
+	baseControllerStruct = structInfo{
+		markers:     markers.Values{},
+		stringValue: "any.BaseController[M any]",
+		fileName:    "generics.go",
+		isExported:  true,
+		position: Position{
+			Line:   42,
+			Column: 6,
+		},
+		methods:           map[string]functionInfo{},
+		allMethods:        map[string]functionInfo{},
+		fields:            map[string]fieldInfo{},
+		embeddedFields:    map[string]fieldInfo{},
+		numFields:         0,
+		totalFields:       0,
+		numEmbeddedFields: 0,
+	}
 )
 
 func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool {
 
 	if len(structs) != file.Structs().Len() {
-		t.Errorf("the number of the structs should be %d, but got %d", len(structs), file.Structs().Len())
+		t.Errorf("the number of the structs in file %s should be %d, but got %d", file.Name(), len(structs), file.Structs().Len())
 		return false
 	}
 
@@ -320,7 +351,7 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 		assertStructFields(t, actualStruct.Name(), actualStruct.Fields(), expectedStruct.fields)
 		assertMarkers(t, expectedStruct.markers, actualStruct.Markers(), fmt.Sprintf("struct %s", expectedStructName))
 
-		for _, interfaceName := range expectedStruct.interfaces {
+		for _, interfaceName := range expectedStruct.implementsInterfaces {
 			iface, exists := file.Interfaces().FindByName(interfaceName)
 
 			if !exists {
@@ -330,6 +361,20 @@ func assertStructs(t *testing.T, file *File, structs map[string]structInfo) bool
 
 			if !actualStruct.Implements(iface) {
 				t.Errorf(" the struct %s should implement the interface %s", actualStruct.Name(), interfaceName)
+				continue
+			}
+		}
+
+		for _, interfaceName := range expectedStruct.noImplementsInterfaces {
+			iface, exists := file.Interfaces().FindByName(interfaceName)
+
+			if !exists {
+				t.Errorf("the interface %s should exists in file %s and the struct %s should implement it", interfaceName, file.Name(), actualStruct.Name())
+				continue
+			}
+
+			if actualStruct.Implements(iface) {
+				t.Errorf(" the struct %s should not implement the interface %s", actualStruct.Name(), interfaceName)
 				continue
 			}
 		}
@@ -386,4 +431,21 @@ func assertStructFields(t *testing.T, structName string, actualFields *Fields, e
 func TestStructs_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
 	structs := &Structs{}
 	assert.Nil(t, structs.At(0))
+}
+
+func TestFields_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	fields := &Fields{}
+	assert.Nil(t, fields.At(0))
+}
+func TestFields_AtShouldReturnFieldIfIndexIsBetweenRange(t *testing.T) {
+	fields := &Fields{
+		elements: []*Field{
+			{
+				name: "anyField",
+			},
+		},
+	}
+	field := fields.At(0)
+	assert.NotNil(t, field)
+	assert.Equal(t, "anyField", field.Name())
 }
