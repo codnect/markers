@@ -27,19 +27,19 @@ func (registry *Registry) initialize() {
 		registry.packageMap = make(map[string]DefinitionMap)
 		registry.packageMap[""] = make(DefinitionMap)
 	}
-	registry.packageMap[""][ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", PackageLevel, &ImportMarker{})
+	registry.packageMap[""][ImportMarkerName], _ = MakeDefinition(ImportMarkerName, "", PackageLevel, &Import{})
 
-	overrideMarker, _ := MakeDefinition(OverrideMarkerName, "", StructMethodLevel, &OverrideMarker{})
+	overrideMarker, _ := MakeDefinition(OverrideMarkerName, "", StructMethodLevel, &Override{})
 	overrideMarker.Output.SyntaxFree = true
 	registry.packageMap[""][OverrideMarkerName] = overrideMarker
 
-	deprecatedDefinitionMarker, _ := MakeDefinition(DeprecatedMarkerName, "", TypeLevel|MethodLevel|FieldLevel|FunctionLevel, &DeprecatedMarker{})
+	deprecatedDefinitionMarker, _ := MakeDefinition(DeprecatedMarkerName, "", TypeLevel|MethodLevel|FieldLevel|FunctionLevel, &Deprecated{})
 	deprecatedDefinitionMarker.Output.SyntaxFree = true
 	registry.packageMap[""][DeprecatedMarkerName] = deprecatedDefinitionMarker
 
-	registry.packageMap[""][DefinitionMarkerName], _ = MakeDefinition(DefinitionMarkerName, "", StructTypeLevel, &DefinitionMarker{})
-	registry.packageMap[""][DefinitionParameterMarkerName], _ = MakeDefinition(DefinitionParameterMarkerName, "", FieldLevel, &DefinitionParameterMarker{})
-	registry.packageMap[""][DefinitionEnumMarkerName], _ = MakeDefinition(DefinitionEnumMarkerName, "", FieldLevel, &DefinitionEnumMarker{})
+	registry.packageMap[""][MarkerName], _ = MakeDefinition(MarkerName, "", StructTypeLevel, &Definition{})
+	registry.packageMap[""][ParameterMarkerName], _ = MakeDefinition(ParameterMarkerName, "", FieldLevel, &Parameter{})
+	registry.packageMap[""][EnumMarkerName], _ = MakeDefinition(EnumMarkerName, "", FieldLevel, &Enum{})
 }
 
 // Register registers a new marker with the given name, target level, and output type.

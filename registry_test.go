@@ -91,6 +91,44 @@ func TestRegistry_RegisterWithDefinition(t *testing.T) {
 	assert.Len(t, registry.packageMap["anyPkg"], len(testCases))
 }
 
+func TestRegistry_RegisterReturnsErrorIfDefinitionIsNil(t *testing.T) {
+	registry := NewRegistry()
+	err := registry.RegisterWithDefinition(nil)
+	assert.Equal(t, "definition cannot be nil", err.Error())
+}
+
+func TestRegistry_RegisterReturnsErrorIfDefinitionNameIsEmpty(t *testing.T) {
+	registry := NewRegistry()
+	err := registry.RegisterWithDefinition(&Definition{})
+	assert.Equal(t, "marker name cannot be empty", err.Error())
+}
+
+func TestRegistry_RegisterReturnsErrorIfTargetLevelIsNotSpecified(t *testing.T) {
+	registry := NewRegistry()
+	err := registry.RegisterWithDefinition(&Definition{
+		Name: "any:marker",
+	})
+	assert.Equal(t, "specify target levels for the definition: any:marker", err.Error())
+}
+
+func TestRegistry_RegisterReturnsErrorIfMarkerNameContainsLowerCaseCharacters(t *testing.T) {
+	registry := NewRegistry()
+	err := registry.RegisterWithDefinition(&Definition{
+		Name:        "anyMarker",
+		TargetLevel: AllLevels,
+	})
+	assert.Equal(t, "marker 'anyMarker' should only contain lower case characters", err.Error())
+}
+
+func TestRegistry_RegisterReturnsErrorIfMarkerNameContainsWhitespace(t *testing.T) {
+	registry := NewRegistry()
+	err := registry.RegisterWithDefinition(&Definition{
+		Name:        "any:\tmarker",
+		TargetLevel: AllLevels,
+	})
+	assert.Equal(t, "marker 'any:\tmarker' cannot contain any whitespace", err.Error())
+}
+
 func TestRegistry_RegisterMarkerAlreadyRegistered(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register("marker:test", "anyPkg", TypeLevel, &testTypeLevelMarker{})

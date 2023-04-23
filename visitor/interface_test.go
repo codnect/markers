@@ -2,27 +2,79 @@ package visitor
 
 import (
 	"fmt"
-	"github.com/procyon-projects/marker"
+	"github.com/procyon-projects/markers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 type interfaceInfo struct {
-	markers         markers.MarkerValues
-	name            string
-	fileName        string
-	position        Position
-	explicitMethods map[string]functionInfo
-	methods         map[string]functionInfo
-	embeddedTypes   []string
-	isExported      bool
+	markers            markers.Values
+	name               string
+	fileName           string
+	position           Position
+	explicitMethods    map[string]functionInfo
+	methods            map[string]functionInfo
+	embeddedTypes      []string
+	embeddedInterfaces []string
+	isExported         bool
+	stringValue        string
 }
 
 // interfaces
 var (
+	repositoryInterface = interfaceInfo{
+		name:       "Repository",
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   13,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"Save": saveFunction,
+		},
+		methods: map[string]functionInfo{
+			"Save": saveFunction,
+		},
+		stringValue: "any.Repository[T any,ID any|string|constraints.Ordered|int|float32]",
+	}
+	numberInterface = interfaceInfo{
+		name:       "Number",
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   31,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"ToString": toStringFunction,
+		},
+		methods: map[string]functionInfo{
+			"ToString": toStringFunction,
+		},
+		embeddedTypes:      []string{"Ordered"},
+		embeddedInterfaces: []string{"Ordered"},
+		stringValue:        "any.Number",
+	}
+	eventPublisherInterface = interfaceInfo{
+		name:       "EventPublisher",
+		fileName:   "generics.go",
+		isExported: true,
+		position: Position{
+			Line:   38,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"Publish": publishMethod,
+		},
+		methods: map[string]functionInfo{
+			"Publish": publishMethod,
+		},
+		stringValue: "any.EventPublisher[E any,ID ~int]",
+	}
 	bakeryShopInterface = interfaceInfo{
-		markers: markers.MarkerValues{
-			"marker:interface-type-level": {
+		markers: markers.Values{
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "BakeryShop",
 				},
@@ -32,7 +84,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   13,
+			Line:   14,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -48,12 +100,14 @@ var (
 			"muffin":   muffinFunction,
 			"Bread":    breadFunction,
 		},
-		embeddedTypes: []string{"Dessert"},
+		embeddedTypes:      []string{"Dessert"},
+		embeddedInterfaces: []string{"Dessert"},
+		stringValue:        "menu.BakeryShop",
 	}
 
 	dessertInterface = interfaceInfo{
-		markers: markers.MarkerValues{
-			"marker:interface-type-level": {
+		markers: markers.Values{
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "Dessert",
 				},
@@ -63,7 +117,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   79,
+			Line:   84,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -84,11 +138,12 @@ var (
 			"Pie":      pieFunction,
 			"muffin":   muffinFunction,
 		},
+		stringValue: "menu.Dessert",
 	}
 
 	newYearsEveCookieInterface = interfaceInfo{
-		markers: markers.MarkerValues{
-			"marker:interface-type-level": {
+		markers: markers.Values{
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "newYearsEveCookie",
 				},
@@ -98,7 +153,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: false,
 		position: Position{
-			Line:   48,
+			Line:   53,
 			Column: 6,
 		},
 		methods: map[string]functionInfo{
@@ -107,11 +162,12 @@ var (
 		explicitMethods: map[string]functionInfo{
 			"Funfetti": funfettiFunction,
 		},
+		stringValue: "menu.newYearsEveCookie",
 	}
 
 	sweetShopInterface = interfaceInfo{
-		markers: markers.MarkerValues{
-			"marker:interface-type-level": {
+		markers: markers.Values{
+			"test-marker:interface-type-level": {
 				InterfaceTypeLevel{
 					Name: "SweetShop",
 				},
@@ -121,7 +177,7 @@ var (
 		fileName:   "dessert.go",
 		isExported: true,
 		position: Position{
-			Line:   125,
+			Line:   130,
 			Column: 6,
 		},
 		explicitMethods: map[string]functionInfo{
@@ -138,14 +194,33 @@ var (
 			"Pie":      pieFunction,
 			"muffin":   muffinFunction,
 		},
-		embeddedTypes: []string{"newYearsEveCookie", "Dessert"},
+		embeddedTypes:      []string{"newYearsEveCookie", "Dessert"},
+		embeddedInterfaces: []string{"newYearsEveCookie", "Dessert"},
+		stringValue:        "menu.SweetShop",
+	}
+	mealInterface = interfaceInfo{
+		markers:    markers.Values{},
+		name:       "Meal",
+		fileName:   "dessert.go",
+		isExported: true,
+		position: Position{
+			Line:   146,
+			Column: 6,
+		},
+		explicitMethods: map[string]functionInfo{
+			"Eat": mealEatMethod,
+		},
+		methods: map[string]functionInfo{
+			"Eat": mealEatMethod,
+		},
+		stringValue: "menu.Meal",
 	}
 )
 
 func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceInfo) bool {
 
 	if len(interfaces) != file.Interfaces().Len() {
-		t.Errorf("the number of the interface should be %d, but got %d", len(interfaces), file.Interfaces().Len())
+		t.Errorf("the number of the interface in file %s should be %d, but got %d", file.Name(), len(interfaces), file.Interfaces().Len())
 		return false
 	}
 
@@ -191,6 +266,10 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 			t.Errorf("the number of the explicit methods of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.explicitMethods), actualInterface.NumExplicitMethods())
 		}
 
+		if actualInterface.NumEmbeddedInterfaces() != len(expectedInterface.embeddedInterfaces) {
+			t.Errorf("the number of the embedded interfaces of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.embeddedInterfaces), actualInterface.NumEmbeddedInterfaces())
+		}
+
 		if actualInterface.NumEmbeddedTypes() != len(expectedInterface.embeddedTypes) {
 			t.Errorf("the number of the embedded types of the interface %s should be %d, but got %d", expectedInterfaceName, len(expectedInterface.embeddedTypes), actualInterface.NumEmbeddedTypes())
 		}
@@ -199,6 +278,15 @@ func assertInterfaces(t *testing.T, file *File, interfaces map[string]interfaceI
 
 		assert.Equal(t, expectedInterface.position, actualInterface.Position(), "the position of the interface %s should be %w, but got %w",
 			expectedInterfaceName, expectedInterface.position, actualInterface.Position())
+
+		//TODO: fix
+		actualInterface.IsConstraint()
+		actualInterface.EmbeddedInterfaces()
+		actualInterface.EmbeddedTypes()
+
+		if expectedInterface.stringValue != actualInterface.String() {
+			t.Errorf("Output returning from String() method for interface type with name %s does not equal to %s, but got %s", expectedInterfaceName, expectedInterface.stringValue, actualInterface.String())
+		}
 
 		assertInterfaceEmbeddedTypes(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.EmbeddedTypes(), expectedInterface.embeddedTypes)
 		assertFunctions(t, fmt.Sprintf("interface %s", actualInterface.Name()), actualInterface.Methods(), expectedInterface.methods)
@@ -237,4 +325,9 @@ func assertInterfaceEmbeddedTypes(t *testing.T, interfaceName string, actualEmbe
 	}
 
 	return true
+}
+
+func TestInterfaces_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	interfaces := &Interfaces{}
+	assert.Nil(t, interfaces.At(0))
 }

@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/procyon-projects/marker/internal/cmd"
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers/internal/cmd"
+	"github.com/procyon-projects/markers/packages"
 	"io"
 	"os"
 	"os/exec"

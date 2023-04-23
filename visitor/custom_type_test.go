@@ -2,53 +2,85 @@ package visitor
 
 import (
 	"fmt"
+	"github.com/procyon-projects/markers"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 type customTypeInfo struct {
-	name          string
-	aliasTypeName string
-	isExported    bool
+	name               string
+	underlyingTypeName string
+	isExported         bool
+	methods            map[string]functionInfo
+	stringValue        string
+	markers            markers.Values
 }
 
 var (
 	errorCustomTypes = map[string]customTypeInfo{
 		"errorList": {
-			name:          "errorList",
-			aliasTypeName: "[]error",
-			isExported:    false,
+			name:               "errorList",
+			underlyingTypeName: "[]error",
+			isExported:         false,
+			methods: map[string]functionInfo{
+				"Print":    printErrorMethod,
+				"ToErrors": toErrorsMethod,
+			},
+			stringValue: "any.errorList",
 		},
 	}
 	permissionCustomTypes = map[string]customTypeInfo{
 		"Permission": {
-			name:          "Permission",
-			aliasTypeName: "int",
-			isExported:    true,
+			name:               "Permission",
+			underlyingTypeName: "int",
+			isExported:         true,
+			stringValue:        "any.Permission",
 		},
 		"RequestMethod": {
-			name:          "RequestMethod",
-			aliasTypeName: "string",
-			isExported:    true,
+			name:               "RequestMethod",
+			underlyingTypeName: "string",
+			isExported:         true,
+			stringValue:        "any.RequestMethod",
 		},
 		"Chan": {
-			name:          "Chan",
-			aliasTypeName: "int",
-			isExported:    true,
+			name:               "Chan",
+			underlyingTypeName: "int",
+			isExported:         true,
+			stringValue:        "any.Chan",
 		},
 	}
 	coffeeCustomTypes = map[string]customTypeInfo{
 		"Coffee": {
-			name:          "Coffee",
-			aliasTypeName: "int",
-			isExported:    true,
+			name:               "Coffee",
+			underlyingTypeName: "int",
+			isExported:         true,
+			stringValue:        "menu.Coffee",
+		},
+		"CustomBakeryShop": {
+			name:               "CustomBakeryShop",
+			underlyingTypeName: "BakeryShop",
+			isExported:         true,
+			stringValue:        "menu.CustomBakeryShop",
 		},
 	}
 	freshCustomTypes = map[string]customTypeInfo{
 		"Lemonade": {
-			name:          "Lemonade",
-			aliasTypeName: "uint",
-			isExported:    true,
+			name:               "Lemonade",
+			underlyingTypeName: "uint",
+			isExported:         true,
+			stringValue:        "menu.Lemonade",
+		},
+	}
+	genericsCustomTypes = map[string]customTypeInfo{
+		"HttpHandler": {
+			name:               "HttpHandler",
+			underlyingTypeName: "func (ctx C,value V) K",
+			isExported:         true,
+			methods: map[string]functionInfo{
+				"Print":        printHttpHandlerMethod,
+				"CustomMethod": customHttpHandlerMethod,
+			},
+			stringValue: "any.HttpHandler[C context.Context,K string|int,V constraints.Ordered|constraints.Complex,M ~string]",
 		},
 	}
 )
@@ -79,20 +111,14 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			continue
 		}
 
-		assert.Equal(t, actualCustomType, actualCustomType.Underlying())
 		assert.Equal(t, fileCustomType, actualCustomType, "CustomTypes.At should return %w, but got %w", fileCustomType, actualCustomType)
 
 		if expectedCustomType.name != actualCustomType.Name() {
 			t.Errorf("custom type name in file %s shoud be %s, but got %s", file.name, expectedCustomTypeName, actualCustomType.Name())
 		}
 
-		if expectedCustomType.aliasTypeName != actualCustomType.AliasType().Name() {
-			t.Errorf("alias type of custom type %s in file %s shoud be %s, but got %s", file.name, expectedCustomType.name, expectedCustomType.aliasTypeName, actualCustomType.AliasType().Name())
-		}
-
-		customTypeStrValue := fmt.Sprintf("type %s %s", expectedCustomType.name, expectedCustomType.aliasTypeName)
-		if customTypeStrValue != actualCustomType.String() {
-			t.Errorf("String() method of custom type %s shoud return %s, but got %s", expectedCustomTypeName, customTypeStrValue, actualCustomType.String())
+		if expectedCustomType.underlyingTypeName != actualCustomType.Underlying().Name() {
+			t.Errorf("underlying type of custom type %s in file %s shoud be %s, but got %s", file.name, expectedCustomType.name, expectedCustomType.underlyingTypeName, actualCustomType.Underlying().Name())
 		}
 
 		if actualCustomType.IsExported() && !expectedCustomType.isExported {
@@ -101,18 +127,24 @@ func assertCustomTypes(t *testing.T, file *File, customTypes map[string]customTy
 			t.Errorf("custom type with name %s is not exported, but should be exported field", expectedCustomTypeName)
 		}
 
-		/*if expectedConstant.value != actualConstant.Value() {
-			t.Errorf("value of constant %s in file %s shoud be %s, but got %s", actualConstant.Name(), file.name, expectedConstant.value, actualConstant.Value())
+		if expectedCustomType.stringValue != actualCustomType.String() {
+			t.Errorf("Output returning from String() method for custom type with name %s does not equal to %s, but got %s", expectedCustomTypeName, expectedCustomType.stringValue, actualCustomType.String())
 		}
 
-		if expectedConstant.typeName != actualConstant.Type().Name() {
-			t.Errorf("type name of constant %s in file %s shoud be %s, but got %s", actualConstant.Name(), file.name, expectedConstant.typeName, actualConstant.Type().Name())
+		if actualCustomType.NumMethods() != len(expectedCustomType.methods) {
+			t.Errorf("the number of the methods of the custom type %s should be %d, but got %d", expectedCustomTypeName, len(expectedCustomType.methods), actualCustomType.NumMethods())
 		}
 
-		assert.Equal(t, expectedConstant.position, actualConstant.Position(), "the position of constant %s in file %s should be %w, but got %w", expectedConstant.name, actualConstant.File().Name(), expectedConstant.position, actualConstant.Position())
-		*/
+		assertFunctions(t, fmt.Sprintf("custom type %s", actualCustomType.Name()), actualCustomType.Methods(), expectedCustomType.methods)
+		assertMarkers(t, expectedCustomType.markers, actualCustomType.Markers(), fmt.Sprintf("type %s %s", expectedCustomTypeName, expectedCustomType.name))
+
 		index++
 	}
 
 	return true
+}
+
+func TestCustomTypes_AtShouldReturnNilIfIndexIsOutOfRange(t *testing.T) {
+	customTypes := &CustomTypes{}
+	assert.Nil(t, customTypes.At(0))
 }

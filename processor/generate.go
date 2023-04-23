@@ -3,8 +3,8 @@ package processor
 import (
 	"errors"
 	"fmt"
-	"github.com/procyon-projects/marker"
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers"
+	"github.com/procyon-projects/markers/packages"
 	"github.com/spf13/cobra"
 	"path"
 )
@@ -50,7 +50,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		var dirs []string
-		dirs, err = GetPackageDirectories()
+		dirs, err = PackageDirectories()
 
 		if err != nil {
 			return errors.New("go.module not found")

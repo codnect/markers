@@ -32,7 +32,7 @@ const (
 	AllLevels   = PackageLevel | TypeLevel | MethodLevel | FieldLevel | FunctionLevel
 )
 
-func FindTargetLevelFromNode(node ast.Node) TargetLevel {
+func FindTargetLevel(node ast.Node) TargetLevel {
 	switch typedNode := node.(type) {
 	case *ast.TypeSpec:
 		_, isStructType := typedNode.Type.(*ast.StructType)
@@ -57,7 +57,7 @@ func FindTargetLevelFromNode(node ast.Node) TargetLevel {
 		} else {
 			return FunctionLevel
 		}
-	case *ast.Package:
+	case *ast.Package, *ast.File:
 		return PackageLevel
 	}
 

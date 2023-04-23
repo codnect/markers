@@ -6,20 +6,32 @@ import (
 )
 
 type testFile struct {
-	constants   []constantInfo
-	interfaces  map[string]interfaceInfo
-	structs     map[string]structInfo
-	functions   map[string]functionInfo
-	imports     []importInfo
-	customTypes map[string]customTypeInfo
+	path          string
+	constants     []constantInfo
+	interfaces    map[string]interfaceInfo
+	structs       map[string]structInfo
+	functions     map[string]functionInfo
+	imports       []importInfo
+	customTypes   map[string]customTypeInfo
+	importMarkers []importMarkerInfo
+	fileMarkers   []fileMarkerInfo
 }
 
 type importInfo struct {
 	name       string
 	path       string
 	sideEffect bool
+	file       string
 	position   Position
 }
+
+type importMarkerInfo struct {
+	value string
+	pkg   string
+	alias string
+}
+
+type fileMarkerInfo any
 
 func sideEffects(imports []importInfo) []importInfo {
 	result := make([]importInfo, 0)
@@ -32,7 +44,7 @@ func sideEffects(imports []importInfo) []importInfo {
 	return result
 }
 
-func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool {
+func assertImports(t *testing.T, file *File, expectedImports []importInfo, expectedImportMarkers []importMarkerInfo, fileMarkers []fileMarkerInfo) bool {
 	if file.Imports().Len() != len(expectedImports) {
 		t.Errorf("the number of the imports in file %s should be %d, but got %d", file.name, len(expectedImports), file.Imports().Len())
 	}
@@ -68,6 +80,10 @@ func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool 
 			t.Errorf("import path in file %s shoud be %s, but got %s", file.name, expectedImport.path, actualImport.Path())
 		}
 
+		if expectedImport.file != actualImport.File().Name() {
+			t.Errorf("the file name for import '%s' should be %s, but got %s", expectedImport.path, expectedImport.file, actualImport.File().Name())
+		}
+
 		if actualImport.SideEffect() && !expectedImport.sideEffect {
 			t.Errorf("import with path %s in file %s is not an import side effect, but should be an import side effect", expectedImport.path, file.name)
 		} else if !actualImport.SideEffect() && expectedImport.sideEffect {
@@ -77,5 +93,65 @@ func assertImports(t *testing.T, file *File, expectedImports []importInfo) bool 
 		assert.Equal(t, expectedImport.position, actualImport.Position(), "position for import with path %s in file %s should be %w, but got %w", expectedImport.name, "", expectedImport.position, fileImport.Position())
 	}
 
+	assertFileMarkers(t, file, fileMarkers)
+	assertImportMarkers(t, file, expectedImportMarkers)
+
 	return true
+}
+
+func assertFileMarkers(t *testing.T, file *File, expectedFileMarkers []fileMarkerInfo) {
+
+	if file.Markers().Count() != len(expectedFileMarkers) {
+		t.Errorf("the number of the file markers in file %s should be %d, but got %d", file.name, len(expectedFileMarkers), file.Markers().Count())
+	}
+
+	index := 0
+	for _, actualMarker := range file.Markers() {
+		expectedMarker := expectedFileMarkers[index].(PackageLevel)
+		assert.Equal(t, expectedMarker, actualMarker[0])
+		index++
+	}
+}
+
+func assertImportMarkers(t *testing.T, file *File, expectedImportMarkers []importMarkerInfo) {
+
+	if file.NumImportMarkers() != len(expectedImportMarkers) {
+		t.Errorf("the number of the import markers in file %s should be %d, but got %d", file.name, len(expectedImportMarkers), len(file.ImportMarkers()))
+		return
+	}
+
+	for index, importMarker := range file.ImportMarkers() {
+		expectedImportMarker := expectedImportMarkers[index]
+		if importMarker.Pkg != expectedImportMarker.pkg {
+			t.Errorf("the Pkg attribute of the import marker in file %s shoud be %s, but got %s", file.name, expectedImportMarker.pkg, importMarker.Pkg)
+		}
+
+		if importMarker.Value != expectedImportMarker.value {
+			t.Errorf("the Value attribute of the import marker in file %s shoud be %s, but got %s", file.name, expectedImportMarker.value, importMarker.Value)
+		}
+
+		if importMarker.Alias != expectedImportMarker.alias {
+			t.Errorf("the Alias attribute of the import marker in file %s shoud be %s, but got %s", file.name, expectedImportMarker.alias, importMarker.Alias)
+		}
+	}
+}
+
+func TestFiles_FindByNameShouldReturnFileIfItExists(t *testing.T) {
+	files := &Files{
+		elements: []*File{
+			{
+				name: "test",
+			},
+		},
+	}
+
+	file, ok := files.FindByName("test")
+	assert.True(t, ok)
+	assert.NotNil(t, file)
+	assert.Equal(t, "test", file.name)
+}
+
+func TestFiles_AtShouldReturnNilIfIndexIsOutOfBound(t *testing.T) {
+	files := &Files{}
+	assert.Nil(t, files.At(-1))
 }

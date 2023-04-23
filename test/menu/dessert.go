@@ -1,5 +1,6 @@
-// +import=marker, Pkg=github.com/procyon-projects/marker
-// +marker:package-level:Name=dessert.go
+// +import=marker, Pkg=github.com/procyon-projects/markers
+// +import=test-marker, Pkg=github.com/procyon-projects/test-markers
+// +test-marker:package-level:Name=dessert.go
 
 package menu
 
@@ -9,130 +10,139 @@ import (
 )
 
 // BakeryShop is an interface
-// +marker:interface-type-level:Name=BakeryShop
+// +test-marker:interface-type-level:Name=BakeryShop
 type BakeryShop interface {
 	// Bread is a method
-	// +marker:interface-method-level:Name=Bread
+	// +test-marker:interface-method-level:Name=Bread
 	Bread(i, k float64) struct{}
 	// Dessert is an embedded interface
-	// +marker:interface-method-level:Name=Dessert
+	// +test-marker:interface-method-level:Name=Dessert
 	Dessert
 }
 
 // Eat is a method
-// +marker:struct-method-level:Name=Eat
+// +test-marker:struct-method-level:Name=Eat
 func (c *FriedCookie) Eat() bool {
 	return true
 }
 
 // FriedCookie is a struct
-// +marker:struct-type-level:Name=FriedCookie
+// +test-marker:struct-type-level:Name=FriedCookie
 type FriedCookie struct {
 
 	// Cookie is an embedded struct
-	// +marker:interface-method-level:Name=Cookie
+	// +test-marker:interface-method-level:Name=Cookie
 	cookie
 	// ChocolateChip is a field
-	// +marker:struct-field-level:Name=CookieDough
+	// +test-marker:struct-field-level:Name=CookieDough
 	cookieDough any
+	// This is an anonymous struct
+	anonymousStruct struct{}
+	// This is an empty interface
+	emptyInterface interface{}
 }
 
 // Buy is a method
-// +marker:struct-method-level:Name=Buy
+// +test-marker:struct-method-level:Name=Buy
 func (c *FriedCookie) Buy(i int) {
 
 }
 
 // NewYearsEveCookie is an interface
-// +marker:interface-type-level:Name=newYearsEveCookie
+// +test-marker:interface-type-level:Name=newYearsEveCookie
 type newYearsEveCookie interface {
 	// Funfetti is a method
-	// +marker:interface-method-level:Name=Funfetti
+	// +test-marker:interface-method-level:Name=Funfetti
 	Funfetti(v rune) byte
 }
 
 // Cookie is a struct
-// +marker:struct-type-level:Name=cookie, Any={key:"value"}
+// +test-marker:struct-type-level:Name=cookie, Any={key:"value"}
 type cookie struct {
 	// ChocolateChip is a field
-	// +marker:struct-field-level:Name=ChocolateChip
+	// +test-marker:struct-field-level:Name=ChocolateChip
 	ChocolateChip string
 	// tripleChocolateCookie is a field
-	// +marker:struct-field-level:Name=tripleChocolateCookie
+	// +test-marker:struct-field-level:Name=tripleChocolateCookie
 	tripleChocolateCookie map[string]error
 }
 
 // FortuneCookie is a method
-// +marker:struct-method-level:Name=FortuneCookie
+// +test-marker:struct-method-level:Name=FortuneCookie
 func (c *cookie) FortuneCookie(v interface{}) []string {
 	return nil
 }
 
 // Oreo is a method
-// +marker:struct-method-level:Name=Oreo
+// +test-marker:struct-method-level:Name=Oreo
 func (c *cookie) Oreo(a []interface{}, v ...string) error {
 	return nil
 }
 
 // Dessert is an interface
-// +marker:interface-type-level:Name=Dessert
+// +test-marker:interface-type-level:Name=Dessert
 type Dessert interface {
 
 	// IceCream is a method
-	// +marker:interface-method-level:Name=IceCream
-	// +marker:interface-type-level:Name=IceCream
+	// +test-marker:interface-method-level:Name=IceCream
+	// +test-marker:interface-type-level:Name=IceCream
 	IceCream(s string, v ...bool) (r string)
 
 	// CupCake is a method
-	// +marker:interface-method-level:Name=CupCake
-	CupCake(a []int, b bool) float32
+	// +test-marker:interface-method-level:Name=CupCake
+	CupCake([]int, bool) float32
 
 	// Tart is a method
-	// +marker:interface-method-level:Name=Tart
+	// +test-marker:interface-method-level:Name=Tart
 	Tart(s interface{})
 
 	// Donut is a method
-	// +marker:interface-method-level:Name=Donut
+	// +test-marker:interface-method-level:Name=Donut
 	Donut() error
 
 	// Pudding is a method
-	// +marker:interface-method-level:Name=Pudding
+	// +test-marker:interface-method-level:Name=Pudding
 	Pudding() [5]string
 
 	// Pie is a method
-	// +marker:interface-method-level:Name=Pie
+	// +test-marker:interface-method-level:Name=Pie
 	Pie() interface{}
 
 	// muffin is a method
-	// +marker:interface-method-level:Name=muffin
-	muffin() (string, error)
+	// +test-marker:interface-method-level:Name=muffin
+	muffin() (*string, error)
 }
 
 // MakeACake is a function
-// +marker:function-level:Name=MakeACake
+// +test-marker:function-level:Name=MakeACake
 func MakeACake(s interface{}) error {
 	return nil
 }
 
 // BiscuitCake is a function
-// +marker:function-level:Name=BiscuitCake
+// +test-marker:function-level:Name=BiscuitCake
 func BiscuitCake(s string, arr []int, v ...int16) (i int, b bool) {
 	return
 }
 
 // SweetShop is an interface
-// +marker:interface-type-level:Name=SweetShop
+// +test-marker:interface-type-level:Name=SweetShop
 type SweetShop interface {
 
 	// NewYearsEveCookie is an embedded interface
-	// +marker:interface-method-level:Name=NewYearsEveCookie
+	// +test-marker:interface-method-level:Name=NewYearsEveCookie
 	newYearsEveCookie
 
 	// Macaron is a method
-	// +marker:interface-method-level:Name=Macaron
+	// +test-marker:interface-method-level:Name=Macaron
 	Macaron(c complex128) (chan string, fmt.Stringer)
 
 	// Dessert is an embedded interface
-	// +marker:interface-method-level:Name=Dessert
+	// +test-marker:interface-method-level:Name=Dessert
 	Dessert
+}
+
+// Meal is an interface
+type Meal interface {
+	Eat() bool
 }

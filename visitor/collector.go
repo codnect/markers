@@ -1,39 +1,29 @@
 package visitor
 
-import "github.com/procyon-projects/marker/packages"
+import "github.com/procyon-projects/markers/packages"
 
 type packageCollector struct {
-	hasSeen      map[string]bool
-	hasProcessed map[string]bool
-	files        map[string]*Files
-	packages     map[string]*packages.Package
+	hasSeen  map[string]bool
+	files    map[string]*Files
+	packages map[string]*packages.Package
 
 	unprocessedTypes map[string]map[string]Type
 
-	importTypes map[string]*ImportedType
+	importTypes map[string]Type
 }
 
 func newPackageCollector() *packageCollector {
 	return &packageCollector{
 		hasSeen:          make(map[string]bool),
-		hasProcessed:     make(map[string]bool),
 		files:            make(map[string]*Files),
 		packages:         make(map[string]*packages.Package),
 		unprocessedTypes: make(map[string]map[string]Type),
-		importTypes:      make(map[string]*ImportedType),
+		importTypes:      make(map[string]Type),
 	}
-}
-
-func (collector *packageCollector) getPackage(pkgId string) *packages.Package {
-	return collector.packages[pkgId]
 }
 
 func (collector *packageCollector) markAsSeen(pkgId string) {
 	collector.hasSeen[pkgId] = true
-}
-
-func (collector *packageCollector) markAsProcessed(pkgId string) {
-	collector.hasProcessed[pkgId] = true
 }
 
 func (collector *packageCollector) isVisited(pkgId string) bool {
@@ -44,16 +34,6 @@ func (collector *packageCollector) isVisited(pkgId string) bool {
 	}
 
 	return visited
-}
-
-func (collector *packageCollector) isProcessed(pkgId string) bool {
-	processed, ok := collector.hasProcessed[pkgId]
-
-	if !ok {
-		return false
-	}
-
-	return processed
 }
 
 func (collector *packageCollector) addFile(pkgId string, file *File) {
@@ -70,7 +50,7 @@ func (collector *packageCollector) addFile(pkgId string, file *File) {
 	collector.files[pkgId].elements = append(collector.files[pkgId].elements, file)
 }
 
-func (collector *packageCollector) findTypeByImportAndTypeName(importName, typeName string, file *File) *ImportedType {
+func (collector *packageCollector) findTypeByImportAndTypeName(importName, typeName string, file *File) Type {
 	if importedType, ok := collector.importTypes[importName+"#"+typeName]; ok {
 		return importedType
 	}
@@ -88,19 +68,10 @@ func (collector *packageCollector) findTypeByImportAndTypeName(importName, typeN
 	typ, exists := collector.findTypeByPkgIdAndName(packageImport.path, typeName)
 
 	if exists {
-		importedType := &ImportedType{
-			collector.packages[packageImport.path],
-			typ,
-		}
-		collector.importTypes[packageImport.path+"#"+typeName] = importedType
+		collector.importTypes[packageImport.path+"#"+typeName] = typ
 	}
 
-	importedType := &ImportedType{
-		pkg: collector.packages[packageImport.path],
-		typ: typ,
-	}
-	collector.importTypes[packageImport.path+"#"+typeName] = importedType
-	return importedType
+	return typ
 }
 
 func (collector *packageCollector) findTypeByPkgIdAndName(pkgId, typeName string) (Type, bool) {

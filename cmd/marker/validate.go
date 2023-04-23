@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/procyon-projects/marker/processor"
+	"github.com/procyon-projects/markers/processor"
 	"os"
 	"os/exec"
 )

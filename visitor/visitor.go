@@ -2,8 +2,8 @@ package visitor
 
 import (
 	"errors"
-	"github.com/procyon-projects/marker"
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers"
+	"github.com/procyon-projects/markers/packages"
 	"go/ast"
 	"go/token"
 )
@@ -14,8 +14,8 @@ type packageVisitor struct {
 	collector *packageCollector
 
 	pkg               *packages.Package
-	packageMarkers    map[ast.Node]markers.MarkerValues
-	allPackageMarkers map[string]map[ast.Node]markers.MarkerValues
+	packageMarkers    map[ast.Node]markers.Values
+	allPackageMarkers map[string]map[ast.Node]markers.Values
 
 	file *File
 
@@ -54,7 +54,7 @@ func (visitor *packageVisitor) Visit(node ast.Node) ast.Visitor {
 		return visitor
 	case *ast.FuncDecl:
 		visitor.funcDecl = typedNode
-		newFunction(typedNode, nil, visitor.file, visitor.pkg, visitor, visitor.packageMarkers[typedNode])
+		newFunction(typedNode, nil, nil, nil, visitor.file, visitor.pkg, visitor, visitor.packageMarkers[typedNode])
 		return nil
 	case *ast.TypeSpec:
 		collectTypeFromTypeSpec(typedNode, visitor)
@@ -64,7 +64,7 @@ func (visitor *packageVisitor) Visit(node ast.Node) ast.Visitor {
 	}
 }
 
-func visitPackage(pkg *packages.Package, collector *packageCollector, allPackageMarkers map[string]map[ast.Node]markers.MarkerValues) {
+func visitPackage(pkg *packages.Package, collector *packageCollector, allPackageMarkers map[string]map[ast.Node]markers.Values) {
 	pkgVisitor := &packageVisitor{
 		collector:         collector,
 		pkg:               pkg,
@@ -88,13 +88,18 @@ func EachFile(collector *markers.Collector, pkgs []*packages.Package, callback F
 	}
 
 	var errs []error
-	packageMarkers := make(map[string]map[ast.Node]markers.MarkerValues)
+	packageMarkers := make(map[string]map[ast.Node]markers.Values)
 
 	for _, pkg := range pkgs {
 		markerValues, err := collector.Collect(pkg)
 
 		if err != nil {
-			errs = append(errs, err.(markers.ErrorList)...)
+			switch typedErr := err.(type) {
+			case markers.ErrorList:
+				errs = append(errs, err.(markers.ErrorList)...)
+			default:
+				errs = append(errs, typedErr)
+			}
 			continue
 		}
 
@@ -108,7 +113,7 @@ func EachFile(collector *markers.Collector, pkgs []*packages.Package, callback F
 	pkgCollector := newPackageCollector()
 
 	for _, pkg := range pkgs {
-		if !pkgCollector.isVisited(pkg.ID) || !pkgCollector.isProcessed(pkg.ID) {
+		if !pkgCollector.isVisited(pkg.ID) {
 			visitPackage(pkg, pkgCollector, packageMarkers)
 		}
 	}

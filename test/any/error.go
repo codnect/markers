@@ -1,7 +1,5 @@
 package any
 
-type errorList []error
-
 func (e errorList) Print() {
 
 }

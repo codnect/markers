@@ -1,5 +1,6 @@
-// +import=marker, Pkg=github.com/procyon-projects/marker
-// +marker:package-level:Name=fresh.go
+// +import=marker, Pkg=github.com/procyon-projects/markers
+// +import=test-marker, Pkg=github.com/procyon-projects/test-markers
+// +test-marker:package-level:Name=fresh.go
 
 package menu
 

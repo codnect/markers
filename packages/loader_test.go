@@ -6,7 +6,7 @@ import (
 )
 
 func TestLoadResult_Packages(t *testing.T) {
-	loadResult, err := LoadPackages("github.com/procyon-projects/marker/test/...")
+	loadResult, err := LoadPackages("github.com/procyon-projects/markers/test/...")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, loadResult)
@@ -30,25 +30,25 @@ func TestLoadResult_StandardPackage(t *testing.T) {
 }
 
 func TestLoadResult_Lookup(t *testing.T) {
-	loadResult, err := LoadPackages("github.com/procyon-projects/marker/test/...")
+	loadResult, err := LoadPackages("github.com/procyon-projects/markers/test/...")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, loadResult)
 	assert.Len(t, loadResult.Packages(), 2)
 
-	pkg, err := loadResult.Lookup("github.com/procyon-projects/marker/test/menu")
+	pkg, err := loadResult.Lookup("github.com/procyon-projects/markers/test/menu")
 	assert.Nil(t, err)
 	assert.NotNil(t, pkg)
 	assert.Equal(t, "menu", pkg.Name)
 	assert.False(t, pkg.IsStandardPackage())
-	assert.Equal(t, "github.com/procyon-projects/marker/test/menu", pkg.ID)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/menu", pkg.PkgPath)
+	assert.Equal(t, "github.com/procyon-projects/markers/test/menu", pkg.ID)
+	assert.Equal(t, "github.com/procyon-projects/markers/test/menu", pkg.PkgPath)
 
-	pkg, err = loadResult.Lookup("github.com/procyon-projects/marker/test/any")
+	pkg, err = loadResult.Lookup("github.com/procyon-projects/markers/test/any")
 	assert.Nil(t, err)
 	assert.NotNil(t, pkg)
 	assert.Equal(t, "any", pkg.Name)
 	assert.False(t, pkg.IsStandardPackage())
-	assert.Equal(t, "github.com/procyon-projects/marker/test/any", pkg.ID)
-	assert.Equal(t, "github.com/procyon-projects/marker/test/any", pkg.PkgPath)
+	assert.Equal(t, "github.com/procyon-projects/markers/test/any", pkg.ID)
+	assert.Equal(t, "github.com/procyon-projects/markers/test/any", pkg.PkgPath)
 }

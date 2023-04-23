@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/procyon-projects/marker/internal/cmd"
+	"github.com/procyon-projects/markers/internal/cmd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -65,7 +66,7 @@ func TestGetPackageInfo(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, pkg)
 	assert.Equal(t, packageInfo, pkg)
-	assert.Equal(t, "anyGoPath/pkg/mod/github.com/procyon-projects/marker@v2.0.5", packageInfo.ModulePath())
+	assert.Equal(t, filepath.FromSlash("anyGoPath/pkg/mod/github.com/procyon-projects/marker@v2.0.5"), packageInfo.ModulePath())
 }
 
 func TestGetMarkerPackageShouldReturnErrorIfAnyErrorOccurs(t *testing.T) {
@@ -208,7 +209,7 @@ func TestMarkerPackagePath(t *testing.T) {
 
 	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
 
-	assert.Equal(t, "anyGoPath/marker/pkg/github.com/procyon-projects/marker/anyVersion",
+	assert.Equal(t, filepath.FromSlash("anyGoPath/marker/pkg/github.com/procyon-projects/marker/anyVersion"),
 		MarkerPackagePath("github.com/procyon-projects/marker", "anyVersion"))
 }
 
@@ -224,7 +225,7 @@ func TestMarkerPackagePathFromPackageInfo(t *testing.T) {
 
 	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
 
-	assert.Equal(t, "anyGoPath/marker/pkg/github.com/procyon-projects/marker/anyVersion",
+	assert.Equal(t, filepath.FromSlash("anyGoPath/marker/pkg/github.com/procyon-projects/marker/anyVersion"),
 		MarkerPackagePathFromPackageInfo(&PackageInfo{
 			Path:    "github.com/procyon-projects/marker",
 			Version: "anyVersion",
@@ -243,7 +244,7 @@ func TestMarkerProcessorYamlPath(t *testing.T) {
 
 	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
 
-	assert.Equal(t, "anyGoPath/pkg/mod/github.com/procyon-projects/marker@anyVersion/marker.processors.yaml",
+	assert.Equal(t, filepath.FromSlash("anyGoPath/pkg/mod/github.com/procyon-projects/marker@anyVersion/marker.processors.yaml"),
 		MarkerProcessorYamlPath(&PackageInfo{
 			Path:    "github.com/procyon-projects/marker",
 			Version: "anyVersion",
@@ -266,7 +267,7 @@ func TestMarkerPackageYamlPath(t *testing.T) {
 	assert.True(t, strings.HasSuffix(MarkerPackageYamlPath(&PackageInfo{
 		Path:    "github.com/procyon-projects/marker",
 		Version: "anyVersion",
-	}), "marker/pkg/github.com/procyon-projects/marker/anyVersion/marker.procesors.yaml"))
+	}), filepath.FromSlash("marker/pkg/github.com/procyon-projects/marker/anyVersion/marker.procesors.yaml")))
 }
 
 func TestGoModDir(t *testing.T) {
@@ -285,19 +286,19 @@ func TestInstallPackageShouldInstallPackage(t *testing.T) {
 	}
 
 	goInstallCmd := &exec.Cmd{
-		Path:   "/usr/local/go/bin/go",
+		Path:   execLookupPath,
 		Args:   []string{"go", "install", "github.com/procyon-projects/chrono/...@latest"},
 		Env:    []string{},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
 
-	environmentVariables := []string{fmt.Sprintf("GOBIN=%s", "anyGoPath/marker/pkg/github.com/procyon-projects/chrono/latest")}
+	environmentVariables := []string{fmt.Sprintf("GOBIN=%s", filepath.FromSlash("anyGoPath/marker/pkg/github.com/procyon-projects/chrono/latest"))}
 	goInstallCmd.Env = append(goInstallCmd.Env, os.Environ()...)
 	goInstallCmd.Env = append(goInstallCmd.Env, environmentVariables...)
 
-	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
 	mockExecutor.On("Execute", goInstallCmd).Return(nil, nil)
+	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
 
 	err := InstallPackage(&PackageInfo{
 		Path:    "github.com/procyon-projects/chrono",
@@ -317,19 +318,19 @@ func TestInstallPackageReturnsErrorIfInstallationIsFailed(t *testing.T) {
 	}
 
 	goInstallCmd := &exec.Cmd{
-		Path:   "/usr/local/go/bin/go",
+		Path:   execLookupPath,
 		Args:   []string{"go", "install", "github.com/procyon-projects/chrono/...@latest"},
 		Env:    []string{},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
 
-	environmentVariables := []string{fmt.Sprintf("GOBIN=%s", "anyGoPath/marker/pkg/github.com/procyon-projects/chrono/latest")}
+	environmentVariables := []string{fmt.Sprintf("GOBIN=%s", filepath.FromSlash("anyGoPath/marker/pkg/github.com/procyon-projects/chrono/latest"))}
 	goInstallCmd.Env = append(goInstallCmd.Env, os.Environ()...)
 	goInstallCmd.Env = append(goInstallCmd.Env, environmentVariables...)
 
-	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
 	mockExecutor.On("Execute", goInstallCmd).Return(nil, errors.New("anyInstallationError"))
+	mockExecutor.On("Execute", goPathCmd).Return([]byte("anyGoPath\n "), nil)
 
 	err := InstallPackage(&PackageInfo{
 		Path:    "github.com/procyon-projects/chrono",

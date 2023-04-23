@@ -1,7 +1,7 @@
 package visitor
 
 import (
-	"github.com/procyon-projects/marker/packages"
+	"github.com/procyon-projects/markers/packages"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -47,7 +47,6 @@ func (c *Constant) evaluateExpression() {
 		return
 	}
 
-	// TODO: There might be some issues with const expressions.
 	defer func() {
 		if r := recover(); r != nil {
 		}
@@ -82,6 +81,7 @@ func (c *Constant) Underlying() Type {
 }
 
 func (c *Constant) String() string {
+	// TODO: complete string implementation
 	return ""
 }
 
